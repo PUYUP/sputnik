@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block head_title %}{% trans "Daftar" noop %}{% endblock %}
+
+{% block main %}
+    <div class="d-flex align-items-center justify-content-center">
+        <div class="col-12 col-sm-7 col-md-5 col-lg-4 col-xl-3 p-0">
+            <div class="card shadow-sm shadow-sm bg-light">
+                <h5 class="card-header d-flex w-100">
+                    {% trans "Daftar Sekarang" noop %}
+
+                    <a href="{% url 'person_login' %}" class="ml-auto small">
+                        {% trans "Masuk" noop %}
+                    </a>
+                </h5>
+
+                <div class="card-body">
+                    <form id="boarding-form" class="needs-validation" action="{% url 'person_boarding' %}" novalidate>
+                        <div class="form-group">
+                            <label for="register">{% trans "Email atau Nomor Ponsel" noop %}</label>
+                            <input type="text" id="register" class="form-control" required>
+                        </div>
+
+                        <div class="d-flex w-100">
+                            <button type="submit" id="boarding-submit" class="btn btn-info btn-block pl-4 pr-4 mr-auto">
+                                {% trans "Selanjutnya" noop %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block js %}
+    <script type="text/javascript">
+        (function() {
+            'use strict';
+            window.addEventListener('load', function() {
+                // ...
+                // SUBMIT
+                // ...
+                $(document).on('submit', '#boarding-form', function(event) {
+                    var register = $(event.target).find('#register').val();
+                    if (register) {
+                        if (isPhoneNumberValid(register)) {
+                            checkMSISDNAvailable(register);
+                        } else if (isEmailValid(register)) {
+                            checkEmailAvailable(register);
+                        }
+
+                        if (isPhoneNumberValid(register) || isEmailValid(register)) {
+                            $(event.target).addClass('was-validated');
+                            $(event.target).find('#register').removeClass('is-invalid');
+                        }
+
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                });
+
+
+                // ...
+                // EMAIL AND MSISDN VALID CALLBACK
+                // ...
+                $(document).on('checkEmailValid checkMSISDNValid', function(event, data) {
+                    data['challenge'] = 'register_validation';
+
+                    $(document.body).append(modalElem(data));
+                    $(document).find('#verificationModal').modal('show');
+                });
+
+
+                // ...
+                // OTP VALID CALLBACK
+                // ...
+                $(document).on('otpValid', function(event, data) {
+                    window.location.href = "{% url 'person_register' %}";
+                });
+            }, false);
+        })();
+    </script>
+{% endblock %}

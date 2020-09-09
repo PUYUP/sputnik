@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block head_title %}{% trans "Validasi Kode OTP" noop %}{% endblock %}
+
+{% block main %}
+    <div class="d-flex align-items-center justify-content-center">
+        <div class="col-12 col-sm-7 col-md-5 col-lg-4 col-xl-3 p-0">
+            <div class="card shadow-sm bg-light">
+                <h5 class="card-header">{% trans "Validasi Kode OTP" noop %}</h5>
+
+                <div class="card-body">
+                    <p>{{ send_to_message|safe }}</p>
+
+                    <form id="form-otp-validation" class="needs-validation" novalidate>
+                        <div class="form-group">
+                            <input type="text" id="otp-code" class="form-control text-uppercase" required>
+
+                            <div class="invalid-feedback">
+                                {% trans "Kode OTP tidak valid." noop %}
+                            </div>
+                        </div>
+                    
+                        <input type="hidden" id="redirect-to" name="redirect-to" value="{{ redirect_to }}">
+                        <input type="hidden" id="challenge" name="challenge" value="{{ challenge }}">
+
+                        <div class="d-flex w-100 align-items-center">
+                            <button type="submit" class="btn btn-info pl-4 pr-4 mr-auto">
+                                {% trans "Validasi" %}
+                            </button>
+
+                            <div class="d-flex flex-column">
+                                <button id="resend-otp" type="button" class="btn btn-sm btn-block btn-link text-info p-0 d-none" disabled>{% trans "Kirim Ulang" %}</button>
+                                <small id="resend-timer" class="small text-muted"></small>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block js %}
+    <script type="text/javascript">
+        (function() {
+            'use strict';
+            window.addEventListener('load', function() {
+                // Start otp timer
+                resendInterval(true);
+            }, false);
+        })();
+    </script>
+{% endblock %}

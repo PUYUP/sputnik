@@ -1,0 +1,13 @@
+# FITUR 7-6-2020 (tambah Celery dan Redis)
++ start redis: klik 'redis-server.exe' di folder d:/PROGRAMS/CACHE/redis
++ redis cli: klik 'redis-cli.exe' di folder d:/PROGRAMS/CACHE/redis
+
+# FITUR 11-6-2020 (validasi pembaruan akun)
++ user request OTP -> validasi OTP -> ganti data akun
+
+# BUG 14-06-2020
++ kombinasi Q(email=email) | Q(msisdn=msisdn) tidak bisa digunakan karena meskipun email salah tetap menghasilkan object karena
+msisdn adalah Null (None)
+
+# BUG 17-06-2020
++ Kode OTP terkirim double karena send email otp diletakkan di signal yang ternyata terpanggil juga ketika aksi validasi OTP

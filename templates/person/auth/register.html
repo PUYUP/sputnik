@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block head_title %}{% trans "Lengkapi Data Diri" noop %}{% endblock %}
+
+{% block main %}
+    <div class="d-flex align-items-center justify-content-center">
+        <div class="col-12 col-sm-7 col-md-5 col-lg-4 col-xl-3 p-0">
+            <div class="card shadow-sm bg-light">
+                <h5 class="card-header d-flex w-100">
+                    {% trans "Lengkapi Data Diri" noop %}
+
+                    <a href="{% url 'person_login' %}" class="ml-auto small">
+                        {% trans "Masuk" noop %}
+                    </a>
+                </h5>
+
+                <div class="card-body">
+                    <form id="register-form" class="needs-validation" action="{% url 'person_register' %}" method="POST" novalidate>
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                            
+                        <button type="submit" class="btn btn-info btn-block pl-4 pr-4 mt-2">{% trans "Kirim" noop %}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block js %}
+    <script type="text/javascript">
+        (function() {
+            'use strict';
+            window.addEventListener('load', function() {
+                
+            }, false);
+        })();
+    </script>
+{% endblock %}

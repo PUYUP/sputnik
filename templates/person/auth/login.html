@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block head_title %}{% trans "Masuk ke Akun" noop %}{% endblock %}
+
+{% block main %}
+    <div class="d-flex align-items-center justify-content-center flex-column">
+        <div class="col-12 col-sm-7 col-md-5 col-lg-4 col-xl-3 p-0">
+            {% if messages %}
+                <ul class="messages list-unstyled">
+                    {% for message in messages %}
+                        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+                            {{ message }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            <div class="card shadow-sm bg-light">
+                <h5 class="card-header d-flex w-100">
+                    {% trans "Masuk ke Akun" noop %}
+
+                    <a href="{% url 'person_register' %}" class="ml-auto small">
+                        {% trans "Daftar" noop %}
+                    </a>
+                </h5>
+
+                <div class="card-body">
+                    <form id="login-form" method="POST" action="{% url 'person_login' %}" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        <div id="account-field">
+                            <div class="spinner-border spinner-border-sm mb-3" role="status">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center">
+                            <button type="submit" id="login-submit" data-action="account" class="btn btn-info btn-block pl-3 pr-3">{% trans "Selanjutnya" %}</button>
+
+                            <div id="spinner" class="spinner-border spinner-border-sm ml-3 d-none" role="status">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block js %}
+    <script type="text/javascript">
+        (function() {
+            'use strict';
+            window.addEventListener('load', function() {
+                // ...
+                // PREPARE FIELDS
+                // ...
+                var userCheck = function() {
+                    return `<div class="form-group">
+                        <label for="account">{% trans "Nama Pengguna atau Email" noop %}</label>
+                        <input type="text" id="account" class="form-control" name="account" required>
+
+                        <div class="text-right">
+                            <a href="{% url 'person_lost_password' %}" class="mt-2 pull-right small text-lowercase">{% trans "Lupa kata sandi?" noop %}</a>
+                        </div>
+                    </div>`;
+                }
+
+                var passwordCheck = function(accountValue) {
+                    return `<div class="form-group">
+                        <label for="account" class="d-block mb-0">{% trans "Nama Pengguna atau Email" noop %}</label>
+                        <span class="d-flex align-items-center font-weight-bold">
+                            ${accountValue}
+
+                            <button type="button" id="account-change" class="btn btn-link btn-sm text-info ml-auto font-weight-normal small text-lowercase">
+                                {% trans "Ubah" noop %}
+                            </button>
+                        </span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password" class="d-flex w-100">
+                            {% trans "Kata Sandi" noop %}
+                            <a href="{% url 'person_lost_password' %}" class="ml-auto small text-lowercase">{% trans "Lupa kata sandi?" noop %}</a>
+                        </label>
+
+                        <div class="input-group">
+                            <input type="password" id="password" class="form-control" name="password" data-toggle="password" required>
+                            <div class="input-group-append">
+                                <span class="input-group-text"></span>
+                            </div>
+                        </div>
+                    </div>`;
+                }
+
+                var accountField = document.getElementById('account-field');
+                accountField.innerHTML = userCheck();
+        
+                var form = document.getElementById('login-form');
+                var spinner = document.getElementById('spinner');
+                var submitButton = document.getElementById('login-submit');
+                var account = document.getElementById('account');
+                var errorMessage = '{% trans "Terjadi kesalahan" noop %}';
+
+
+                // ...
+                // FORM HANDLER
+                // ...
+                form.addEventListener('submit', function(event) {
+                    var account = document.getElementById('account');
+                    var password = document.getElementById('password');
+
+                    event.preventDefault();
+                    event.stopPropagation();
+                    
+                    if (form.checkValidity() === true) {
+                        spinner.classList.remove('d-none');
+                        submitButton.disabled = true;
+
+                        var action = submitButton.getAttribute('data-action');
+                        if (action === 'account' && account.value) accountHandler(account.value);
+                        if (action === 'login' && password.value) loginHandler(password.value);
+                    }
+
+                    form.classList.add('was-validated');
+                }, false);
+
+
+                // ...
+                // SUBMIT
+                // ...
+                function accountHandler(accountValue) {
+                    $.ajax({
+                        method: 'POST',
+                        headers: {'X-CSRFToken': Cookies.get('csrftoken'), 'otp-token': 'Abcafaga'},
+                        url: siteUrl + 'api/person/users/check-account-exist/',
+                        data: {'account': accountValue},
+                        beforeSend: function(xHR) {
+                            
+                        },
+                        success: function(resp) {
+                            accountField.innerHTML = passwordCheck(accountValue);
+
+                            form.classList.remove('was-validated');
+                            account.classList.remove('is-invalid');
+                            spinner.classList.add('d-none');
+
+                            submitButton.disabled = false;
+                            submitButton.innerHTML = '{% trans "Masuk" noop %}';
+                            submitButton.setAttribute('data-action', 'login');
+
+                            accountChange(accountValue);
+                            Cookies.set('register_account', accountValue, { expires: 1, path: "{% url 'person_login' %}" });
+                            togglePasswordVisible();
+                        },
+                        error: function(err) {
+                            form.classList.remove('was-validated');
+                            account.classList.add('is-invalid');
+                            spinner.classList.add('d-none');
+                            submitButton.disabled = false;
+
+                            if (err) {
+                                var responseJSON = err.responseJSON;
+                                $.each(responseJSON, function(index, value) {
+                                    if (value) errorMessage = Array.isArray(value) ? value.join(' ') : value;
+                                });
+                            }
+
+                            runGeneralNotify(errorMessage, 'danger');
+                        }
+                    });
+                }
+
+
+                // ...
+                // LOGIN HANDLER
+                // ...
+                var loginHandler = function(password) {
+                    var c = Cookies.get('register_account');
+                    
+                    $.ajax({
+                        method: 'POST',
+                        headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                        url: siteUrl + 'api/person/token/',
+                        data: {
+                            'username': c,
+                            'password': password
+                        },
+                        beforeSend: function(xHR) {
+                            
+                        },
+                        success: function(resp) {
+                            runGeneralNotify('{% trans "Berhasil masuk. Mengalihkan..." noop %}', 'success');
+                            Cookies.remove('register_account');
+                            window.location.href = "{% url 'home' %}";
+                        },
+                        error: function(err) {
+                            form.classList.remove('was-validated');
+                            spinner.classList.add('d-none');
+                            submitButton.disabled = false;
+
+                            if (err) {
+                                var responseJSON = err.responseJSON;
+                                $.each(responseJSON, function(index, value) {
+                                    if (value) errorMessage = Array.isArray(value) ? value.join(' ') : value;
+                                });
+                            }
+
+                            runGeneralNotify(errorMessage, 'danger');
+                        }
+                    });
+                }
+
+
+                // ...
+                // CHANGE
+                // ...
+                var accountChange = function(accountValue) {
+                    var accountChangeButton = document.getElementById('account-change');
+                    accountChangeButton.addEventListener('click', function(event) {
+                        accountField.innerHTML = userCheck();
+                        submitButton.innerHTML = '{% trans "Selanjutnya" noop %}';
+                        submitButton.setAttribute('data-action', 'account');
+
+                        document.getElementById('account').value = accountValue;
+                    }, false);
+                }
+            }, false);
+        })();
+    </script>
+{% endblock %}

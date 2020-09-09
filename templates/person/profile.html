@@ -1,0 +1,913 @@
+{% extends 'base.html' %}
+{% load i18n static %}
+{% load crispy_forms_tags %}
+
+{% block head_title %}{% trans "Profil" noop %}{% endblock %}
+
+{% block main %}
+    <div class="d-flex align-items-start justify-content-center flex-column profile-page">
+        <div class="col-12 col-sm-12 col-md-10 col-lg-9 col-xl-7 p-0">
+            {% if messages %}
+                <ul class="messages list-unstyled">
+                    {% for message in messages %}
+                        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+                            {{ message }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            <div class="row">
+                <div class="col-12 col-sm-4 col-md-4 col-lg-4">
+                    <div class="avatar">
+                        <div class="card shadow-sm bg-light">
+                            <div class="card-body p-3">
+                                <div id="upload-zone">
+                                    <figure class="mb-3">
+                                        {% if profile.picture %}
+                                            <img src="{{ profile.picture.url|safe|escape }}" class="w-100 h-auto" alt="{{ user.first_name|default:user.username|safe|escape }}">
+                                        {% else %}
+                                            <img src="{% static '/images/default-photo-profile.jpg' %}" class="w-100 h-auto" alt="{{ user.first_name|default:user.username|safe|escape }}">
+                                        {% endif %}
+                                    </figure>
+
+                                    <div class="progress mb-2 d-none">
+                                        <div class="progress-bar" role="progressbar" style="width: 25%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">25%</div>
+                                    </div>
+
+                                    <button type="button" id="select-avatar" class="btn btn-dark btn-block btn-sm">
+                                        {% trans "Pilih Foto" noop %}
+                                    </button>
+
+                                    <input id="upload-avatar" type="file" name="picture" class="d-none" accept="image/x-png,image/jpeg,image/jpg">
+                                
+                                    <p class="text-muted small mb-0 mt-2">Besar file: maksimum 2.5 MB. Ekstensi file yang diperbolehkan: .JPG dan .PNG</p>
+                                </div> <!-- /.upload-zone -->
+                            </div> <!-- /.card body -->
+                        </div> <!-- /.card -->
+                    </div>
+                </div> <!-- /.col -->
+
+                <div class="col-12 col-sm-8 col-md-8 col-lg-8">
+                    <div class="biography d-block">
+                        <h6 class="border-bottom pb-2 mb-2 d-flex w-100 align-items-center">
+                            {% trans "Biodata Diri" noop %}
+
+                            <div class="ml-auto">
+                                <button type="button" id="save-bio-action" data-action="save" class="btn btn-sm btn-success mr-2 pl-3 pr-3 d-none">
+                                    {% trans "Simpan" noop %}
+                                </button>
+
+                                <button type="button" id="change-bio-action" data-action="change" class="btn btn-sm btn-info pl-3 pr-3">
+                                    {% trans "Sunting" noop %}
+                                </button>
+                            </div>
+                        </h6>
+
+                        <div id="bio-content" class="bio-content">
+                            <div class="form-group row mb-1">
+                                <label class="col-sm-4 col-md-5 col-lg-5 col-xl-4">{% trans "Nama" noop %}</label>
+                                <div class="col-sm-8 col-md-7 col-lg-7 col-xl-8">
+                                    <div class="bio-value text" data-field="first_name" data-value="{{ user.first_name|default:""|safe|escape }}">
+                                        {{ user.first_name|default:"&mdash;"|safe|escape }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group row mb-1">
+                                <label class="col-sm-4 col-md-5 col-lg-5 col-xl-4">{% trans "Tanggal Lahir" noop %}</label>
+                                <div class="col-sm-8 col-md-7 col-lg-7 col-xl-8">
+                                    <div class="bio-value date" data-field="birthdate" data-value="{{ profile.birthdate|default:""|safe|escape }}">
+                                        {{ profile.birthdate|default:"&mdash;"|safe|escape }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group row mb-1">
+                                <label class="col-sm-4 col-md-5 col-lg-5 col-xl-4">{% trans "Jenis Kelamin" noop %}</label>
+                                <div class="col-sm-8 col-md-7 col-lg-7 col-xl-8">
+                                    <div class="bio-value option" data-field="gender" data-value="{{ profile.gender|default:""|safe|escape }}">
+                                        {{ profile.get_gender_display|default:"&mdash;"|safe|escape }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group row mb-1">
+                                <label class="col-sm-4 col-md-5 col-lg-5 col-xl-4">{% trans "Tentang" noop %}</label>
+                                <div class="col-sm-8 col-md-7 col-lg-7 col-xl-8">
+                                    <div class="bio-value textarea" data-field="biography" data-value="{{ profile.biography|default:""|safe|escape }}">
+                                        {{ profile.biography|default:"&mdash;"|safe|escape }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!-- /.bio -->
+
+                    <div class="biography d-block mt-4">
+                        <h6 class="border-bottom pb-2 mb-2">{% trans "Kontak dan Keamanan" noop %}</h6>
+
+                        <div class="form-group row mb-1">
+                            <label class="col-sm-4 col-md-5 col-lg-5 col-xl-4">{% trans "Alamat Email" noop %}</label>
+                            <div class="col-sm-8 col-md-7 col-lg-7 col-xl-8">
+                                <div class="d-flex w-100 align-items-top">
+                                    {{ user.account.email|default:"&mdash;"|safe|escape }}
+
+                                    <a href="#" id="show-modal" class="ml-auto" data-toggle="modal" data-target="#verificationModal"
+                                        data-field="email" data-challenge="change_email">
+                                        {% trans "Ubah" noop %}
+                                    </a>
+                                </div>
+                            </div>
+                        </div> <!-- EMAIL -->
+
+                        <div class="form-group row mb-1">
+                            <label class="col-sm-4 col-md-5 col-lg-5 col-xl-4">{% trans "Nomor Ponsel" noop %}</label>
+                            <div class="col-sm-8 col-md-7 col-lg-7 col-xl-8">
+                                <div class="d-flex w-100 align-items-top">
+                                    {{ user.account.msisdn|default:"&mdash;"|safe|escape }}
+
+                                    <a href="#" id="show-modal" class="ml-auto" data-toggle="modal" data-target="#verificationModal"
+                                        data-field="msisdn" data-challenge="change_msisdn">
+                                        {% trans "Ubah" noop %}
+                                    </a>
+                                </div>
+                            </div>
+                        </div> <!-- MSISDN -->
+
+                        <div class="form-group row mb-1">
+                            <label class="col-sm-4 col-md-5 col-lg-5 col-xl-4">{% trans "Nama Pengguna" noop %}</label>
+                            <div class="col-sm-8 col-md-7 col-lg-7 col-xl-8">
+                                <div class="d-flex w-100 align-items-top">
+                                    {{ user.username|default:"&mdash;"|safe|escape }}
+
+                                    <a href="#" id="show-change-username-modal" class="ml-auto" data-toggle="modal" data-target="#changeUsernameModal"
+                                        data-field="username" data-challenge="change_username">
+                                        {% trans "Ubah" noop %}
+                                    </a>
+                                </div>
+                            </div>
+                        </div> <!-- USERNAME -->
+
+                        <div class="form-group row mb-1">
+                            <label class="col-sm-4 col-md-5 col-lg-5 col-xl-4">{% trans "Kata Sandi" noop %}</label>
+                            <div class="col-sm-8 col-md-7 col-lg-7 col-xl-8">
+                                <div class="d-flex w-100 align-items-top">
+                                    ************
+
+                                    <a href="#" id="show-change-password-modal" class="ml-auto" data-toggle="modal" data-target="#changePasswordModal"
+                                        data-field="password" data-challenge="change_password">
+                                        {% trans "Ubah" noop %}
+                                    </a>
+                                </div>
+                            </div>
+                        </div> <!-- PASSWORD -->
+                    </div>
+                </div> <!-- /.col -->
+            </div> <!-- /.row -->
+        </div>
+    </div> 
+{% endblock %}
+
+{% block style %}
+    <style type="text/css">
+        @media (max-width: 767px) {
+            .profile-page .avatar {
+                margin: auto;
+                margin-bottom: 25px;
+            }
+
+            .profile-page .biography label {
+                margin-bottom: 0;
+                font-size: 13px;
+            }
+
+            .profile-page .form-group {
+                margin-bottom: 15px !important;
+            }
+
+            .profile-page .bio-value {
+                margin-top: 5px;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block js %}
+    <script src="{% static 'vendors/jquery-file-upload/jquery.iframe-transport.js' %}"></script>
+    <script src="{% static 'vendors/jquery-file-upload/vendor/load-image.all.min.js' %}"></script>
+    <script src="{% static 'vendors/jquery-file-upload/vendor/jquery.ui.widget.js' %}"></script>
+    <script src="{% static 'vendors/jquery-file-upload/jquery.fileupload.js' %}"></script>
+    <script src="{% static 'vendors/jquery-file-upload/jquery.fileupload-process.js' %}"></script>
+    <script src="{% static 'vendors/jquery-file-upload/jquery.fileupload-image.js' %}"></script>
+    <script src="{% static 'vendors/jquery-file-upload/jquery.fileupload-validate.js' %}"></script>
+
+    <script type="text/javascript">
+        (function() {
+            'use strict';
+            window.addEventListener('load', function() {
+                var cancelText = '{% trans "Batal" noop %}';
+                var changeText = '{% trans "Sunting" noop %}';
+                var successMessage = '{% trans "Profil berhasil diperbarui" noop %}';
+                var errorMessage = '{% trans "Terjadi kesalahan" noop %}';
+                var oldEmailMessage = '{% trans "Email Lama" noop %}';
+                var newEmailMessage = '{% trans "Email Baru" noop %}';
+                var oldMsisdnMessage = '{% trans "Nomor Ponsel Lama" noop %}';
+                var newMsisdnMessage = '{% trans "Nomor Ponsel Baru" noop %}';
+
+                var oldUsernameMessage = '{% trans "Nama Pengguna Lama" noop %}';
+                var newUsernameMessage = '{% trans "Nama Pengguna Baru" noop %}';
+                var changeEmailSuccessMessage = '{% trans "Email kontak berhasil dirubah." noop %}';
+                var changeUsernameSuccessMessage = '{% trans "Nama pengguna berhasil durubah." noop %}';
+                var changeMSISDNSuccessMessage = '{% trans "MSISDN berhasil dirubah." noop %}';
+                var oldPasswordMessage = '{% trans "Kata Sandi Lama" noop %}';
+                var newPasswordMessage = '{% trans "Masukkan Kata Sandi Baru" noop %}';
+                var newPasswordRetryMessage = '{% trans "Ulangi Kata Sandi Baru" noop %}';
+
+                var bioContent = document.getElementById("bio-content");
+                var changeFields = $(bioContent).find(".bio-value");
+                var changeBioButton = document.getElementById("change-bio-action");
+                var saveBioButton = document.getElementById("save-bio-action");
+                var genderChoices = JSON.parse('{{ gender_choices|safe }}');
+                var oldValues = [];
+
+                // MODAL UPDATE ACCOUNT WITH CONFIRMATION
+                var updateAccountWithConfirmationModal = `<div class="modal fade" id="updateAccountWithConfirmationModal" data-backdrop="static" data-keyboard="false" tabindex="-1" role="dialog" aria-labelledby="updateAccountWithConfirmationModal" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <form id="form-update-account" class="needs-validation modal-content" method="POST" novalidate>
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="updateAccountWithConfirmationModal">{% trans "Rubah Kontak" noop %}</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+
+                            <div class="modal-body">
+                                <div id="old" class="form-group">
+                                    <label for="old-value"></label>
+                                    <input type="text" class="form-control" id="old-value" name="old-value" disabled readonly required>
+                                </div>
+
+                                <div id="new" class="form-group">
+                                    <label for="new-value"></label>
+                                    <input type="text" class="form-control" id="new-value" name="new-value" required>
+                                    <span class="form-text text-muted small">{% trans "Kami akan mengirimkan kode verifikasi untuk memastikan kontak baru Anda aktif." noop %}</span>
+                                </div>
+
+                                <input type="hidden" id="challenge" name="challenge">
+                            </div>
+
+                            <div class="modal-footer">
+                                <div class="row d-flex justify-content-center w-100">
+                                    <div class="col-5">
+                                        <button type="button" class="btn btn-secondary btn-block" data-dismiss="modal">
+                                            {% trans "Batal" noop %}
+                                        </button>
+                                    </div>
+
+                                    <div class="col-5">
+                                        <button type="submit" class="btn btn-info btn-block">
+                                            {% trans "Lanjutkan" noop %}
+                                        </button>
+                                    </div>
+                                </div> <!-- /.row -->
+                            </div>
+                        </form>
+                    </div>
+                </div>`;
+
+
+                // UPDATE ACCOUNT MODAL
+                var updateAccountModal = `<div class="modal fade" id="updateAccountModal" data-backdrop="static" data-keyboard="false" tabindex="-1" role="dialog" aria-labelledby="updateAccountModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <form id="form-update-account" class="needs-validation modal-content" method="POST" novalidate>
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="updateAccountModalLabel">{% trans "Rubah Kontak" noop %}</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+
+                            <div class="modal-body">
+                                <div id="old" class="form-group">
+                                    <label for="old-value"></label>
+                                    <input type="text" class="form-control" id="old-value" name="old-value" disabled readonly required>
+                                </div>
+
+                                <div id="new" class="form-group">
+                                    <label for="new-value"></label>
+                                    <input type="text" class="form-control" id="new-value" name="new-value" required>
+                                </div>
+
+                                <input type="hidden" id="challenge" name="challenge">
+                            </div>
+
+                            <div class="modal-footer">
+                                <div class="row d-flex justify-content-center w-100">
+                                    <div class="col-5">
+                                        <button type="button" class="btn btn-secondary btn-block" data-dismiss="modal">
+                                            {% trans "Batal" noop %}
+                                        </button>
+                                    </div>
+
+                                    <div class="col-5">
+                                        <button type="submit" class="btn btn-info btn-block">
+                                            {% trans "Simpan" noop %}
+                                        </button>
+                                    </div>
+                                </div> <!-- /.row -->
+                            </div>
+                        </form>
+                    </div>
+                </div>`;
+
+
+                // CHANGE PASSWORD MODAL
+                var changePasswordModal = `<div class="modal fade" id="changePasswordModal" data-backdrop="static" data-keyboard="false" tabindex="-1" role="dialog" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <form id="form-change-password" class="needs-validation modal-content" method="POST" novalidate>
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="changePasswordModalLabel">{% trans "Rubah Kata Sandi" noop %}</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label for="password">${oldPasswordMessage}</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control form-control-lg" id="password" name="password" data-toggle="password" required>
+
+                                        <div class="input-group-append">
+                                            <span class="input-group-text"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr />
+
+                                <div class="form-group">
+                                    <label for="new-password1">${newPasswordMessage}</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control form-control-lg" id="new-password1" name="new-password1" data-toggle="password" required>
+
+                                        <div class="input-group-append">
+                                            <span class="input-group-text"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="new-password2">${newPasswordRetryMessage}</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control form-control-lg" id="new-password2" name="new-password2" data-toggle="password" required>
+                                    
+                                        <div class="input-group-append">
+                                            <span class="input-group-text"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="modal-footer">
+                                <div class="row d-flex justify-content-center w-100">
+                                    <div class="col-5">
+                                        <button type="button" class="btn btn-secondary btn-block" data-dismiss="modal">
+                                            {% trans "Batal" noop %}
+                                        </button>
+                                    </div>
+
+                                    <div class="col-5">
+                                        <button type="submit" class="btn btn-info btn-block">
+                                            {% trans "Simpan" noop %}
+                                        </button>
+                                    </div>
+                                </div> <!-- /.row -->
+                            </div>
+                        </form>
+                    </div>
+                </div>`;
+
+                // CHANGE PASSWORD MODAL
+                var changeUsernameModal = `<div class="modal fade" id="changeUsernameModal" data-backdrop="static" data-keyboard="false" tabindex="-1" role="dialog" aria-labelledby="changeUsernameModal" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <form id="form-change-username" class="needs-validation modal-content" method="POST" novalidate>
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="changeUsernameModal">{% trans "Rubah Nama Pengguna" noop %}</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label for="username">${newUsernameMessage}</label>
+                                    <input type="text" class="form-control form-control-lg" id="username" name="username" required>
+                                </div>
+                            </div>
+
+                            <div class="modal-footer">
+                                <div class="row d-flex justify-content-center w-100">
+                                    <div class="col-5">
+                                        <button type="button" class="btn btn-secondary btn-block" data-dismiss="modal">
+                                            {% trans "Batal" noop %}
+                                        </button>
+                                    </div>
+
+                                    <div class="col-5">
+                                        <button type="submit" class="btn btn-info btn-block">
+                                            {% trans "Simpan" noop %}
+                                        </button>
+                                    </div>
+                                </div> <!-- /.row -->
+                            </div>
+                        </form>
+                    </div>
+                </div>`;
+
+
+                // ...
+                // SHOW EDIT FIELD
+                // ...
+                changeBioButton.addEventListener("click", function(event) {
+                    // Show button save
+                    $(saveBioButton).removeClass("d-none");
+
+                    var action = $(event.target).attr("data-action");
+
+                    // Change
+                    if (action === "change") {
+                        // Update data-action
+                        $(event.target).attr("data-action", "cancel")
+                            .text(cancelText).removeClass("btn-info").addClass("btn-dark");
+
+                        // Update content
+                        $.each(changeFields, function(index, value) {
+                            var contentValue = $(value).attr("data-value");
+                            var name = $(value).attr("data-field");
+                            var isText = $(value).hasClass("text");
+                            var isDate = $(value).hasClass("date");
+                            var isTextarea = $(value).hasClass("textarea");
+                            var isOption = $(value).hasClass("option");
+                            var inputElem;
+
+                            if (isText) inputElem = `<input type="text" class="form-control form-control-sm" name="${name}" value="${contentValue}">`;
+                            if (isDate) inputElem = `<input type="date" class="form-control form-control-sm" name="${name}" value="${contentValue}">`;
+                            if (isTextarea) inputElem = `<textarea class="form-control form-control-sm" name="${name}">${contentValue}</textarea>`;
+                            
+                            if (isOption) {
+                                var options = '';
+                                $.each(genderChoices, function(k, v) {
+                                    options += `<option value="${k}" ${k === contentValue ? "selected" : ""}>${v}</option>`;
+                                });
+
+                                inputElem = `<select class="form-control form-control-sm" name="${name}">${options}</select>`;
+                                contentValue = genderChoices[contentValue];
+                            }
+
+                            if (inputElem) $(value).html(inputElem);
+
+                            // Store old value
+                            oldValues.push(contentValue);
+                        });
+                    }
+
+                    // Cancel
+                    if (action === "cancel") {
+                        // Hide button save
+                        $(saveBioButton).addClass("d-none");
+
+                        // Update data-action
+                        $(event.target).attr("data-action", "change")
+                            .text(changeText).removeClass("btn-dark").addClass("btn-info");
+
+                        // Update content
+                        $.each(changeFields, function(index, value) {
+                            var contentValue = oldValues[index];
+                            $(value).html(contentValue);
+                        });
+
+                        // Reset old values
+                        oldValues = [];
+                    }
+                }, false);
+
+
+                // ...
+                // SAVE CHANGE
+                // ...
+                saveBioButton.addEventListener("click", function(event) {
+                    var saveValues = {};
+                    
+                    $.each(changeFields, function(index, value) {
+                        var contentValue = $(value).find(".form-control").val();
+                        var name = $(value).find(".form-control").attr("name");
+
+                        saveValues[name] = contentValue;
+                    });
+
+                    $.ajax({
+                        method: 'PATCH',
+                        headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                        url: siteUrl + 'api/person/users/{{ user.uuid }}/profile/',
+                        data: {...saveValues},
+                        success: function(resp) {
+                            // Hide button save
+                            $(saveBioButton).addClass("d-none");
+
+                            // Update data-action
+                            $(changeBioButton).attr("data-action", "change")
+                                .text(changeText).removeClass("btn-dark").addClass("btn-info");
+
+                            // Update content
+                            $.each(changeFields, function(index, value) {
+                                var text = $(value).find("input, textarea").val();
+                                var option = $(value).find("select option:selected").text();
+
+                                if (text) $(value).html(text);
+                                if (option) $(value).html(option);
+                            });
+
+                            // Notify
+                            runGeneralNotify(successMessage, 'success');
+
+                            // Reset old values
+                            oldValues = [];
+                        }
+                    });
+                }, false);
+
+
+                // ...
+                // SHOW MODAL
+                // ...
+                $(document).on('click', '#show-modal', function(event) {
+                    event.preventDefault();
+
+                    var modalTarget = $(event.target).attr('data-target');
+                    var challenge = $(this).attr('data-challenge');
+                    var data = {
+                        challenge: challenge,
+                        email: userData.email,
+                        msisdn: userData.msisdn,
+                    };
+
+                    $(document.body).append(modalElem(data));
+                    $(document).find(modalTarget).modal('show');
+                });
+
+
+                // ...
+                // SHOW CHANGE PASSWORD MODAL
+                // ...
+                $(document).on('click', '#show-change-password-modal', function(event) {
+                    event.preventDefault();
+                    var modalTarget = $(event.target).attr('data-target');
+
+                    $(document.body).append(changePasswordModal);
+                    $(document).find(modalTarget).modal('show');
+                });
+
+
+                // ...
+                // SHOW CHANGE USERNAME MODAL
+                // ...
+                $(document).on('click', '#show-change-username-modal', function(event) {
+                    event.preventDefault();
+                    var modalTarget = $(event.target).attr('data-target');
+
+                    $(document.body).append(changeUsernameModal);
+                    $(document).find(modalTarget).modal('show');
+                });
+
+                $(document).on('shown.bs.modal', '#changePasswordModal', function(event) {
+                    togglePasswordVisible();
+                });
+
+
+                // ...
+                // UPDATE USER
+                // ...
+                var updateUser = function(data) {
+                    $.ajax({
+                        method: 'PATCH',
+                        headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                        url: siteUrl + 'api/person/users/{{ user.uuid }}/',
+                        data: {...data},
+                        success: function(resp) {
+                            var username = data.username;
+                            var email = data.email;
+                            var password = data.password;
+
+                            if (email && email != 'undefined') {
+                                Cookies.remove('user_new_email');
+                                runGeneralNotify(changeEmailSuccessMessage, 'success');
+                            }
+
+                            if (username && username != 'undefined') {
+                                runGeneralNotify(changeUsernameSuccessMessage, 'success');
+                            }
+
+                            if (password && password != 'undefined') {
+                                window.location.href = "{% url 'person_login' %}";
+                            } else {
+                                window.location.reload();
+                            }
+                        },
+                        error: function(err) {
+                            if (err) {
+                                var responseJSON = err.responseJSON;
+                                $.each(responseJSON, function(index, value) {
+                                    if (value) errorMessage = Array.isArray(value) ? value.join(' ') : value;
+                                });
+                            }
+
+                            runGeneralNotify(errorMessage, 'warning');
+                        }
+                    });
+                }
+
+
+                // ...
+                // UPDATE ACCOUNT
+                // ...
+                var updateAccount = function(data) {
+                    $.ajax({
+                        method: 'PATCH',
+                        headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                        url: siteUrl + 'api/person/users/{{ user.uuid }}/account/',
+                        data: {...data},
+                        success: function(resp) {
+                            var msisdn = data.msisdn;
+
+                            if (msisdn && msisdn != 'undefined') {
+                                Cookies.remove('user_new_msisdn');
+                                runGeneralNotify(changeMSISDNSuccessMessage, 'success');
+                            }
+                        
+                            window.location.reload();
+                        },
+                        error: function(err) {
+                            if (err) {
+                                var responseJSON = err.responseJSON;
+                                $.each(responseJSON, function(index, value) {
+                                    if (value) errorMessage = Array.isArray(value) ? value.join(' ') : value;
+                                });
+                            }
+
+                            runGeneralNotify(errorMessage, 'warning');
+                        }
+                    });
+                }
+
+
+                // ...
+                // VALIDATE OTP CALLBACK
+                // ...
+                $(document).on('otpValid', function(event, data) {
+                    setCookies('validate', data);
+
+                    // Close OTP modal
+                    $(document).find('#verificationModal').modal('hide');
+
+                    var challenge = data.challenge;
+                    if (challenge === 'change_email' || challenge === 'change_msisdn' || challenge === 'change_username') {
+                        // Request change
+                        var oldMessage, newMessage, oldValue;
+
+                        // Open change modal
+                        if (challenge === 'change_email' || challenge === 'change_msisdn') {
+                            if (challenge === 'change_email') {
+                                oldValue = data.email;
+                                oldMessage = oldEmailMessage;
+                                newMessage = newEmailMessage;
+                            } else if (challenge === 'change_msisdn') {
+                                oldValue = data.msisdn;
+                                oldMessage = oldMsisdnMessage;
+                                newMessage = newMsisdnMessage;
+                            }
+
+                            $(document.body).append(updateAccountWithConfirmationModal);
+                            $(document).find('#updateAccountWithConfirmationModal').modal('show');
+
+                            if (oldValue) {
+                                $(document).find('#updateAccountWithConfirmationModal #old input').val(oldValue);
+                                $(document).find('#updateAccountWithConfirmationModal #old label').html(oldMessage);
+                            } else {
+                                $(document).find('#updateAccountWithConfirmationModal #old').remove();
+                            }
+                            
+                            $(document).find('#updateAccountWithConfirmationModal #new label').html(newMessage);
+                            $(document).find('#updateAccountWithConfirmationModal #challenge').val(challenge);
+
+                        } else if (challenge === 'change_username') {
+                            oldValue = userData.username;
+                            oldMessage = oldUsernameMessage;
+                            newMessage = newUsernameMessage;
+
+                            $(document.body).append(updateAccountModal);
+                            $(document).find('#updateAccountModal').modal('show');
+
+                            if (oldValue) {
+                                $(document).find('#updateAccountModal #old input').val(oldValue);
+                                $(document).find('#updateAccountModal #old label').html(oldMessage);
+                            } else {
+                                $(document).find('#updateAccountModal #old').remove();
+                            }
+
+                            $(document).find('#updateAccountModal #new label').html(newMessage);
+                            $(document).find('#updateAccountModal #challenge').val(challenge);
+                        }
+
+                    } else if (challenge === 'change_email_validation') {
+                        var newEmail = Cookies.get('user_new_email');
+                        if (newEmail && newEmail != 'undefined') updateUser({'email': newEmail});
+
+                    } else if (challenge === 'change_msisdn_validation') {
+                        var newMSISDN = Cookies.get('user_new_msisdn');
+                        if (newMSISDN && newMSISDN != 'undefined') updateAccount({'msisdn': newMSISDN});
+                    }
+                });
+
+
+                // ...
+                // SUBMIT UPDATE ACCOUNT / USER
+                // ...
+                $(document).on('submit', '#form-update-account', function(event) {
+                    $(event.target).addClass('was-validated');
+
+                    var challenge = $(event.target).find('#challenge').val();
+                    var newValue = $(event.target).find('#new-value').val();
+
+                    if (isPhoneNumberValid(newValue)) {
+                        // is phone number
+                        checkMSISDNAvailable(newValue);
+                        Cookies.set('user_new_msisdn', newValue, {expires: 1});
+                    } else if (isEmailValid(newValue)) {
+                        // is email
+                        checkEmailAvailable(newValue);
+                        Cookies.set('user_new_email', newValue, {expires: 1});
+                    } else {
+                        // whatever
+                        if (challenge === 'change_username') {
+                            updateUser({'username': newValue});
+                        }
+                    }
+
+                    event.preventDefault();
+                    event.stopPropagation();
+                });
+
+                $(document).on('checkEmailInvalid checkUsernameInvalid checkMSISDNInvalid', function(err) {
+                    $(document.body).find('#form-update-account').removeClass('was-validated');
+                    $(document.body).find('#form-update-account #new-value').addClass('is-invalid');
+                });
+
+
+                // ...
+                // SUBMIT CHANGE PASSWORD
+                // ...
+                $(document).on('submit', '#form-change-password', function(event) {
+                    $(event.target).addClass('was-validated');
+
+                    var password = $(event.target).find('#password').val();
+                    var new_password1 = $(event.target).find('#new-password1').val();
+                    var new_password2 = $(event.target).find('#new-password2').val();
+
+                    if (password && new_password1 && new_password2) {
+                        var data = {
+                            'password': password,
+                            'new_password1': new_password1,
+                            'new_password2': new_password2,
+                        }
+                        
+                        updateUser(data);
+                    }
+
+                    event.preventDefault();
+                    event.stopPropagation();
+                });
+
+
+                // ...
+                // SUBMIT CHANGE USERNAME
+                // ...
+                $(document).on('submit', '#form-change-username', function(event) {
+                    $(event.target).addClass('was-validated');
+
+                    var username = $(event.target).find('#username').val();
+                    if (username) updateUser({'username': username});
+
+                    event.preventDefault();
+                    event.stopPropagation();
+                });
+
+
+                // ... 
+                // EMAIL VALID & CAN UPDATE
+                // ...
+                $(document).on('checkEmailValid', function(event, data) {
+                    // Hide current modal
+                    $(document).find('#updateAccountWithConfirmationModal').modal('hide');
+
+                    data['challenge'] = 'change_email_validation';
+                    data['email'] = data.email;
+
+                    $(document.body).append(modalElem(data));
+                    $(document).find('#verificationModal').modal('show');
+
+                    createOTP(data);
+                });
+
+
+                // ... 
+                // MSISDN VALID & CAN UPDATE
+                // ...
+                $(document).on('checkMSISDNValid', function(event, data) {
+                    // Hide current modal
+                    $(document).find('#updateAccountWithConfirmationModal').modal('hide');
+
+                    data['challenge'] = 'change_msisdn_validation';
+                    data['msisdn'] = data.msisdn;
+
+                    $(document.body).append(modalElem(data));
+                    $(document).find('#verificationModal').modal('show');
+
+                    createOTP(data);
+                });
+
+
+                // ... 
+                // REMOVE MODAL CHANGE PASSWORD AND USERNAME ON HIDE
+                // ...
+                $(document).on('hidden.bs.modal', '#changePasswordModal, #changeUsernameModal', function(event) {
+                    $(event.target).remove();
+                });
+
+
+                // ...
+                // SELECT AVATAR
+                // ...
+                $(document).on('click', '#select-avatar', function(e) {
+                    e.preventDefault();
+                    $('#upload-avatar').trigger('click');
+                });
+
+
+                // ...
+                // UPLOAD AVATAR
+                // ...
+                $('#upload-avatar').fileupload({
+                    method: 'PATCH',
+                    url: siteUrl + 'api/person/users/{{ user.uuid }}/profile/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    dataType: 'json',
+                    sequentialUploads: true,
+                    progress: function (e, data) {
+                        var progress = parseInt(data.loaded / data.total * 100, 10);
+                        var strProgress = progress + "%";
+                        var uploadZoneEl = $(e.target).closest('#upload-zone');
+
+                        $(uploadZoneEl).find('.progress').removeClass('d-none');
+                        $(uploadZoneEl).find('.progress-bar').css({ 'width': strProgress });
+                        $(uploadZoneEl).find('.progress-bar').text(strProgress);
+                    },
+                    done: function (e, data) {
+                        var result = data.result;
+                        var uploadZoneEl = $(e.target).closest('#upload-zone');
+
+                        if (result) {
+                            var img = '<img src="' + result.picture + '" class="w-100 h-auto">';
+                            $(uploadZoneEl).find('figure').html(img);
+                        }
+
+                        $(uploadZoneEl).find('.progress').addClass('d-none');
+                    },
+                    stop: function (e) {
+                        var uploadZoneEl = $(e.target).closest('#upload-zone');
+                        $(uploadZoneEl).find('.progress').addClass('d-none');
+                    }
+                });
+
+
+                // ...
+                // UPLOAD AVATAR PARAMS
+                // ...
+                $('#upload-avatar').bind('fileuploadsubmit', function (e, data) {
+                    data.formData = {
+                        'abc': 'xyz',
+                    }
+                });
+
+
+                // ...
+                // UPLOAD FAIL
+                // ...
+                $('#upload-avatar').bind('fileuploadfail', function (error, data) {
+                    var errorMessage = '{% trans "Maksimal ukuran file 2.5 MB." noop %}';
+                    runGeneralNotify(errorMessage, 'danger');
+                });
+            }, false);
+        })();
+    </script>
+{% endblock %}

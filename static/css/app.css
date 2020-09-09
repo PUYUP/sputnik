@@ -1,0 +1,63 @@
+.auth-page {
+    padding-top: 125px;
+}
+
+/***
+ * UIkit override
+ */
+.uk-logo {
+    padding-bottom: 2px;
+    padding-left: 0 !important;
+}
+
+.uk-navbar-nav > li > a {
+    text-transform: none;
+}
+
+.uk-navbar-item:not(.uk-logo), 
+.uk-navbar-nav > li > a,
+.uk-navbar-toggle {
+    font-size: .975rem;
+}
+
+.uk-tab>*>a {
+    text-transform: none
+}
+
+
+/* Large devices (desktops, less than 1200px) */
+@media (max-width: 1199px) {
+    
+}
+
+/* Medium devices (tablets, less than 992px) */
+ @media (max-width: 991.98px) {
+
+}
+
+/* Small devices (landscape phones, less than 768px) */
+@media (max-width: 767px) {
+
+}
+
+/* Small devices (landscape phones, less than 768px) */
+@media (max-width: 640px) {
+    .uk-navbar-item, .uk-navbar-nav>li>a, 
+    .uk-navbar-toggle {
+        min-height: 65px;
+        padding: 0 12px;
+    }
+}
+
+/* Extra small devices (portrait phones, less than 576px) */
+@media (max-width: 575px) {
+    .uk-logo {
+        font-size: 1.1rem;
+    }
+
+    .uk-navbar-item:not(.uk-logo), .uk-navbar-nav > li > a,
+    .uk-navbar-toggle {
+        font-size: .9rem;
+        padding: 0 10px;
+    }
+}
