@@ -253,13 +253,13 @@ class EducationApiView(viewsets.ViewSet):
 
         if method == 'POST':
             try:
-                education_obj = Education.objects.get(uuid=uuid)
+                parent_instance = Education.objects.get(uuid=uuid)
             except ValidationError as e:
                 return Response({'detail': _(u" ".join(e.messages))}, status=response_status.HTTP_406_NOT_ACCEPTABLE)
             except ObjectDoesNotExist:
                 raise NotFound(_("Education not found"))
 
-            context['education'] = education_obj
+            context['parent_instance'] = parent_instance
             serializer = EducationAttachmentSerializer(data=request.data, context=context)
             if serializer.is_valid(raise_exception=True):
                 try:
@@ -270,16 +270,19 @@ class EducationApiView(viewsets.ViewSet):
             return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
         elif method == 'GET':
-            queryset = EducationAttachment.objects.annotate(
-                is_creator=Case(
-                    When(Q(education__user__uuid=user.uuid), then=Value(True)),
-                    default=Value(False),
-                    output_field=BooleanField()
-                )
-            ) \
-            .prefetch_related(Prefetch('education'), Prefetch('education__user')) \
-            .select_related('education', 'education__user') \
-            .filter(education__uuid=uuid)
+            try:
+                queryset = EducationAttachment.objects.annotate(
+                    is_creator=Case(
+                        When(Q(education__user__uuid=user.uuid), then=Value(True)),
+                        default=Value(False),
+                        output_field=BooleanField()
+                    )
+                ) \
+                .prefetch_related(Prefetch('education'), Prefetch('education__user')) \
+                .select_related('education', 'education__user') \
+                .filter(education__uuid=uuid)
+            except Exception as e:
+                raise NotAcceptable(detail=_("Something wrong %s" % type(e)))
 
             serializer = EducationAttachmentSerializer(queryset, many=True, context=context)
             return Response(serializer.data, status=response_status.HTTP_200_OK)

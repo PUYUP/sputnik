@@ -16,7 +16,7 @@ HOLD = 'hold'
 RESOLVED = 'resolved'
 DELETED = 'deleted'
 DRAFT = 'draft'
-TICKET_STATUS = (
+CONSULT_STATUS = (
     (OPEN, _("Open")),
     (CLOSED, _("Closed")),
     (HOLD, _("Hold")),
@@ -25,10 +25,10 @@ TICKET_STATUS = (
     (DRAFT, _("Draft")),
 )
 
-TICKET = 'ticket'
+CONSULT = 'consult'
 REPLY = 'reply'
 CLASSIFY_CHOICES = (
-    (TICKET, _("Ticket")),
+    (CONSULT, _("Consult")),
     (REPLY, _("Reply")),
 )
 

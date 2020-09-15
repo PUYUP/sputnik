@@ -97,7 +97,7 @@ class AbstractSegment(models.Model):
                              validators=[IDENTIFIER_VALIDATOR, non_python_keyword])
     open_hour = models.TimeField()
     close_hour = models.TimeField()
-    max_opened = models.IntegerField(help_text=_("How many Ticket allowed with status open"))
+    max_opened = models.IntegerField(help_text=_("How many Consult allowed with status open"))
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -109,12 +109,12 @@ class AbstractSegment(models.Model):
 
     @property
     def is_open(self) -> bool:
-        # check segment allow new ticket or not by compare ':max_openend'
-        # with tickets has opened status
-        ticket_open_count = self.assigns.prefetch_related(Prefetch('ticket')) \
-            .select_related('ticket') \
-            .filter(ticket__status=OPEN).count()
-        return self.max_opened > ticket_open_count
+        # check segment allow new consult or not by compare ':max_openend'
+        # with consults has opened status
+        consult_open_count = self.assigns.prefetch_related(Prefetch('consult')) \
+            .select_related('consult') \
+            .filter(consult__status=OPEN).count()
+        return self.max_opened > consult_open_count
 
     def save(self, *args, **kwargs):
         self.user = self.schedule.user

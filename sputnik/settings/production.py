@@ -7,13 +7,20 @@ import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 
 DEBUG = False
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', 'marketion.herokuapp.com']
+ALLOWED_HOSTS = [
+    'localhost', 
+    '127.0.0.1', 
+    '[::1]', 
+    'openpeo.herokuapp.com',
+    'api.openpeo.com',
+]
 
 
 # SENTRY
 sentry_sdk.init(
-    dsn="https://08b6a2d0e4f947d7a966a7921ffa76dc@o400235.ingest.sentry.io/5282976",
+    dsn="https://fc8ad650d89f42a0be005a19b401449a@o400235.ingest.sentry.io/5419903",
     integrations=[DjangoIntegration()],
+    traces_sample_rate=1.0,
 
     # If you wish to associate users to errors (assuming you are using
     # django.contrib.auth) you may enable sending PII data.
@@ -25,8 +32,7 @@ sentry_sdk.init(
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/2.2/ref/settings/
 SESSION_COOKIE_SECURE = True
-SESSION_COOKIE_SAMESITE = None
-SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_HTTPONLY = False
 
 SECURE_REFERRER_POLICY = 'same-origin'
 SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -41,44 +47,64 @@ X_FRAME_OPTIONS = 'DENY'
 # Django csrf
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/2.2/ref/csrf/
+CSRF_COOKIE_DOMAIN = '.openpeo.com'
+CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
 CSRF_COOKIE_SECURE = True
-# CSRF_TRUSTED_ORIGINS = [
-#     'opsional001.firebaseapp.com'
-# ]
+CSRF_USE_SESSIONS = False
+CSRF_COOKIE_HTTPONLY = False
+CSRF_TRUSTED_ORIGINS = [
+    'openpeo-dev.firebaseapp.com',
+    '.openpeo.com'
+]
 
 
 # Django CORS
 # ------------------------------------------------------------------------------
 # https://pypi.org/project/django-cors-headers/
 CORS_ALLOW_CREDENTIALS = True
-# CORS_ORIGIN_WHITELIST = [
-#     'https://opsional001.firebaseapp.com'
-# ]
+CORS_ALLOWED_ORIGINS = [
+    'https://openpeo-dev.firebaseapp.com',
+    'https://openpeo.com'
+]
 
 
 # Static files (CSS, JavaScript, Images)
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(PROJECT_PATH, 'static/')
+STATIC_ROOT = os.path.join(PROJECT_PATH, 'static')
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(PROJECT_PATH, 'media')
 
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
+"""
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'd4qs9i1jc7m49',
-        'USER': 'qveldyqqkiawhe',
-        'PASSWORD': 'da8daaf52fcdff7ccc813c3b593881fd4bc9220238a78cba244135604c6586f7',
-        'HOST': 'ec2-50-17-90-177.compute-1.amazonaws.com',
+        'NAME': 'd2ma6sopic7bhj',
+        'USER': 'gvmwasekarxsqr',
+        'PASSWORD': '9620ac1a6ecf2ac4bc0ee2e5ee01ee74a2845e699779213bd87d9c616cc67171',
+        'HOST': 'ec2-52-22-216-69.compute-1.amazonaws.com',
         'PORT': '5432'
     }
 }
-
-
-# REDIS
-REDIS_URL = os.environ.get('REDIS_URL', '')
+"""
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'openpeo_db',
+        'USER': 'openpeo_db_user',
+        'PASSWORD': 'K65&&hyrt#@!hgrtr',
+        'HOST': '127.0.0.1',   # Or an IP Address that your DB is hosted on
+        'PORT': '',
+        'OPTIONS': {
+            'sql_mode': 'STRICT_TRANS_TABLES',
+        }
+    }
+}
 
 
 # SENDGRID
@@ -88,3 +114,18 @@ EMAIL_HOST_PASSWORD = 'SG.CP7_4rZcSDWvdUNvpENX8w.RHCgCoPc53OGhXmO7XC3-dk85kOIfUa
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
+
+
+# CHANNELS
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
+
+
+# CACHING SERVER
+CACHES['default']['LOCATION'] = REDIS_URL

@@ -5,7 +5,7 @@ from .master import *
 from .base import *
 from .eav import *
 from .schedule import *
-from .ticket import *
+from .consult import *
 
 __all__ = []
 
@@ -73,12 +73,12 @@ if not is_model_registered('helpdesk', 'Priority'):
 
 
 # 8
-if not is_model_registered('helpdesk', 'Ticket'):
-    class Ticket(AbstractTicket):
-        class Meta(AbstractTicket.Meta):
-            db_table = 'helpdesk_ticket'
+if not is_model_registered('helpdesk', 'Consult'):
+    class Consult(AbstractConsult):
+        class Meta(AbstractConsult.Meta):
+            db_table = 'helpdesk_consult'
 
-    __all__.append('Ticket')
+    __all__.append('Consult')
 
 
 # 9

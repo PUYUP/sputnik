@@ -11,6 +11,7 @@ from utils.generals import is_model_registered
 
 __all__ = list()
 
+
 # https://docs.djangoproject.com/en/3.1/topics/auth/customizing/#auth-custom-user
 if not is_model_registered('person', 'User'):
     class User(User):

@@ -2,7 +2,6 @@ import os
 
 from django.db import transaction
 from django.db.models import Q, Prefetch
-from django.template.defaultfilters import slugify
 from django.utils.translation import ugettext_lazy as _
 
 from rest_framework import serializers
@@ -11,31 +10,10 @@ from rest_framework.exceptions import NotAcceptable
 from utils.generals import get_model
 from apps.person.utils.auth import CurrentUserDefault
 from apps.person.utils.constants import DRAFT
+from apps.person.api.utils import handle_upload_attachment
 
 Education = get_model('person', 'Education')
 EducationAttachment = get_model('person', 'EducationAttachment')
-
-
-def handle_upload_attachment(instance, file):
-    if instance and file:
-        name, ext = os.path.splitext(file.name)
-
-        fsize = file.size / 1000
-        if fsize > 5000:
-            raise serializers.ValidationError({'detail': _("Ukuran file maksimal 5 MB")})
-    
-        if ext != '.jpeg' and ext != '.jpg' and ext != '.png' and ext != '.pdf':
-            raise serializers.ValidationError({'detail': _("Jenis file tidak diperbolehkan")})
-
-        education = getattr(instance, 'education')
-        username = education.user.username
-        school = education.school
-        filename = '{username}_{school}'.format(username=username, school=school)
-        filename_slug = slugify(filename)
-
-        instance.attach_type = ext
-        instance.attach_file.save('%s%s' % (filename_slug, ext), file, save=False)
-        instance.save(update_fields=['attach_file', 'attach_type'])
 
 
 class EducationListSerializer(serializers.ListSerializer):
@@ -77,8 +55,8 @@ class EducationAttachmentSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
-        education = self.context['education']
+        parent_instance = self.context['parent_instance']
         attach_file = validated_data.pop('attach_file')
-        obj = EducationAttachment.objects.create(education_id=education.id, **validated_data)
-        handle_upload_attachment(obj, attach_file)
+        obj = EducationAttachment.objects.create(education_id=parent_instance.id, **validated_data)
+        handle_upload_attachment(obj, parent_instance._meta.model_name, attach_file)
         return obj

@@ -32,6 +32,7 @@ PROJECT_APPS = [
     'crispy_forms',
     'django_celery_results',
     'apps.person.apps.PersonConfig',
+    'apps.resume.apps.ResumeConfig',
     'apps.helpdesk.apps.HelpdeskConfig'
 ]
 INSTALLED_APPS = INSTALLED_APPS + PROJECT_APPS
@@ -131,3 +132,9 @@ REST_FRAMEWORK = {
 # Email Configuration
 # https://docs.djangoproject.com/en/3.0/topics/email/
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+
+# REDIS
+REDIS_HOST = '127.0.0.1'
+REDIS_PORT = '6379'
+REDIS_URL = 'redis://' + REDIS_HOST + ':' + REDIS_PORT + '/0'

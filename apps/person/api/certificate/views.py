@@ -1,6 +1,6 @@
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ValidationError, ObjectDoesNotExist, FieldError
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.db.models import (
     Prefetch, Case, When, Q, Value, BooleanField, CharField, Count
 )
@@ -99,7 +99,8 @@ class CertificateApiView(viewsets.ViewSet):
             return queryset.prefetch_related(Prefetch('user'), Prefetch('certificate_attachments')) \
                 .select_related('user') \
                 .filter(user__uuid=user_uuid) \
-                .exclude(~Q(user__uuid=user.uuid) & Q(status=DRAFT))
+                .exclude(~Q(user__uuid=user.uuid) & Q(status=DRAFT)) \
+                .order_by('sort_order')
         except FieldError as e:
             raise NotAcceptable(detail=str(e))
 
@@ -177,6 +178,56 @@ class CertificateApiView(viewsets.ViewSet):
             status=response_status.HTTP_204_NO_CONTENT)
 
     """***********
+    BULK UPDATES
+    ***********"""
+    @method_decorator(never_cache)
+    @transaction.atomic
+    @action(methods=['patch'], detail=False,
+            permission_classes=[IsAuthenticated],
+            url_path='bulk-updates', url_name='view_bulk_updates')
+    def view_bulk_updates(self, request, uuid=None):
+        """
+        Params:
+            [
+                {"uuid": "adadafa"},
+                {"uuid": "adadafa"}
+            ]
+        """
+        context = {'request': request}
+        method = request.method
+        user = request.user
+        
+        if not request.data:
+            raise NotAcceptable()
+
+        if method == 'PATCH':
+            update_objs = list()
+
+            for i, v in enumerate(request.data):
+                uuid = v.get('uuid')
+ 
+                try:
+                    obj = Certificate.objects.get(user_id=user.id, uuid=uuid)
+                    setattr(obj, 'sort_order', i + 1) # auto set with sort index
+
+                    update_objs.append(obj)
+                except (ValidationError, ObjectDoesNotExist) as e:
+                    pass
+
+            if not update_objs:
+                raise NotAcceptable()
+
+            if update_objs:
+                try:
+                    Certificate.objects.bulk_update(update_objs, ['sort_order'])
+                except IntegrityError:
+                    return Response({'detail': _(u"Fatal error")},
+                                    status=response_status.HTTP_406_NOT_ACCEPTABLE)
+
+                return Response({'detail': _(u"Update success")},
+                                status=response_status.HTTP_200_OK)
+
+    """***********
     ATTACHMENT
     ***********"""
     # LIST, CREATE
@@ -200,13 +251,13 @@ class CertificateApiView(viewsets.ViewSet):
 
         if method == 'POST':
             try:
-                certificate_obj = Certificate.objects.get(uuid=uuid)
+                parent_instance = Certificate.objects.get(uuid=uuid)
             except ValidationError as e:
                 return Response({'detail': _(u" ".join(e.messages))}, status=response_status.HTTP_406_NOT_ACCEPTABLE)
             except ObjectDoesNotExist:
                 raise NotFound(_("Certificate not found"))
 
-            context['certificate'] = certificate_obj
+            context['parent_instance'] = parent_instance
             serializer = CertificateAttachmentSerializer(data=request.data, context=context)
             if serializer.is_valid(raise_exception=True):
                 try:
@@ -217,16 +268,19 @@ class CertificateApiView(viewsets.ViewSet):
             return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
         elif method == 'GET':
-            queryset = CertificateAttachment.objects.annotate(
-                is_creator=Case(
-                    When(Q(certificate__user__uuid=user.uuid), then=Value(True)),
-                    default=Value(False),
-                    output_field=BooleanField()
-                )
-            ) \
-            .prefetch_related(Prefetch('certificate'), Prefetch('certificate__user')) \
-            .select_related('certificate', 'certificate__user') \
-            .filter(certificate__uuid=uuid)
+            try:
+                queryset = CertificateAttachment.objects.annotate(
+                    is_creator=Case(
+                        When(Q(certificate__user__uuid=user.uuid), then=Value(True)),
+                        default=Value(False),
+                        output_field=BooleanField()
+                    )
+                ) \
+                .prefetch_related(Prefetch('certificate'), Prefetch('certificate__user')) \
+                .select_related('certificate', 'certificate__user') \
+                .filter(certificate__uuid=uuid)
+            except Exception as e:
+                raise NotAcceptable(detail=_("Something wrong %s" % type(e)))
 
             serializer = CertificateAttachmentSerializer(queryset, many=True, context=context)
             return Response(serializer.data, status=response_status.HTTP_200_OK)
