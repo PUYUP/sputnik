@@ -46,13 +46,13 @@ class UserExtend(UserAdmin):
         (None, {'fields': ('username', 'password', 'email',)}),
         (_(u"Personal info"), {'fields': ('first_name', 'last_name',)}),
         (_(u"Permissions"), {
-            'fields': ('role', 'is_active', 'is_staff', 'is_superuser',),
+            'fields': ('roles', 'is_active', 'is_staff', 'is_superuser',),
         }),
         (_(u"Important dates"), {'fields': ('last_login', 'date_joined')}),
     )
     add_fieldsets = (
         (None, {
-            'fields': ('username', 'email', 'password1', 'password2', 'role',)
+            'fields': ('username', 'email', 'password1', 'password2', 'roles',)
         }),
     )
 

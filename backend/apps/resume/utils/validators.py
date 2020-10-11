@@ -12,20 +12,28 @@ class CleanValidateMixin(serializers.ModelSerializer):
 
 
 def month_validator(value):
-    try:
-        int(value)
-    except ValueError:
-        raise ValidationError(_("Only accept number"))
+    if value:
+        try:
+            int(value)
+        except ValueError:
+            raise ValidationError(_("Only accept number"))
 
-    if len(value) < 1:
-        raise ValidationError(_("Month is 2 digit"))
+        if not isinstance(value, str):
+            value = str(value)
+
+        if len(value) < 1:
+            raise ValidationError(_("Month is 2 digit"))
 
 
 def year_validator(value):
-    try:
-        int(value)
-    except ValueError:
-        raise ValidationError(_("Only accept number"))
+    if value:
+        try:
+            int(value)
+        except ValueError:
+            raise ValidationError(_("Only accept number"))
 
-    if len(value) < 4:
-        raise ValidationError(_("Year is 4 digit"))
+        if not isinstance(value, str):
+            value = str(value)
+
+        if len(value) < 4:
+            raise ValidationError(_("Year is 4 digit"))

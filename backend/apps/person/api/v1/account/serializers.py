@@ -1,11 +1,14 @@
+from pprint import pp
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Prefetch
+from django.db.models.expressions import Value
 from django.urls import reverse
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ObjectDoesNotExist
 
 from rest_framework import serializers
+from firebase_admin.auth import get_user_by_phone_number
 
 from utils.generals import get_model
 from apps.person.utils.constants import CHANGE_MSISDN
@@ -26,12 +29,11 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class AccountListSerializer(serializers.ListSerializer):
-    def to_representation(self, data):
-        request = self.context.get('request')
-        if data.exists():
-            data = data.prefetch_related(Prefetch('user')) \
+    def to_representation(self, value):
+        if value.exists():
+            value = value.prefetch_related(Prefetch('user')) \
                 .select_related('user')
-        return super().to_representation(data)
+        return super().to_representation(value)
 
 
 # User account serializer
@@ -63,8 +65,10 @@ class AccountSerializer(serializers.ModelSerializer):
         # data available only on PATCH and POST
         data = kwargs.get('data', None)
         if data:
-            # get token
+            # get data
             self.token = data.get('token', None)
+            self.provider = data.get('provider', None)
+            self.provider_value = data.get('provider_value', None)
 
             if settings.STRICT_MSISDN_DUPLICATE:
                 self.fields['msisdn'].validators.extend([MSISDNDuplicateValidator()])
@@ -73,12 +77,27 @@ class AccountSerializer(serializers.ModelSerializer):
         # check msisdn verified
         if settings.STRICT_MSISDN_VERIFIED:
             if self.instance:
-                with transaction.atomic():
+                if self.provider == 'firebase':
+                    """
+                    Passcode provided by Firebase JavaScript SDK on the frontend
+                    After passcode verified, we check the msisdn exists in Firebase with Python
+                    """
+                    formated_value = value.replace('0', '+62', 1);
+
                     try:
-                        self.verifycode_obj = VerifyCode.objects.select_for_update() \
-                            .get_verified_unused(msisdn=value, challenge=CHANGE_MSISDN, token=self.token)
-                    except ObjectDoesNotExist:
-                        raise serializers.ValidationError(_(u"Kode verifikasi pembaruan msisdn salah"))
+                       firebase_user = get_user_by_phone_number(formated_value)
+                       firebase_msisdn = firebase_user._data.get('phoneNumber')
+                       if firebase_msisdn != self.provider_value:
+                           raise serializers.ValidationError(_(u"MSISDN tidak terdaftar"))
+                    except:
+                        raise serializers.ValidationError(_(u"Kode verifikasi pembaruan MSISDN salah"))
+                else:
+                    with transaction.atomic():
+                        try:
+                            self.verifycode_obj = VerifyCode.objects.select_for_update() \
+                                .get_verified_unused(msisdn=value, challenge=CHANGE_MSISDN, token=self.token)
+                        except ObjectDoesNotExist:
+                            raise serializers.ValidationError(_(u"Kode verifikasi pembaruan MSISDN salah"))
         return value
 
     def get_url(self, obj):
@@ -89,6 +108,10 @@ class AccountSerializer(serializers.ModelSerializer):
 
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
+
+        # remove custom field here, we don't need again
+        data.pop('provider', None)
+        data.pop('provider_value', None)
 
         # one field each update request
         if len(data) > 1:
@@ -103,10 +126,10 @@ class AccountSerializer(serializers.ModelSerializer):
             })
         return data
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
+    def to_representation(self, value):
+        data = super().to_representation(value)
 
-        data['username'] = instance.user.username
+        data['username'] = value.user.username
         return data
 
     @transaction.atomic

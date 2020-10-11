@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import Permission
 
 from utils.validators import IDENTIFIER_VALIDATOR, non_python_keyword
-from apps.person.utils.constants import ROLE_IDENTIFIERS, REGISTERED
+from apps.person.utils.constants import ROLES_ALLOWED, ROLE_IDENTIFIERS, REGISTERED
 
 try:
     _REGISTERED = REGISTERED
@@ -45,8 +45,9 @@ class AbstractRole(models.Model):
     def __str__(self):
         return self.identifier
 
-    def clean(self):
-        if self.identifier not in dict(ROLE_IDENTIFIERS):
+    def clean(self, *args, **kwargs):
+        from_restful = kwargs.get('from_restful')
+        if (self.identifier not in dict(ROLE_IDENTIFIERS)) or (from_restful and self.identifier not in dict(ROLES_ALLOWED)):
             raise ValidationError(
                 {'identifier': _(u"Role %s not available." % (self.identifier))}
             )

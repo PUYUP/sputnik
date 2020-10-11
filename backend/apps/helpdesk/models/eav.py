@@ -5,13 +5,15 @@ from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import ValidationError
+from django.template.defaultfilters import cut
 from django.utils.translation import ugettext_lazy as _
 
 from utils.generals import get_model
+from utils.constants import MONTH_CHOICES
 from utils.validators import non_python_keyword, IDENTIFIER_VALIDATOR
 from apps.helpdesk.utils.constants import (
     VARCHAR, ATTRIBUTE_TYPE_CHOICES, ATTRIBUTE_CHOICES, BOOLEAN,
-    BYHOUR, BYMINUTE, BYSECOND, WKST_CHOICES, MONTH_CHOICES
+    BYHOUR, BYMINUTE, BYSECOND, WKST_CHOICES
 )
 
 _limit_content_type = models.Q(app_label='helpdesk')
@@ -58,24 +60,58 @@ class AbstractAttribute(models.Model):
         if self.type == BOOLEAN and self.required:
             raise ValidationError({'type': _("Boolean attribute should not be required")})
 
-    def _save_value(self, value_obj, value):
-        if value is None or value == '':
+    def _save_value(self, value_obj, current_value, update_value, deleted=False, created=True):
+        # if current_value set to None or empty, delete object
+        if deleted and not created:
             value_obj.delete()
             return
-        if value != value_obj.value:
-            value_obj.value = value
-            value_obj.save()
+
+        """
+        if not deleted:
+            field = 'value_%s' % self.type
+            if current_value != update_value:
+                if update_value and not created:
+                    current_value = update_value
+
+                setattr(value_obj, field, current_value)
+
+                if update_value and not created:
+                    value_obj.save(update_fields=[field])
+                else:
+                    value_obj.save()
+        """
 
     # set attribute value to content_object (entity object, eg: Schedule)
     # :content_object must a single object
-    def save_value(self, content_object, value):   # noqa: C901 too complex
+    def save_value(self, content_object, current_value, update_value=None, deleted=False):   # noqa: C901 too complex
         AttributeValue = get_model('helpdesk', 'AttributeValue')
-        try:
-            value_obj = content_object.attribute_values.get(attribute=self)
-        except AttributeValue.DoesNotExist:
-            value_obj = AttributeValue.objects.create(content_object=content_object, attribute=self)
 
-        self._save_value(value_obj, value)
+        created = None
+        model_name = content_object._meta.model_name
+        app_label = content_object._meta.app_label
+        ct = ContentType.objects.get(app_label=app_label, model=model_name)
+
+        field = 'value_%s' % self.type
+        field_value = {field: current_value}
+
+        """
+        try:
+            value_obj = AttributeValue.objects \
+                .get(attribute=self, value_object_id=content_object.id, value_content_type=ct, **field_value)
+            created = False
+        except AttributeValue.DoesNotExist:
+            value_obj = AttributeValue(attribute=self, value_content_object=content_object, **field_value)
+            created = True
+        """
+
+        defaults = {field: update_value if update_value else current_value}
+
+        value_obj, created = AttributeValue.objects \
+            .update_or_create(attribute=self, value_object_id=content_object.id, value_content_type=ct,
+                           **field_value, defaults=defaults)
+
+        self._save_value(value_obj, current_value, update_value=update_value, deleted=deleted,
+                         created=created)
 
     def validate_value(self, value):
         validator = getattr(self, '_validate_%s' % self.type)
@@ -186,7 +222,11 @@ class AbstractAttributeValue(models.Model):
 
         # setnull unused field value
         self.setnull_unused_value(self.attribute.type)
+        
+        # validation
+        self.clean()
 
+        # saved!
         super().save(*args, **kwargs)
 
     def clean(self):
@@ -255,7 +295,7 @@ class AbstractAttributeValue(models.Model):
 
         if value not in dict(WKST_CHOICES) or not value.isupper():
             keys = list(dict(WKST_CHOICES).keys())
-            raise ValidationError({'byweekday': _("Not available. Use one of %s" % (', '.join(keys)))})
+            raise ValidationError({'byweekday': _("Value %s not available. Valid choices is %s" % (str(value), ', '.join(keys)))})
 
     def _rrule_bymonth(self, value):
         try:
@@ -265,7 +305,7 @@ class AbstractAttributeValue(models.Model):
 
         if value not in dict(MONTH_CHOICES):
             keys = list(dict(MONTH_CHOICES).keys())
-            raise ValidationError({'bymonth': _("Not available. Use one of %s" % (', '.join(str(v) for v in keys)))})
+            raise ValidationError({'bymonth': _("Value %s not available. Valid choices is %s" % (str(value), ', '.join(str(v) for v in keys)))})
 
     def _rrule_bysetpos(self, value):
         try:
@@ -359,9 +399,9 @@ class AbstractAttributeValue(models.Model):
             value = value.all()
         return value
 
-    def _set_value(self, new_value):
+    def _set_value(self, current_value):
         attr_name = 'value_%s' % self.attribute.type
-        setattr(self, attr_name, new_value)
+        setattr(self, attr_name, current_value)
         return
 
     field_value = property(_get_value, _set_value)

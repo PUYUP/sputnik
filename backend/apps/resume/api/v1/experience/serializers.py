@@ -10,13 +10,13 @@ Experience = get_model('resume', 'Experience')
 
 
 class ExperienceListSerializer(serializers.ListSerializer):
-    def to_representation(self, data):
+    def to_representation(self, value):
         request = self.context.get('request')
-        if data.exists():
-            data = data.prefetch_related(Prefetch('user')) \
+        if value.exists():
+            value = value.prefetch_related(Prefetch('user')) \
                 .select_related('user') \
                 .exclude(~Q(user__uuid=request.user.uuid) & Q(status=DRAFT))
-        return super().to_representation(data)
+        return super().to_representation(value)
 
 
 class ExperienceSerializer(serializers.ModelSerializer):
@@ -27,13 +27,22 @@ class ExperienceSerializer(serializers.ModelSerializer):
         model = Experience
         fields = '__all__'
 
-    def to_representation(self, instance):
-        request = self.context.get('request')
-        ret = super().to_representation(instance)
-        ret['is_creator'] = request.user.uuid == instance.user.uuid
-        ret['start_month_display'] = instance.get_start_month_display()
-        ret['employment_display'] = instance.get_employment_display()
+    def validate(self, attrs):
+        instance = self.Meta.model(**attrs)
+        instance.clean()
+        return attrs
 
-        if instance.end_month:
-            ret['end_month_display'] = instance.get_end_month_display()
+    def to_internal_value(self, data):
+        data = super().to_internal_value(data)
+        return data
+
+    def to_representation(self, value):
+        request = self.context.get('request')
+        ret = super().to_representation(value)
+        ret['is_creator'] = request.user.uuid == value.user.uuid
+        ret['start_month_display'] = value.get_start_month_display()
+        ret['employment_display'] = value.get_employment_display()
+
+        if value.end_month:
+            ret['end_month_display'] = value.get_end_month_display()
         return ret

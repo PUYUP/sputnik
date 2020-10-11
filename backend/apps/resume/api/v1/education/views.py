@@ -1,5 +1,5 @@
 from django.utils.translation import ugettext_lazy as _
-from django.core.exceptions import ValidationError, ObjectDoesNotExist, FieldError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db import transaction, IntegrityError
 from django.db.models import Prefetch, Q
 from django.utils.decorators import method_decorator
@@ -67,34 +67,37 @@ class EducationApiView(viewsets.ViewSet):
             return [permission() for permission in self.permission_classes]
 
     # Get a objects
-    def get_object(self, user_uuid=None, uuid=None, is_update=False):
-        user = self.request.user
-
+    def get_object(self, uuid=None, is_update=False):
         # start query
         queryset = Education.objects
 
-        # Single object
-        # uuid is :education uuid
-        if uuid:
-            try:
-                if is_update:
-                    return queryset.select_for_update().get(uuid=uuid)
-                return queryset.get(uuid=uuid)
-            except ValidationError as e:
-                return Response({'detail': _(u" ".join(e.messages))}, status=response_status.HTTP_406_NOT_ACCEPTABLE)
-            except ObjectDoesNotExist:
-                return None
+        try:
+            if is_update:
+                queryset = queryset.select_for_update().get(uuid=uuid)
+            else:
+                queryset = queryset.get(uuid=uuid)
+        except ValidationError as e:
+            raise NotAcceptable({'detail': repr(e)})
+        except ObjectDoesNotExist:
+            raise NotFound()
 
-        # All objects
+        return queryset
+
+    def get_objects(self, user_uuid=None):
+        user = self.request.user
+        queryset = Education.objects
+
         # If current user not creator show only PUBLISH status
         try:
-            return queryset.prefetch_related(Prefetch('user')) \
+            queryset = queryset.prefetch_related(Prefetch('user')) \
                 .select_related('user') \
                 .filter(user__uuid=user_uuid) \
                 .exclude(~Q(user__uuid=user.uuid) & Q(status=DRAFT)) \
                 .order_by('sort_order')
-        except FieldError as e:
-            raise NotAcceptable(detail=str(e))
+        except Exception as e:
+            raise NotAcceptable(detail=repr(e))
+
+        return queryset
 
     def list(self, request, format=None):
         params_missed = dict()
@@ -111,10 +114,7 @@ class EducationApiView(viewsets.ViewSet):
         if params_missed:
             raise NotAcceptable(detail=params_missed)
 
-        queryset = self.get_object(user_uuid=user_uuid)
-        if queryset is None:
-            raise NotFound()
-
+        queryset = self.get_objects(user_uuid=user_uuid)
         serializer = EducationSerializer(queryset, many=True, context=context)
         return Response(serializer.data, status=response_status.HTTP_200_OK)
 
@@ -138,8 +138,6 @@ class EducationApiView(viewsets.ViewSet):
 
         # single object
         queryset = self.get_object(uuid=uuid, is_update=True)
-        if queryset is None:
-            raise NotFound()
 
         # check permission
         self.check_object_permissions(request, queryset)
@@ -153,12 +151,8 @@ class EducationApiView(viewsets.ViewSet):
     @method_decorator(never_cache)
     @transaction.atomic
     def destroy(self, request, uuid=None, format=None):
-        context = {'request': request}
-
         # single object
         queryset = self.get_object(uuid=uuid)
-        if queryset is None:
-            raise NotFound()
 
         # check permission
         self.check_object_permissions(request, queryset)
@@ -185,7 +179,6 @@ class EducationApiView(viewsets.ViewSet):
                 {"uuid": "adadafa"}
             ]
         """
-        context = {'request': request}
         method = request.method
         user = request.user
         

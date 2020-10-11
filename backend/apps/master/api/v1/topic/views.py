@@ -1,4 +1,4 @@
-from django.db.models import Prefetch
+from django.db.models import Q, Prefetch
 from django.utils.translation import ugettext_lazy as _
 
 from rest_framework import status as response_status, viewsets
@@ -7,12 +7,12 @@ from rest_framework.response import Response
 from rest_framework.exceptions import NotAcceptable
 
 from utils.generals import get_model
-from .serializers import SkillSerializer
+from .serializers import TopicSerializer
 
-Skill = get_model('master', 'Skill')
+Topic = get_model('master', 'Topic')
 
 
-class SkillApiView(viewsets.ViewSet):
+class TopicApiView(viewsets.ViewSet):
     """
     GET
     ---------------------
@@ -22,7 +22,7 @@ class SkillApiView(viewsets.ViewSet):
         }
 
     Example:
-        api/master/skills/?s=PHP
+        api/master/topics/?s=PHP
     """
     lookup_field = 'uuid'
     permission_classes = (AllowAny,)
@@ -39,9 +39,8 @@ class SkillApiView(viewsets.ViewSet):
         if params_missed:
             raise NotAcceptable(detail=params_missed)
     
-        queryset = Skill.objects \
-            .prefetch_related(Prefetch('scope')) \
-            .select_related('scope') \
-            .filter(is_active=True, label__icontains=s)
-        serializer = SkillSerializer(queryset, many=True, context=context)
+        queryset = Topic.objects \
+            .prefetch_related(Prefetch('scopes')) \
+            .filter(Q(is_active=True), Q(label__icontains=s))
+        serializer = TopicSerializer(queryset, many=True, context=context)
         return Response(serializer.data, status=response_status.HTTP_200_OK)

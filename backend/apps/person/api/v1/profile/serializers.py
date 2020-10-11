@@ -57,9 +57,9 @@ class ProfileSerializer(serializers.ModelSerializer):
 
         return request.build_absolute_uri(url + 'profile/')
 
-    def to_representation(self, instance):
-        ret = super().to_representation(instance)
-        ret['gender_display'] = instance.get_gender_display()
+    def to_representation(self, value):
+        ret = super().to_representation(value)
+        ret['gender_display'] = value.get_gender_display()
         return ret
 
     def to_internal_value(self, data):

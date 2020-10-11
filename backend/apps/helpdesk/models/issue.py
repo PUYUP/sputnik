@@ -27,7 +27,7 @@ class AbstractIssue(models.Model):
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                              related_name='issues')
-    skill = models.ManyToManyField('master.Skill', related_name='issues',
+    topic = models.ManyToManyField('master.Topic', related_name='issues',
                                    limit_choices_to={'is_active': True})
 
     number = models.CharField(max_length=255, editable=False)

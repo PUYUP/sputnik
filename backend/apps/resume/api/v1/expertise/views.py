@@ -8,6 +8,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import status as response_status, viewsets
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import NotAcceptable, NotFound, ValidationError
 
 from utils.generals import get_model
@@ -34,7 +36,7 @@ class ExpertiseApiView(viewsets.ViewSet):
     ---------------------
     Params:
         {
-            "skill": "valid uuid4"
+            "topic": "valid uuid4"
         }
     """
     lookup_field = 'uuid'
@@ -56,8 +58,8 @@ class ExpertiseApiView(viewsets.ViewSet):
             raise NotAcceptable(detail=params_missed)
 
         queryset = Expertise.objects \
-            .prefetch_related(Prefetch('skill')) \
-            .select_related('skill') \
+            .prefetch_related(Prefetch('topic'), Prefetch('user')) \
+            .select_related('topic', 'user') \
             .filter(user__uuid=user_uuid)
         serializer = ExpertiseSerializer(queryset, many=True, context=context)
         return Response(serializer.data, status=response_status.HTTP_200_OK)
@@ -81,6 +83,31 @@ class ExpertiseApiView(viewsets.ViewSet):
 
     @method_decorator(never_cache)
     @transaction.atomic
+    def partial_update(self, request, uuid=None, format=None):
+        context = {'request': request}
+
+        # single object
+        try:
+            queryset = Expertise.objects.get(uuid=uuid)
+        except ValidationError as e:
+            return Response(
+                {'detail': _(u" ".join(e.messages))}, 
+                status=response_status.HTTP_406_NOT_ACCEPTABLE
+            )
+        except ObjectDoesNotExist:
+            raise NotFound()
+
+        # check permission
+        self.check_object_permissions(request, queryset)
+
+        serializer = ExpertiseSerializer(queryset, data=request.data, partial=True, context=context)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data, status=response_status.HTTP_200_OK)
+        return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
+
+    @method_decorator(never_cache)
+    @transaction.atomic
     def destroy(self, request, uuid=None, format=None):
         context = {'request': request}
 
@@ -98,3 +125,52 @@ class ExpertiseApiView(viewsets.ViewSet):
         return Response(
             {'detail': _("Delete success!")},
             status=response_status.HTTP_204_NO_CONTENT)
+
+    """***********
+    BULK UPDATES
+    ***********"""
+    @method_decorator(never_cache)
+    @transaction.atomic
+    @action(methods=['patch'], detail=False,
+            permission_classes=[IsAuthenticated],
+            url_path='bulk-updates', url_name='view_bulk_updates')
+    def view_bulk_updates(self, request, uuid=None):
+        """
+        Params:
+            [
+                {"uuid": "adadafa"},
+                {"uuid": "adadafa"}
+            ]
+        """
+        method = request.method
+        user = request.user
+        
+        if not request.data:
+            raise NotAcceptable()
+
+        if method == 'PATCH':
+            update_objs = list()
+
+            for i, v in enumerate(request.data):
+                uuid = v.get('uuid')
+ 
+                try:
+                    obj = Expertise.objects.get(user_id=user.id, uuid=uuid)
+                    setattr(obj, 'sort_order', i + 1) # auto set with sort index
+
+                    update_objs.append(obj)
+                except (ValidationError, ObjectDoesNotExist) as e:
+                    pass
+
+            if not update_objs:
+                raise NotAcceptable()
+
+            if update_objs:
+                try:
+                    Expertise.objects.bulk_update(update_objs, ['sort_order'])
+                except IntegrityError:
+                    return Response({'detail': _(u"Fatal error")},
+                                    status=response_status.HTTP_406_NOT_ACCEPTABLE)
+
+                return Response({'detail': _(u"Update success")},
+                                status=response_status.HTTP_200_OK)

@@ -6,11 +6,15 @@ from django.conf.urls.static import static
 from api import routers as api_routers
 from views import urls as base_urls
 from apps.person.views.v1 import urls as person_urls
+from apps.resume.views.v1 import urls as resume_urls
+from apps.helpdesk.views.v1 import urls as helpdesk_urls
 
 urlpatterns = [
     path('', include(base_urls)),
     path('api/', include(api_routers)),
     path('person/', include(person_urls)),
+    path('resume/', include(resume_urls)),
+    path('helpdesk/', include(helpdesk_urls)),
     path('admin/', admin.site.urls),
 ]
 

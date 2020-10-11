@@ -115,9 +115,6 @@ class AbstractVerifyCode(models.Model):
         verbose_name = _(u"Verify Code")
         verbose_name_plural = _(u"Verify Codes")
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def __str__(self):
         return self.passcode
 
@@ -197,8 +194,8 @@ class AbstractVerifyCode(models.Model):
 
         # generate VerifyCode
         token = pyotp.random_base32()
-        verifycode = pyotp.TOTP(token)
-        passcode = verifycode.at(self.valid_until_timestamp)
+        totp = pyotp.TOTP(token)
+        passcode = totp.at(self.valid_until_timestamp)
 
         # save to database
         self.passcode = passcode

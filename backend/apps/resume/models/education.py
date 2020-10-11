@@ -1,3 +1,4 @@
+from pprint import pp
 import uuid
 
 from django.conf import settings
@@ -42,3 +43,10 @@ class AbstractEducation(models.Model):
 
     def __str__(self):
         return self.user.username
+
+
+    def save(self, *args, **kwargs):
+        if self.user and not self.pk:
+            c = self.__class__.objects.filter(user_id=self.user.id).count()
+            self.sort_order = c + 1
+        super().save(*args, **kwargs)

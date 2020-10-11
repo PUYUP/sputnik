@@ -56,7 +56,9 @@ class UserApiView(viewsets.ViewSet):
         If :email NOT provide :msisdn required
 
         {
-            "role": "slug",
+            "roles": [
+                {"identifier": "student"}
+            ],
             "password": "string with special character",
             "username": "string",
             "email": "string email",
@@ -91,24 +93,28 @@ class UserApiView(viewsets.ViewSet):
             # action is not set return default permission_classes
             return [permission() for permission in self.permission_classes]
 
-    # Get a objects
+    # Get a object
     def get_object(self, uuid=None, is_update=False):
-        # Single object
-        if uuid:
-            try:
-                queryset = User.objects
-                if is_update:
-                    return queryset.select_for_update().get(uuid=uuid)
-                return queryset.prefetch_related(Prefetch('educations'), Prefetch('certificates'),
-                                                 Prefetch('experiences')) \
-                    .get(uuid=uuid)
-            except ObjectDoesNotExist:
-                raise NotFound()
+        queryset = User.objects
 
-        # All objects
-        return User.objects.prefetch_related(Prefetch('account'), Prefetch('profile')) \
+        try:
+            if is_update:
+                queryset = queryset.select_for_update().get(uuid=uuid)
+            else:
+                queryset = queryset.prefetch_related(Prefetch('educations'), Prefetch('certificates'),
+                                                     Prefetch('experiences')) \
+                    .get(uuid=uuid)
+        except ObjectDoesNotExist:
+            raise NotFound()
+
+        return queryset
+
+    # Many objects
+    def get_objects(self):
+        queryset = User.objects.prefetch_related(Prefetch('account'), Prefetch('profile')) \
             .select_related('account', 'profile') \
             .all()
+        return queryset
 
     # Return a response
     def get_response(self, serializer, serializer_parent=None):
@@ -127,10 +133,10 @@ class UserApiView(viewsets.ViewSet):
     # All Users
     def list(self, request, format=None):
         context = {'request': self.request}
-        queryset = self.get_object()
+        queryset = self.get_objects()
         queryset_paginator = _PAGINATOR.paginate_queryset(queryset, request)
         serializer = UserSerializer(queryset_paginator, many=True, context=context,
-                                    fields=('uuid', 'username', 'url', 'profile'))
+                                    fields=('uuid', 'username', 'url', 'profile',))
         return self.get_response(serializer)
 
     # Single User
@@ -142,7 +148,7 @@ class UserApiView(viewsets.ViewSet):
         fields = ('__all__')
         if str(request.user.uuid) != uuid:
             fields = ('uuid', 'username', 'url', 'profile', 'first_name',
-                      'educations', 'certificates', 'experiences', 'expertises')
+                      'educations', 'certificates', 'experiences', 'expertises',)
 
         serializer = UserSerializer(queryset, many=False, context=context, fields=fields)
         return Response(serializer.data, status=response_status.HTTP_200_OK)
@@ -363,7 +369,7 @@ class UserApiView(viewsets.ViewSet):
             serializer = ProfileSerializer(queryset, data=request.data,
                                            partial=True, context=context)
 
-            if serializer.is_valid():
+            if serializer.is_valid(raise_exception=True):
                 serializer.save()
                 return Response(serializer.data, status=response_status.HTTP_200_OK)
 
@@ -394,7 +400,7 @@ class UserApiView(viewsets.ViewSet):
             serializer = AccountSerializer(queryset, data=request.data,
                                            partial=True, context=context)
 
-            if serializer.is_valid():
+            if serializer.is_valid(raise_exception=True):
                 serializer.save()
                 return Response(serializer.data, status=response_status.HTTP_200_OK)
 

@@ -25,7 +25,7 @@ except NameError:
 class UserChangeFormExtend(UserChangeForm):
     """ Override user Edit form """
     email = forms.EmailField(max_length=254, help_text=_("Required. Inform a valid email address"))
-    role = forms.MultipleChoiceField(
+    roles = forms.MultipleChoiceField(
         choices=_ROLE_IDENTIFIERS,
         widget=forms.CheckboxSelectMultiple(),
         required=False,
@@ -34,7 +34,7 @@ class UserChangeFormExtend(UserChangeForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['role'].initial =  list(self.instance.roles.all().values_list('identifier', flat=True))
+        self.fields['roles'].initial =  list(self.instance.roles.all().values_list('identifier', flat=True))
 
     def clean_email(self):
         email = self.cleaned_data.get('email', None)
@@ -48,15 +48,15 @@ class UserChangeFormExtend(UserChangeForm):
         return email
 
     def clean_role(self):
-        role = self.cleaned_data.get('role', None)
-        return role
+        roles = self.cleaned_data.get('roles', None)
+        return roles
 
     def save(self, commit=True):
         user = super().save(commit=False)
         if commit:
             user.save()
         
-        roles = self.cleaned_data.get('role', None)
+        roles = self.cleaned_data.get('roles', None)
         if roles:
             update_roles(user=user, roles=roles)
         return user
@@ -65,7 +65,7 @@ class UserChangeFormExtend(UserChangeForm):
 class UserCreationFormExtend(UserCreationForm):
     """ Override user Add form """
     email = forms.EmailField(max_length=254, help_text=_("Required. Inform a valid email address"))
-    role = forms.MultipleChoiceField(
+    roles = forms.MultipleChoiceField(
         choices=_ROLE_IDENTIFIERS,
         widget=forms.CheckboxSelectMultiple(),
         required=False,
@@ -74,7 +74,7 @@ class UserCreationFormExtend(UserCreationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['role'].initial = _REGISTERED
+        self.fields['roles'].initial = _REGISTERED
 
     def clean_email(self):
         email = self.cleaned_data.get('email', None)
@@ -97,7 +97,7 @@ class UserCreationFormExtend(UserCreationForm):
             user.save()
 
          # APPEND ROLES
-        roles = self.cleaned_data.get('role', None)
+        roles = self.cleaned_data.get('roles', None)
         if roles:
             setattr(user, 'roles_value', roles)
         return user

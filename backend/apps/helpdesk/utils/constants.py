@@ -69,7 +69,7 @@ FREQ_CHOICES = (
     (rrule.SECONDLY, _(u"Secondly")),
 )
 
-
+setattr(rrule, 'MU', 'MU')
 WKST_CHOICES = (
     (str(rrule.MO), _(u"Monday")),
     (str(rrule.TU), _(u"Tuesday")),
@@ -78,23 +78,7 @@ WKST_CHOICES = (
     (str(rrule.FR), _(u"Friday")),
     (str(rrule.SA), _(u"Saturday")),
     (str(rrule.SU), _(u"Sunday")),
-)
-
-
-(JAN, FEB, MAR, APR, MAY, JUN, JUL, AUG, SEP, OCT, NOV, DEC) = range(1, 13)
-MONTH_CHOICES = (
-    (JAN, _(u"January")),
-    (FEB, _(u"February")),
-    (MAR, _(u"March")),
-    (APR, _(u"April")),
-    (MAY, _(u"May")),
-    (JUN, _(u"June")),
-    (JUL, _(u"July")),
-    (AUG, _(u"August")),
-    (SEP, _(u"September")),
-    (OCT, _(u"October")),
-    (NOV, _(u"November")),
-    (DEC, _(u"December")),
+    (str(rrule.MU), _(u"Multiday")),
 )
 
 

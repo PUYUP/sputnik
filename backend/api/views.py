@@ -11,7 +11,7 @@ class RootApiView(APIView):
     def get(self, request, format=None):
         return Response({
             'master': {
-                'skills': reverse('master:skill-list', request=request,
+                'topics': reverse('master:topic-list', request=request,
                                   format=format, current_app='master')
             },
             'person': {
@@ -38,8 +38,8 @@ class RootApiView(APIView):
             },
             'helpdesk': {
                 'consultant': {
-                    'schedules': reverse('helpdesk:schedule-list', request=request,
-                                         format=format, current_app='helpdesk'),
+                    'schedules': reverse('helpdesk_api:consultant:schedule-list', request=request,
+                                         format=format, current_app='helpdesk_api:consultant'),
                 }
             }
         })

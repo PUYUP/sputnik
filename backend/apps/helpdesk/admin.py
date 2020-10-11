@@ -4,6 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from utils.generals import get_model
 
 Schedule = get_model('helpdesk', 'Schedule')
+ScheduleExpertise = get_model('helpdesk', 'ScheduleExpertise')
 Attribute = get_model('helpdesk', 'Attribute')
 AttributeValue = get_model('helpdesk', 'AttributeValue')
 Segment = get_model('helpdesk', 'Segment')
@@ -23,9 +24,13 @@ class SegmentInline(admin.StackedInline):
     model = Segment
 
 
+class ScheduleExpertiseInline(admin.StackedInline):
+    model = ScheduleExpertise
+
+
 class ScheduleExtend(admin.ModelAdmin):
     model = Schedule
-    inlines = [SegmentInline,]
+    inlines = [ScheduleExpertiseInline, SegmentInline,]
 
 
 # Extend Schedule Attribute

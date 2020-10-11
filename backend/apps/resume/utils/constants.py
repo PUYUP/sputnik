@@ -25,41 +25,12 @@ AVERAGE = 'average'
 SKILLED = 'skilled'
 SPECIALIST = 'specialist'
 EXPERT = 'expert'
-SKILL_LEVELS = (
+EXPERTISE_LEVELS = (
     (BEGINNER, _(u"Beginner")),
     (AVERAGE, _(u"Average")),
     (SKILLED, _(u"Skilled")),
-    (SPECIALIST, _("uSpecialist")),
+    (SPECIALIST, _(u"Specialist")),
     (EXPERT, _(u"Expert")),
-)
-
-
-JAN = '1'
-FEB = '2'
-MAR = '3'
-APR = '4'
-MAY = '5'
-JUN = '6'
-JUL = '7'
-AUG = '8'
-SEP = '9'
-OCT = '10'
-NOV = '11'
-DEC = '12'
-
-MONTH_CHOICES = (
-    (JAN, _(u"January")),
-    (FEB, _(u"February")),
-    (MAR, _(u"March")),
-    (APR, _(u"April")),
-    (MAY, _(u"May")),
-    (JUN, _(u"June")),
-    (JUL, _(u"July")),
-    (AUG, _(u"August")),
-    (SEP, _(u"September")),
-    (OCT, _(u"October")),
-    (NOV, _(u"November")),
-    (DEC, _(u"December")),
 )
 
 

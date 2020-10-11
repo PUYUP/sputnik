@@ -1,4 +1,5 @@
 from .scope import *
+from .topic import *
 
 # PROJECT UTILS
 from utils.generals import is_model_registered
@@ -16,9 +17,9 @@ if not is_model_registered('resume', 'Scope'):
 
 
 # 2
-if not is_model_registered('resume', 'Skill'):
-    class Skill(AbstractSkill):
-        class Meta(AbstractSkill.Meta):
-            db_table = 'master_skill'
+if not is_model_registered('resume', 'Topic'):
+    class Topic(AbstractTopic):
+        class Meta(AbstractTopic.Meta):
+            db_table = 'master_topic'
 
-    __all__.append('Skill')
+    __all__.append('Topic')

@@ -1,6 +1,8 @@
 from datetime import timedelta
 from django.contrib.messages import constants as messages
 
+from firebase_admin import credentials, initialize_app
+
 from .base import *
 
 
@@ -19,11 +21,11 @@ APP_VERSION_SLUG = 'v%s' % (APP_VERSION)
 
 # REGISTRATION REQUIREMENTS
 STRICT_EMAIL = True
-STRICT_EMAIL_VERIFIED = True
+STRICT_EMAIL_VERIFIED = False
 STRICT_EMAIL_DUPLICATE = True
 
-STRICT_MSISDN = False
-STRICT_MSISDN_VERIFIED = False
+STRICT_MSISDN = True
+STRICT_MSISDN_VERIFIED = True
 STRICT_MSISDN_DUPLICATE = True
 
 LOGOUT_REDIRECT_URL = '/'
@@ -114,6 +116,10 @@ SIMPLE_JWT = {
 # ------------------------------------------------------------------------------
 # https://www.django-rest-framework.org/
 REST_FRAMEWORK = {
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+    ],
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
@@ -144,3 +150,9 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 REDIS_HOST = '127.0.0.1'
 REDIS_PORT = '6379'
 REDIS_URL = 'redis://' + REDIS_HOST + ':' + REDIS_PORT + '/0'
+
+
+# Firebase configuration
+service_file = '%s/%s' % (PROJECT_PATH, 'firebase-58c34c542620.json')
+cred = credentials.Certificate(service_file) 
+default_app = initialize_app(cred)

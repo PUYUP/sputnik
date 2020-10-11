@@ -1,4 +1,3 @@
-from django.db import models
 from utils.generals import is_model_registered
 
 from .eav import *
@@ -18,6 +17,15 @@ if not is_model_registered('helpdesk', 'Schedule'):
 
 
 # 2
+if not is_model_registered('helpdesk', 'ScheduleExpertise'):
+    class ScheduleExpertise(AbstractScheduleExpertise):
+        class Meta(AbstractScheduleExpertise.Meta):
+            db_table = 'helpdesk_schedule_expertise'
+
+    __all__.append('ScheduleExpertise')
+
+
+# 3
 if not is_model_registered('helpdesk', 'Attribute'):
     class Attribute(AbstractAttribute):
         class Meta(AbstractAttribute.Meta):
@@ -26,7 +34,7 @@ if not is_model_registered('helpdesk', 'Attribute'):
     __all__.append('Attribute')
 
 
-# 3
+# 4
 if not is_model_registered('helpdesk', 'AttributeValue'):
     class AttributeValue(AbstractAttributeValue):
         class Meta(AbstractAttributeValue.Meta):
@@ -35,7 +43,7 @@ if not is_model_registered('helpdesk', 'AttributeValue'):
     __all__.append('AttributeValue')
 
 
-# 4
+# 5
 if not is_model_registered('helpdesk', 'Segment'):
     class Segment(AbstractSegment):
         class Meta(AbstractSegment.Meta):
@@ -44,7 +52,7 @@ if not is_model_registered('helpdesk', 'Segment'):
     __all__.append('Segment')
 
 
-# 5
+# 6
 if not is_model_registered('helpdesk', 'SLA'):
     class SLA(AbstractSLA):
         class Meta(AbstractSLA.Meta):
@@ -53,7 +61,7 @@ if not is_model_registered('helpdesk', 'SLA'):
     __all__.append('SLA')
 
 
-# 6
+# 7
 if not is_model_registered('helpdesk', 'Priority'):
     class Priority(AbstractPriority):
         class Meta(AbstractPriority.Meta):
@@ -62,7 +70,7 @@ if not is_model_registered('helpdesk', 'Priority'):
     __all__.append('Priority')
 
 
-# 7
+# 8
 if not is_model_registered('helpdesk', 'Issue'):
     class Issue(AbstractIssue):
         class Meta(AbstractIssue.Meta):
@@ -71,7 +79,7 @@ if not is_model_registered('helpdesk', 'Issue'):
     __all__.append('Issue')
 
 
-# 8
+# 9
 if not is_model_registered('helpdesk', 'Respond'):
     class Respond(AbstractRespond):
         class Meta(AbstractRespond.Meta):
@@ -80,7 +88,7 @@ if not is_model_registered('helpdesk', 'Respond'):
     __all__.append('Respond')
 
 
-# 9
+# 10
 if not is_model_registered('helpdesk', 'RespondLog'):
     class RespondLog(AbstractRespondLog):
         class Meta(AbstractRespondLog.Meta):
@@ -89,7 +97,7 @@ if not is_model_registered('helpdesk', 'RespondLog'):
     __all__.append('RespondLog')
 
 
-# 10
+# 11
 if not is_model_registered('helpdesk', 'Entry'):
     class Entry(AbstractEntry):
         class Meta(AbstractEntry.Meta):
@@ -98,7 +106,7 @@ if not is_model_registered('helpdesk', 'Entry'):
     __all__.append('Entry')
 
 
-# 11
+# 12
 if not is_model_registered('helpdesk', 'Assign'):
     class Assign(AbstractAssign):
         class Meta(AbstractAssign.Meta):
@@ -107,7 +115,7 @@ if not is_model_registered('helpdesk', 'Assign'):
     __all__.append('Assign')
 
 
-# 12
+# 13
 if not is_model_registered('helpdesk', 'Assigned'):
     class Assigned(AbstractAssigned):
         class Meta(AbstractAssigned.Meta):
@@ -116,7 +124,7 @@ if not is_model_registered('helpdesk', 'Assigned'):
     __all__.append('Assigned')
 
 
-# 13
+# 14
 if not is_model_registered('helpdesk', 'Gift'):
     class Gift(AbstractGift):
         class Meta(AbstractGift.Meta):

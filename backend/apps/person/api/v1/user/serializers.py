@@ -1,8 +1,10 @@
+from pprint import pp
 from django.conf import settings
 from django.db import transaction, IntegrityError
 from django.contrib import messages
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
+from django.forms.models import model_to_dict
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import EmailValidator
@@ -33,6 +35,20 @@ from apps.resume.api.v1.expertise.serializers import ExpertiseSerializer
 User = get_model('person', 'User')
 Account = get_model('person', 'Account')
 VerifyCode = get_model('person', 'VerifyCode')
+Role = get_model('person', 'Role')
+
+
+class RoleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Role
+        fields = ('identifier',)
+
+    def validate(self, attrs):
+        instance = self.Meta.model(**attrs)
+        
+        # with this we can set custom attribute to model
+        instance.clean(from_restful=True)
+        return attrs
 
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
@@ -44,9 +60,16 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         # Don't pass the 'fields' arg up to the superclass
         fields = kwargs.pop('fields', None)
+        context = kwargs.get('context', dict())
+        request = context.get('request', None)
 
         # Instantiate the superclass normally
         super(DynamicFieldsModelSerializer, self).__init__(*args, **kwargs)
+
+        # Use this field on specific request
+        if request.method == 'PATCH':
+            # Only this field can us at user update
+            fields = ('username', 'password', 'first_name', 'email',)
 
         if fields is not None and fields != '__all__':
             # Drop any fields that are not specified in the `fields` argument.
@@ -74,14 +97,19 @@ class UserSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
                                    validators=[MSISDNNumberValidator()],
                                    min_length=8, max_length=14)
 
-    # set user role at register
-    role = serializers.CharField(required=True, write_only=True,
-                                 validators=[non_python_keyword, IDENTIFIER_VALIDATOR])
+    # for registration only
+    # set user roles at register
+    roles = RoleSerializer(many=True)
 
     # use if action need verify code
     # eg: register, change email, ect
-    challenge = serializers.CharField(required=True, write_only=True,
+    token = serializers.CharField(required=False, write_only=True)
+    challenge = serializers.CharField(required=False, write_only=True,
                                       validators=[non_python_keyword, IDENTIFIER_VALIDATOR])
+
+    # change password purposed
+    password1 = serializers.CharField(required=False, write_only=True)
+    password2 = serializers.CharField(required=False, write_only=True)
 
     class Meta:
         model = User
@@ -111,19 +139,21 @@ class UserSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
 
         # data
         data = kwargs.get('data', dict())
-        self.email = data.get('email', None)
+
         self.msisdn = data.get('msisdn', None)
-        self.role = data.get('role', None)
         self.challenge = data.get('challenge', None)
         self.token = data.get('token', None)
 
+        self.email = data.get('email', None)
+        self.roles = data.get('roles', None)
+
         # used for password change only
-        self.password = data.get('password', None)
-        self.new_password1 = data.get('new_password1', None)
-        self.new_password2 = data.get('new_password2', None)
+        self.password = data.get('password', None) # as old password
+        self.password1 = data.get('password1', None)
+        self.password2 = data.get('password2', None)
 
         # remove password validator if update
-        if self.instance and self.new_password1 and self.new_password2:
+        if self.instance and self.password1 and self.password2:
             pass
         else:
             if 'password' in self.fields:
@@ -148,18 +178,27 @@ class UserSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
 
+        # remove custom field here, we don't need again
+        data.pop('challenge', None)
+        data.pop('token', None)
+        data.pop('password1', None)
+        data.pop('password2', None)
+
         # set is_active to True
         # if False user can't loggedin
         data['is_active'] = True
         return data
 
-    def to_representation(self, instance):
-        ret = super().to_representation(instance)
+    def to_representation(self, value):
+        ret = super().to_representation(value)
+        ret['roles'] = value.roles.values_list('identifier', flat=True)
         return ret
 
-    def validate_role(self, value):
-        if value not in dict(ROLE_IDENTIFIERS) or value not in dict(ROLES_ALLOWED):
-            raise serializers.ValidationError(_(u"Role tidak berlaku"))
+    def validate_roles(self, value):
+        # make user only allow one role
+        if len(value) > 1:
+            raise serializers.ValidationError(_(u"Multiple roles not allowed"))
+        return value
 
     def validate_email(self, value):
         # check verified email
@@ -185,12 +224,7 @@ class UserSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
                     self.verifycode_obj = VerifyCode.objects.select_for_update() \
                         .get_verified_unused(msisdn=value, challenge=self.challenge, token=self.token)
                 except ObjectDoesNotExist:
-                    if self.instance:
-                        # update user
-                        raise serializers.ValidationError(_(u"Kode verifikasi pembaruan msisdn salah"))
-                    else:
-                        # create user
-                        raise serializers.ValidationError(_(u"MSISDN belum divalidasi"))
+                    raise serializers.ValidationError(_(u"MSISDN belum divalidasi"))
         return value
 
     """
@@ -215,14 +249,15 @@ class UserSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
             username = getattr(instance, 'username', None)
 
             # make sure new and old password filled
-            if not self.new_password1 or not self.new_password2:
+            if not self.password1 or not self.password2:
                 raise serializers.ValidationError(_(u"Kata sandi lama dan baru wajib"))
-
-            if self.new_password1 != self.new_password2:
+            
+            print(self.password2)
+            if self.password1 != self.password2:
                 raise serializers.ValidationError(_(u"Kata sandi lama dan baru tidak sama"))
 
             try:
-                validate_password(self.new_password2)
+                validate_password(self.password2)
             except ValidationError as e:
                 raise serializers.ValidationError(e.messages)
 
@@ -230,20 +265,12 @@ class UserSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
             passed = authenticate(username=username, password=self.password)
             if passed is None:
                 raise serializers.ValidationError(_(u"Kata sandi lama salah"))
-            return self.new_password2
+            return self.password2
         return value
 
     @transaction.atomic
     def create(self, validated_data):
-        try:
-            self.msisdn = validated_data.pop('msisdn')
-        except KeyError:
-            pass
-
-        try:
-            validated_data.pop('challenge')
-        except KeyError:
-            pass
+        self.roles = validated_data.pop('roles')
 
         try:
             user = User.objects.create_user(**validated_data)
@@ -264,10 +291,15 @@ class UserSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
                 except IntegrityError:
                     pass
 
-        # set role
-        if self.role:
-            roles = [self.role]
-            set_roles(user=user, roles=roles)
+        # set roles
+        if self.roles:
+            role_list = list()
+            for r in self.roles:
+                i = Role(user=user, **r)
+                role_list.append(i)
+
+            if role_list:
+                Role.objects.bulk_create(role_list, ignore_conflicts=False)
 
         # all done mark verifycode as used
         if self.verifycode_obj:

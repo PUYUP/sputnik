@@ -75,13 +75,13 @@ class VerifyCodeSerializer(VerifyCodeFieldsModelSerializer, serializers.ModelSer
             user = request.user
             return user.account.msisdn
 
-    def to_representation(self, instance):
+    def to_representation(self, value):
         info = _("Terjadi kesalahan")
-        if instance.email:
-            info = _("Kode verifikasi dikirim ke email <strong>{email}</strong>".format(email=instance.email))
+        if value.email:
+            info = _("Kode verifikasi dikirim ke email <strong>{email}</strong>".format(email=value.email))
 
-        if instance.msisdn:
-            info = _("Kode verifikasi dikirim ke nomor <strong>{msisdn}</strong>".format(msisdn=instance.msisdn))
+        if value.msisdn:
+            info = _("Kode verifikasi dikirim ke nomor <strong>{msisdn}</strong>".format(msisdn=value.msisdn))
 
         # capture data from context params
         request = self.context.get('request', None)
@@ -138,7 +138,7 @@ class VerifyCodeSerializer(VerifyCodeFieldsModelSerializer, serializers.ModelSer
         return data
 
     def validate(self, attrs):
-        instance = VerifyCode(**attrs)
+        instance = self.Meta.model(**attrs)
         instance.clean()
         return attrs
 

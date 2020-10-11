@@ -11,13 +11,13 @@ Education = get_model('resume', 'Education')
 
 
 class EducationListSerializer(serializers.ListSerializer):
-    def to_representation(self, data):
+    def to_representation(self, value):
         request = self.context.get('request')
-        if data.exists():
-            data = data.prefetch_related(Prefetch('user')) \
+        if value.exists():
+            value = value.prefetch_related(Prefetch('user')) \
                 .select_related('user') \
                 .exclude(~Q(user__uuid=request.user.uuid) & Q(status=DRAFT))
-        return super().to_representation(data)
+        return super().to_representation(value)
 
 
 class EducationSerializer(CleanValidateMixin, serializers.ModelSerializer):
@@ -28,8 +28,8 @@ class EducationSerializer(CleanValidateMixin, serializers.ModelSerializer):
         model = Education
         fields = '__all__'
 
-    def to_representation(self, instance):
+    def to_representation(self, value):
         request = self.context.get('request')
-        ret = super().to_representation(instance)
-        ret['is_creator'] = request.user.uuid == instance.user.uuid
+        ret = super().to_representation(value)
+        ret['is_creator'] = request.user.uuid == value.user.uuid
         return ret

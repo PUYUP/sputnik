@@ -14,19 +14,18 @@ from apps.helpdesk.utils.constants import (
     CANAL_CHOICES, TEXT, OPEN, WKST_CHOICES, FREQ_CHOICES
 )
 
+MAX_ALLOWED_SCHEDULE = 6
+
 
 class AbstractSchedule(models.Model):
-    # create schedule based to :Expertise
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     create_date = models.DateTimeField(auto_now_add=True, null=True)
     update_date = models.DateTimeField(auto_now=True, null=True)
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                             related_name='schedules')
-    expertise = models.ManyToManyField('resume.Expertise', related_name='schedules')
-
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='schedules')
     label = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
+    sort_order = models.IntegerField(default=1, null=True)
 
     # RRULE
     # https://tools.ietf.org/html/rfc5545
@@ -70,7 +69,7 @@ class AbstractSchedule(models.Model):
         ]
 
     def __str__(self):
-        return '{0}'.format(self.dtstart)
+        return '{0} {1}'.format(self.label, self.dtstart)
 
     def clean(self):
         # freq
@@ -80,6 +79,43 @@ class AbstractSchedule(models.Model):
         # wkst
         if self.wkst not in dict(WKST_CHOICES):
             raise ValidationError({'wkst': _(u"Wkst: '%s' not available." % (self.wkst))})
+        
+        # limited schedule each user
+        if self.user:
+            c = self.__class__.objects.filter(user_id=self.user.id).count()
+            if c > MAX_ALLOWED_SCHEDULE:
+                raise ValidationError({'user': _(u"Max %s schedules" % MAX_ALLOWED_SCHEDULE)})
+
+    def save(self, *args, **kwargs):
+        if self.user and not self.pk:
+            c = self.__class__.objects.filter(user_id=self.user.id).count()
+            self.sort_order = c + 1
+        super().save(*args, **kwargs)
+
+
+class AbstractScheduleExpertise(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    create_date = models.DateTimeField(auto_now_add=True, null=True)
+    update_date = models.DateTimeField(auto_now=True, null=True)
+
+    schedule = models.ForeignKey('helpdesk.Schedule', on_delete=models.CASCADE,
+                                 related_name='schedule_expertises')
+    # Before user create schedule must complete the resume
+    expertise = models.ForeignKey('resume.Expertise', on_delete=models.CASCADE,
+                                  related_name='schedule_expertises')
+
+    class Meta:
+        abstract = True
+        app_label = 'helpdesk'
+        ordering = ['-create_date']
+        verbose_name = _("Schedule Expertise")
+        verbose_name_plural = _("Schedule Expertises")
+        constraints = [
+            models.UniqueConstraint(fields=['schedule', 'expertise'], name='unique_schedule_expertise')
+        ]
+
+    def __str__(self):
+        return self.expertise.topic.label
 
 
 class AbstractSegment(models.Model):

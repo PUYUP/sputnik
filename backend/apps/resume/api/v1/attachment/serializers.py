@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import gettext_lazy as _
 
 from utils.generals import get_model
-from apps.resume.api.utils import handle_upload_attachment
+from apps.resume.utils.generals import handle_upload_attachment
 from apps.resume.utils.validators import CleanValidateMixin
 
 from rest_framework import serializers

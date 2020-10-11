@@ -2,11 +2,11 @@ from django.urls import path, include
 
 from rest_framework.routers import DefaultRouter
 
-from .skill.views import SkillApiView
+from .topic.views import TopicApiView
 
 # Create a router and register our viewsets with it.
 router = DefaultRouter()
-router.register('skills', SkillApiView, basename='skill')
+router.register('topics', TopicApiView, basename='topic')
 
 app_name = 'master'
 
