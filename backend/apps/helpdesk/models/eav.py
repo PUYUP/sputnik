@@ -5,7 +5,6 @@ from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import ValidationError
-from django.template.defaultfilters import cut
 from django.utils.translation import ugettext_lazy as _
 
 from utils.generals import get_model
@@ -17,6 +16,64 @@ from apps.helpdesk.utils.constants import (
 )
 
 _limit_content_type = models.Q(app_label='helpdesk')
+
+
+class AttributeValueManager(models.Manager):
+    def bulk_create(self, objs, **kwargs):
+        # validate all fields
+        for item in objs:
+            field = item.attribute.type
+            field_value = 'value_%s' % field
+            value = getattr(item, field_value)
+            item.validate_value(value)
+
+        return super(AttributeValueManager, self).bulk_create(objs, **kwargs)  
+
+
+class AbstractAttributeOptionGroup(models.Model):
+    """
+    Defines a group of options that collectively may be used as an
+    attribute type
+    For example, Language
+    """
+    name = models.CharField(_('Name'), max_length=128)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        abstract = True
+        app_label = 'helpdesk'
+        verbose_name = _('Attribute option group')
+        verbose_name_plural = _('Attribute option groups')
+
+    @property
+    def option_summary(self):
+        options = [o.option for o in self.options.all()]
+        return ", ".join(options)
+
+
+class AbstractAttributeOption(models.Model):
+    """
+    Provides an option within an option group for an attribute type
+    Examples: In a Language group, English, Greek, French
+    """
+    group = models.ForeignKey(
+        'helpdesk.AttributeOptionGroup',
+        on_delete=models.CASCADE,
+        related_name='options',
+        verbose_name=_("Group"))
+    option = models.CharField(_('Option'), max_length=255)
+
+    def __str__(self):
+        return self.option
+
+    class Meta:
+        abstract = True
+        app_label = 'helpdesk'
+        unique_together = ('group', 'option')
+        verbose_name = _('Attribute option')
+        verbose_name_plural = _('Attribute options')
 
 
 class AbstractAttribute(models.Model):
@@ -41,6 +98,15 @@ class AbstractAttribute(models.Model):
     type = models.CharField(
         choices=ATTRIBUTE_TYPE_CHOICES, default=VARCHAR,
         max_length=20, verbose_name=_("Type"))
+
+    option_group = models.ForeignKey(
+        'helpdesk.AttributeOptionGroup',
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name='attributes',
+        verbose_name=_("Option Group"),
+        help_text=_('Select an option group if using type "Option" or "Multi Option"'))
     required = models.BooleanField(_('Required'), default=False)
 
     class Meta:
@@ -56,62 +122,76 @@ class AbstractAttribute(models.Model):
     def __str__(self):
         return self.label
 
+    @property
+    def is_option(self):
+        return self.type == self.OPTION
+
+    @property
+    def is_multi_option(self):
+        return self.type == self.MULTI_OPTION
+
     def clean(self):
         if self.type == BOOLEAN and self.required:
             raise ValidationError({'type': _("Boolean attribute should not be required")})
 
-    def _save_value(self, value_obj, current_value, update_value, deleted=False, created=True):
+    def _set_multi_option(self, value_obj, value):
+        # ManyToMany fields are handled separately
+        if value is None:
+            value_obj.delete()
+            return
+        try:
+            count = value.count()
+        except (AttributeError, TypeError):
+            count = len(value)
+        if count == 0:
+            value_obj.delete()
+        else:
+            value_obj.value = value
+            value_obj.save()
+
+    def _set_value(self, value_obj, deleted=False, created=True):
         # if current_value set to None or empty, delete object
         if deleted and not created:
             value_obj.delete()
             return
 
-        """
-        if not deleted:
-            field = 'value_%s' % self.type
-            if current_value != update_value:
-                if update_value and not created:
-                    current_value = update_value
-
-                setattr(value_obj, field, current_value)
-
-                if update_value and not created:
-                    value_obj.save(update_fields=[field])
-                else:
-                    value_obj.save()
-        """
-
     # set attribute value to content_object (entity object, eg: Schedule)
     # :content_object must a single object
-    def save_value(self, content_object, current_value, update_value=None, deleted=False):   # noqa: C901 too complex
-        AttributeValue = get_model('helpdesk', 'AttributeValue')
+    # :content_object mean as AttributeValue
+    def set_value(self, content_object, current_value, update_value=None, deleted=False):   # noqa: C901 too complex
+        """ HELP ME!
+        # get the attribute itself
+        :attribute = Attribute.object.get(id=1)
 
-        created = None
-        model_name = content_object._meta.model_name
-        app_label = content_object._meta.app_label
-        ct = ContentType.objects.get(app_label=app_label, model=model_name)
+        # get the object want to set value
+        :content_object = Schedule.objects.get(id=1)
+
+        # set new value
+        attribute.set_value(content_object, 'new_value')
+
+        # update old value
+        attribute.set_value(content_object, 'new_value', 'something new here')
+
+        # delete value
+        attribute.set_value(content_object, is_delete=True)
+        """
+        AttributeValue = get_model('helpdesk', 'AttributeValue')
+        ct = ContentType.objects.get_for_model(content_object, for_concrete_model=False)
 
         field = 'value_%s' % self.type
         field_value = {field: current_value}
-
-        """
-        try:
-            value_obj = AttributeValue.objects \
-                .get(attribute=self, value_object_id=content_object.id, value_content_type=ct, **field_value)
-            created = False
-        except AttributeValue.DoesNotExist:
-            value_obj = AttributeValue(attribute=self, value_content_object=content_object, **field_value)
-            created = True
-        """
-
         defaults = {field: update_value if update_value else current_value}
 
+        # if value not exist create
+        # if exist update
         value_obj, created = AttributeValue.objects \
-            .update_or_create(attribute=self, value_object_id=content_object.id, value_content_type=ct,
-                           **field_value, defaults=defaults)
+            .update_or_create(attribute=self, object_id=content_object.id, content_type=ct,
+                              **field_value, defaults=defaults)
 
-        self._save_value(value_obj, current_value, update_value=update_value, deleted=deleted,
-                         created=created)
+        if self.is_multi_option:
+            self._set_multi_option(value_obj, current_value)
+        else:
+            self._set_value(value_obj, deleted=deleted, created=created)
 
     def validate_value(self, value):
         validator = getattr(self, '_validate_%s' % self.type)
@@ -141,6 +221,33 @@ class AbstractAttribute(models.Model):
         if not type(value) == bool:
             raise ValidationError(_("Must be a boolean"))
 
+    def _validate_multi_option(self, value):
+        try:
+            values = iter(value)
+        except TypeError:
+            raise ValidationError(
+                _("Must be a list or AttributeOption queryset"))
+        # Validate each value as if it were an option
+        # Pass in valid_values so that the DB isn't hit multiple times per iteration
+        valid_values = self.option_group.options.values_list(
+            'option', flat=True)
+        for value in values:
+            self._validate_option(value, valid_values=valid_values)
+
+    def _validate_option(self, value, valid_values=None):
+        if not isinstance(value, get_model('helpdesk', 'AttributeOption')):
+            raise ValidationError(
+                _("Must be an AttributeOption model object instance"))
+        if not value.pk:
+            raise ValidationError(_("AttributeOption has not been saved yet"))
+        if valid_values is None:
+            valid_values = self.option_group.options.values_list(
+                'option', flat=True)
+        if value.option not in valid_values:
+            raise ValidationError(
+                _("%(enum)s is not a valid choice for %(attr)s") %
+                {'enum': value, 'attr': self})
+
 
 class AbstractAttributeValue(models.Model):
     """
@@ -157,23 +264,24 @@ class AbstractAttributeValue(models.Model):
                                   related_name='attribute_values', verbose_name=_("Attribute"))
 
     # attribute content type
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE,
-                                     limit_choices_to=_limit_content_type,
-                                     related_name='attribute_values',
-                                     editable=False)
-    
+    attribute_content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE,
+                                               limit_choices_to=_limit_content_type,
+                                               related_name='attribute_values',
+                                               editable=False)
+
     # object from entity egg: Schedule object
-    value_content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE,
-                                           limit_choices_to=_limit_content_type,
-                                           related_name='attribute_value_types')
-    value_object_id = models.PositiveIntegerField()
-    value_content_object = GenericForeignKey('value_content_type', 'value_object_id')
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE,
+                                     limit_choices_to=_limit_content_type)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
 
     value_varchar = models.CharField(_('Text'), blank=True, null=True, max_length=255)
     value_integer = models.IntegerField(_('Integer'), blank=True, null=True, db_index=True)
     value_boolean = models.BooleanField(_('Boolean'), blank=True, null=True, db_index=True)
     value_date = models.DateField(_('Date'), blank=True, null=True, db_index=True)
     value_datetime = models.DateTimeField(_('DateTime'), blank=True, null=True, db_index=True)
+
+    objects = AttributeValueManager()
 
     class Meta:
         abstract = True
@@ -218,7 +326,7 @@ class AbstractAttributeValue(models.Model):
 
     def save(self, *args, **kwargs):
         if self.attribute:
-            self.content_type = self.attribute.content_type
+            self.attribute_content_type = self.attribute.content_type
 
         # setnull unused field value
         self.setnull_unused_value(self.attribute.type)
@@ -234,7 +342,7 @@ class AbstractAttributeValue(models.Model):
             value = getattr(self, 'value_%s' % self.attribute.type)
 
             # :schedule validator
-            if self.content_type.model == 'schedule':
+            if self.attribute_content_type.model == 'schedule':
                 if (
                     not value 
                     and (
@@ -255,7 +363,7 @@ class AbstractAttributeValue(models.Model):
         _validator_func = '_validate_%s' % self.attribute.type
 
         # :schedule validator
-        if self.content_type.model == 'schedule':
+        if self.attribute_content_type.model == 'schedule':
             _validator_func = '_rrule_%s' % self.attribute.identifier
 
         validator = getattr(self, _validator_func)

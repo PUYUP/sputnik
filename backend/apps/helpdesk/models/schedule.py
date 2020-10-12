@@ -6,7 +6,7 @@ from django.db import models
 from django.db.models import Prefetch
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ValidationError
-from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 
 from utils.validators import non_python_keyword, IDENTIFIER_VALIDATOR
@@ -56,6 +56,9 @@ class AbstractSchedule(models.Model):
                             help_text=_(u"The week start day. Must be one of the MO, TU, WE constants, or an integer, "
                                         "specifying the first day of the week. This will affect recurrences based on weekly periods. "
                                         "The default week start is MO."))
+
+    # more and more data...
+    attributes = GenericRelation('helpdesk.AttributeValue', related_query_name='schedule')
 
     class Meta:
         abstract = True

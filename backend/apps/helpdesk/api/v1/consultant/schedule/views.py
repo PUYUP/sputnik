@@ -30,6 +30,10 @@ class ScheduleApiView(viewsets.ViewSet):
                 {"expertise": '7905433c-966f-4f3a-b1da-66e88c83ecc0'},
                 {"expertise": '7905433c-966f-4f3a-b1da-66e88c83ecc1'},
             ],
+            "attributes": [
+                {"identifier": "byweekday", "value": "something big"},
+                {"identifier": "byhour", "value": 11},
+            ],
             "label": "string",
             "dtstart": "YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z]",
             "dtuntil": "YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z]",
@@ -41,6 +45,10 @@ class ScheduleApiView(viewsets.ViewSet):
         {
             "schedule_expertises": [
                 {"expertise": "7905433c-966f-4f3a-b1da-66e88c83ecc0"}
+            ],
+            "attributes": [
+                {"identifier": "byweekday", "value": "something big"},
+                {"identifier": "byhour", "value": 11}
             ],
             "label": "Jadwal 1",
             "dtstart": "2020-10-09T00:04:29+07:00",

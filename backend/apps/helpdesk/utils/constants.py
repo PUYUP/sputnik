@@ -139,12 +139,16 @@ INTEGER = "integer"
 BOOLEAN = "boolean"
 DATE = "date"
 DATETIME = "datetime"
+OPTION = "option"
+MULTI_OPTION = "multi_option"
 ATTRIBUTE_TYPE_CHOICES = (
     (VARCHAR, _("Text")),
     (INTEGER, _("Integer")),
     (BOOLEAN, _("True / False")),
     (DATE, _("Date")),
     (DATETIME, _("Datetime")),
+    (OPTION, _("Option")),
+    (MULTI_OPTION, _("Multi Option")),
 )
 
 

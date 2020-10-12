@@ -6,6 +6,8 @@ from utils.generals import get_model
 Schedule = get_model('helpdesk', 'Schedule')
 ScheduleExpertise = get_model('helpdesk', 'ScheduleExpertise')
 Attribute = get_model('helpdesk', 'Attribute')
+AttributeOption = get_model('helpdesk', 'AttributeOption')
+AttributeOptionGroup = get_model('helpdesk', 'AttributeOptionGroup')
 AttributeValue = get_model('helpdesk', 'AttributeValue')
 Segment = get_model('helpdesk', 'Segment')
 SLA = get_model('helpdesk', 'SLA')
@@ -48,9 +50,20 @@ class SegmentExtend(admin.ModelAdmin):
     inlines = [SLAInline,]
 
 
+# Extend Attribute
+class AttributeOptionInline(admin.StackedInline):
+    model = AttributeOption
+
+
+class AttributeOptionGroupExtend(admin.ModelAdmin):
+    model = AttributeOptionGroup
+    inlines = [AttributeOptionInline,]
+
+
 admin.site.register(ContentType)
 admin.site.register(Schedule, ScheduleExtend)
 admin.site.register(Attribute)
+admin.site.register(AttributeOptionGroup, AttributeOptionGroupExtend)
 admin.site.register(AttributeValue)
 admin.site.register(Segment, SegmentExtend)
 admin.site.register(SLA)

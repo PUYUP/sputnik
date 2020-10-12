@@ -17,25 +17,25 @@ class HomeView(View):
     context = dict()
 
     def get(self, request):
-        attr = Attribute.objects.get(id=1)
-        content_object = Schedule.objects.get(id=1)
+        # attr = Attribute.objects.get(id=1)
+        # content_object = Schedule.objects.get(id=1)
         
         # set new attribute
-        # attr.save_value(content_object, 'WE')
+        # attr.set_value(content_object, 'WE')
         # or
-        # attr.save_value(content_object, 'WE', 'Ingored')
+        # attr.set_value(content_object, 'WE', 'Ingored')
 
         # update attribute value from WE to MO
-        # attr.save_value(content_object, 'TU', 'SA')
+        # attr.set_value(content_object, 'TU', 'SA')
 
-        # attr.save_value(content_object, 'SU', 'MO')
+        # attr.set_value(content_object, 'SU', 'MO')
 
         # delete attribute
         # find the value want to delete
-        # attr.save_value(content_object, 'TU', 'SA', deleted=True)
-        attr.save_value(content_object, 'WE', 'SA', deleted=True)
+        # attr.set_value(content_object, 'TU', 'SA', deleted=True)
+        # attr.set_value(content_object, 'SA', deleted=True)
 
-        print(content_object)
+        # print(content_object)
 
         if self.request.user.is_authenticated:
             roles = request.user.roles_identifier()
