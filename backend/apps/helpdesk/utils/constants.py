@@ -59,7 +59,7 @@ EVENT_CHOICES = (
 )
 
 
-FREQ_CHOICES = (
+RRULE_FREQ_CHOICES = (
     (rrule.YEARLY, _(u"Yearly")),
     (rrule.MONTHLY, _(u"Monthly")),
     (rrule.WEEKLY, _(u"Weekly")),
@@ -69,8 +69,8 @@ FREQ_CHOICES = (
     (rrule.SECONDLY, _(u"Secondly")),
 )
 
-setattr(rrule, 'MU', 'MU')
-WKST_CHOICES = (
+setattr(rrule, 'FD', 'FD')
+RRULE_WKST_CHOICES = (
     (str(rrule.MO), _(u"Monday")),
     (str(rrule.TU), _(u"Tuesday")),
     (str(rrule.WE), _(u"Wednesday")),
@@ -78,7 +78,15 @@ WKST_CHOICES = (
     (str(rrule.FR), _(u"Friday")),
     (str(rrule.SA), _(u"Saturday")),
     (str(rrule.SU), _(u"Sunday")),
-    (str(rrule.MU), _(u"Multiday")),
+    (str(rrule.FD), _(u"Few days")),
+)
+
+
+EXCLUSION = 'exclusion'
+INCLUSION = 'inclusion'
+RRULE_MODE_CHOICES = (
+    (INCLUSION, _('Inclusion')),
+    (EXCLUSION, _('Exclusion')),
 )
 
 
@@ -93,20 +101,11 @@ BYMINUTE = 'byminute'
 BYSECOND = 'bysecond'
 BYEASTER = 'byeaster'
 
-EXCLUDE_BYWEEKDAY = 'exclude_byweekday'
-EXCLUDE_BYMONTH = 'exclude_bymonth'
-EXCLUDE_BYSETPOS = 'exclude_bysetpos'
-EXCLUDE_BYMONTHDAY = 'exclude_bymonthday'
-EXCLUDE_BYYEARDAY = 'exclude_byyearday'
-EXCLUDE_BYWEEKNO = 'exclude_byweekno'
-EXCLUDE_BYHOUR = 'exclude_byhour'
-EXCLUDE_BYMINUTE = 'exclude_byminute'
-
 LATE_PAYMENT = 'late_payment'
 LATE_BOOKING = 'late_booking'
-ASSINGN_EXTRA_COST = 'extra_cost'
+ASSIGN_EXTRA_COST = 'extra_cost'
 
-ATTRIBUTE_CHOICES = (
+RRULE_IDENTIFIER_CHOICES = (
     (BYWEEKDAY, _("Byweekday")),
     (BYMONTH, _("Bymonth")),
     (BYSETPOS, _("Bysetpos")),
@@ -117,38 +116,24 @@ ATTRIBUTE_CHOICES = (
     (BYMINUTE, _("Byminute")),
     (BYSECOND, _("Bysecond")),
     (BYEASTER, _("Byeaster")),
-
-    (EXCLUDE_BYWEEKDAY, _("Exclude Byweekday")),
-    (EXCLUDE_BYMONTH, _("Exclude Bymonth")),
-    (EXCLUDE_BYSETPOS, _("Exclude Bysetpos")),
-    (EXCLUDE_BYMONTHDAY, _("Exclude Bymonthday")),
-    (EXCLUDE_BYYEARDAY, _("Exclude Byyearday")),
-    (EXCLUDE_BYWEEKNO, _("Exclude Byweekno")),
-    (EXCLUDE_BYHOUR, _("Exclude Byhour")),
-    (EXCLUDE_BYMINUTE, _("Exclude Byminute")),
-
-    (LATE_PAYMENT, _("Late Payment")),
-    (LATE_BOOKING, _("Late Booking")),
-    (ASSINGN_EXTRA_COST, ("Extra Cost")),
 )
 
 
-# Attribute types
+_X = (
+    (LATE_PAYMENT, _("Late Payment")),
+    (LATE_BOOKING, _("Late Booking")),
+    (ASSIGN_EXTRA_COST, ("Extra Cost")),
+)
+
+
+# RRule types
 VARCHAR = "varchar"
 INTEGER = "integer"
-BOOLEAN = "boolean"
-DATE = "date"
 DATETIME = "datetime"
-OPTION = "option"
-MULTI_OPTION = "multi_option"
-ATTRIBUTE_TYPE_CHOICES = (
+RRULE_TYPE_CHOICES = (
     (VARCHAR, _("Text")),
     (INTEGER, _("Integer")),
-    (BOOLEAN, _("True / False")),
-    (DATE, _("Date")),
     (DATETIME, _("Datetime")),
-    (OPTION, _("Option")),
-    (MULTI_OPTION, _("Multi Option")),
 )
 
 

@@ -1,3 +1,4 @@
+from apps.helpdesk.utils.constants import INCLUSION
 from datetime import datetime
 
 from django.urls import reverse
@@ -8,8 +9,8 @@ from django.shortcuts import redirect, render
 from utils.generals import get_model
 from apps.person.utils.constants import CLIENT, CONSULTANT
 
-Attribute = get_model('helpdesk', 'Attribute')
 Schedule = get_model('helpdesk', 'Schedule')
+Rule = get_model('helpdesk', 'Rule')
 
 
 class HomeView(View):
@@ -17,25 +18,16 @@ class HomeView(View):
     context = dict()
 
     def get(self, request):
-        # attr = Attribute.objects.get(id=1)
-        # content_object = Schedule.objects.get(id=1)
-        
-        # set new attribute
-        # attr.set_value(content_object, 'WE')
-        # or
-        # attr.set_value(content_object, 'WE', 'Ingored')
+        values = [
+            {'value': 101, 'new_value': '5'}
+        ]
 
-        # update attribute value from WE to MO
-        # attr.set_value(content_object, 'TU', 'SA')
+        # print(values)
 
-        # attr.set_value(content_object, 'SU', 'MO')
-
-        # delete attribute
-        # find the value want to delete
-        # attr.set_value(content_object, 'TU', 'SA', deleted=True)
-        # attr.set_value(content_object, 'SA', deleted=True)
-
-        # print(content_object)
+        schedule = Schedule.objects.get(id=1)
+        rule_byweekday = schedule.recurrence.rules.get(identifier='byweekday', mode=INCLUSION)
+        rule_byweekday.save_values(values=values)
+        # print(rule_byweekday, 'AAAAAAAAAAAAAAA')
 
         if self.request.user.is_authenticated:
             roles = request.user.roles_identifier()

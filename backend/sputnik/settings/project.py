@@ -49,8 +49,6 @@ INSTALLED_APPS = INSTALLED_APPS + PROJECT_APPS
 # MIDDLEWARES
 PROJECT_MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django_currentuser.middleware.ThreadLocalUserMiddleware',
 ]
 MIDDLEWARE = MIDDLEWARE + PROJECT_MIDDLEWARE
 

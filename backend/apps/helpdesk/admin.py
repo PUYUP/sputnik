@@ -5,10 +5,9 @@ from utils.generals import get_model
 
 Schedule = get_model('helpdesk', 'Schedule')
 ScheduleExpertise = get_model('helpdesk', 'ScheduleExpertise')
-Attribute = get_model('helpdesk', 'Attribute')
-AttributeOption = get_model('helpdesk', 'AttributeOption')
-AttributeOptionGroup = get_model('helpdesk', 'AttributeOptionGroup')
-AttributeValue = get_model('helpdesk', 'AttributeValue')
+Recurrence = get_model('helpdesk', 'Recurrence')
+Rule = get_model('helpdesk', 'Rule')
+RuleValue = get_model('helpdesk', 'RuleValue')
 Segment = get_model('helpdesk', 'Segment')
 SLA = get_model('helpdesk', 'SLA')
 Priority = get_model('helpdesk', 'Priority')
@@ -30,14 +29,13 @@ class ScheduleExpertiseInline(admin.StackedInline):
     model = ScheduleExpertise
 
 
+class RecurrenceInline(admin.StackedInline):
+    model = Recurrence
+
+
 class ScheduleExtend(admin.ModelAdmin):
     model = Schedule
-    inlines = [ScheduleExpertiseInline, SegmentInline,]
-
-
-# Extend Schedule Attribute
-class AttributeValueInline(admin.StackedInline):
-    model = AttributeValue
+    inlines = [RecurrenceInline, ScheduleExpertiseInline, SegmentInline,]
 
 
 # Extend SLA
@@ -50,21 +48,30 @@ class SegmentExtend(admin.ModelAdmin):
     inlines = [SLAInline,]
 
 
-# Extend Attribute
-class AttributeOptionInline(admin.StackedInline):
-    model = AttributeOption
+# Extend Recurrence
+class RuleInline(admin.StackedInline):
+    model = Rule
 
 
-class AttributeOptionGroupExtend(admin.ModelAdmin):
-    model = AttributeOptionGroup
-    inlines = [AttributeOptionInline,]
+class RecurrenceExtend(admin.ModelAdmin):
+    model = Recurrence
+    inlines = [RuleInline,]
+
+
+# Extend Rule
+class RuleValueInline(admin.StackedInline):
+    model = RuleValue
+
+
+class RuleExtend(admin.ModelAdmin):
+    model = Rule
+    inlines = [RuleValueInline,]
 
 
 admin.site.register(ContentType)
 admin.site.register(Schedule, ScheduleExtend)
-admin.site.register(Attribute)
-admin.site.register(AttributeOptionGroup, AttributeOptionGroupExtend)
-admin.site.register(AttributeValue)
+admin.site.register(Recurrence, RecurrenceExtend)
+admin.site.register(Rule, RuleExtend)
 admin.site.register(Segment, SegmentExtend)
 admin.site.register(SLA)
 admin.site.register(Priority)

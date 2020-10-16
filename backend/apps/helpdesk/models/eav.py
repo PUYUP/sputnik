@@ -12,7 +12,7 @@ from utils.constants import MONTH_CHOICES
 from utils.validators import non_python_keyword, IDENTIFIER_VALIDATOR
 from apps.helpdesk.utils.constants import (
     VARCHAR, ATTRIBUTE_TYPE_CHOICES, ATTRIBUTE_CHOICES, BOOLEAN,
-    BYHOUR, BYMINUTE, BYSECOND, WKST_CHOICES
+    BYHOUR, BYMINUTE, BYSECOND, RRULE_WKST_CHOICES
 )
 
 _limit_content_type = models.Q(app_label='helpdesk')
@@ -116,7 +116,8 @@ class AbstractAttribute(models.Model):
         verbose_name = _("Attribute")
         verbose_name_plural = _("Attributes")
         constraints = [
-            models.UniqueConstraint(fields=['content_type', 'label'], name='unique_content_type_label')
+            models.UniqueConstraint(fields=['content_type', 'label'], name='unique_content_type_label'),
+            models.UniqueConstraint(fields=['content_type', 'identifier'], name='unique_content_type_identifier')
         ]
 
     def __str__(self):
@@ -155,26 +156,15 @@ class AbstractAttribute(models.Model):
             value_obj.delete()
             return
 
-    # set attribute value to content_object (entity object, eg: Schedule)
-    # :content_object must a single object
-    # :content_object mean as AttributeValue
-    def set_value(self, content_object, current_value, update_value=None, deleted=False):   # noqa: C901 too complex
-        """ HELP ME!
-        # get the attribute itself
-        :attribute = Attribute.object.get(id=1)
-
-        # get the object want to set value
-        :content_object = Schedule.objects.get(id=1)
-
-        # set new value
-        attribute.set_value(content_object, 'new_value')
-
-        # update old value
-        attribute.set_value(content_object, 'new_value', 'something new here')
-
-        # delete value
-        attribute.set_value(content_object, is_delete=True)
+    # set attribute value to entity_object (entity object, eg: Schedule, Segment, ect)
+    # :entity_object must a single object
+    # :entity_object mean as AttributeValue
+    def set_value(self, entity_object, value):   # noqa: C901 too complex
+        pass
         """
+        1. Get content_type from entity_object
+        2. I
+        
         AttributeValue = get_model('helpdesk', 'AttributeValue')
         ct = ContentType.objects.get_for_model(content_object, for_concrete_model=False)
 
@@ -192,6 +182,7 @@ class AbstractAttribute(models.Model):
             self._set_multi_option(value_obj, current_value)
         else:
             self._set_value(value_obj, deleted=deleted, created=created)
+        """
 
     def validate_value(self, value):
         validator = getattr(self, '_validate_%s' % self.type)
@@ -280,6 +271,16 @@ class AbstractAttributeValue(models.Model):
     value_boolean = models.BooleanField(_('Boolean'), blank=True, null=True, db_index=True)
     value_date = models.DateField(_('Date'), blank=True, null=True, db_index=True)
     value_datetime = models.DateTimeField(_('DateTime'), blank=True, null=True, db_index=True)
+    value_multi_option = models.ManyToManyField(
+        'helpdesk.AttributeOption', blank=True,
+        related_name='multi_valued_attribute_values',
+        verbose_name=_("Value multi option"))
+    value_option = models.ForeignKey(
+        'helpdesk.AttributeOption',
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        verbose_name=_("Value option"))
 
     objects = AttributeValueManager()
 
@@ -311,7 +312,7 @@ class AbstractAttributeValue(models.Model):
             )
         ]
 
-    def __str__(self):
+    def __str__x(self):
         return self.summary()
 
     def setnull_unused_value(self, exclude_type=None):
@@ -332,12 +333,12 @@ class AbstractAttributeValue(models.Model):
         self.setnull_unused_value(self.attribute.type)
         
         # validation
-        self.clean()
+        # self.clean()
 
         # saved!
         super().save(*args, **kwargs)
 
-    def clean(self):
+    def cleanx(self):
         if self.attribute:
             value = getattr(self, 'value_%s' % self.attribute.type)
 
@@ -401,8 +402,8 @@ class AbstractAttributeValue(models.Model):
         if value.isdigit():
             raise ValidationError({'byweekday': _("Must be string")})
 
-        if value not in dict(WKST_CHOICES) or not value.isupper():
-            keys = list(dict(WKST_CHOICES).keys())
+        if value not in dict(RRULE_WKST_CHOICES) or not value.isupper():
+            keys = list(dict(RRULE_WKST_CHOICES).keys())
             raise ValidationError({'byweekday': _("Value %s not available. Valid choices is %s" % (str(value), ', '.join(keys)))})
 
     def _rrule_bymonth(self, value):

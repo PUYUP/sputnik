@@ -1,13 +1,18 @@
-from django.core.exceptions import ValidationError
+from ast import parse
+from os import write
+from django.db.models import query
 from django.db.utils import IntegrityError
 from django.db import transaction
 from django.db.models import Q
+from django.http import request
+from django.urls.base import reverse
 from django.utils import formats
 
 from rest_framework import serializers
 from rest_framework.exceptions import NotAcceptable
 
 from utils.generals import get_model
+from apps.helpdesk.utils.constants import INCLUSION
 from apps.helpdesk.models.models import Recurrence, Rule, RuleValue
 
 Expertise = get_model('resume', 'Expertise')
@@ -45,7 +50,8 @@ class ScheduleExpertiseSerializer(DynamicFieldsModelSerializer, serializers.Mode
 
     def to_representation(self, value):
         ret = super().to_representation(value)
-        ret['expertise_label'] = value.expertise_label
+
+        ret['expertise_label'] = value.expertise.topic.label
         return ret
 
 
@@ -63,75 +69,34 @@ class RuleSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
         fields = '__all__'
 
 
-""" RECURRENCES """
 class RecurrenceSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
-    url = serializers.SerializerMethodField(read_only=True)
-
-    # set to None because 'default' is required
-    # we set schedule object in to_internal_value
-    schedule = serializers.HiddenField(default=None)
+    rules = RuleSerializer(many=True, write_only=True, fields=('identifier', 'type', 'rule_values',))
 
     class Meta:
         model = Recurrence
         fields = '__all__'
 
-    def get_url(self, obj):
-        from .views import ScheduleApiView
-
-        schedule_uuid = obj.schedule.uuid
-        recurrence_uuid = obj.uuid
-        view = ScheduleApiView()
-        view.basename = 'helpdesk_api:consultant:schedule'
-        view.request = self.context.get('request')
-        url = view.reverse_action('recurrences-update', args=[schedule_uuid, recurrence_uuid])
-        return url
-    
     def to_representation(self, value):
+        is_detail = self.context.get('is_detail')
         ret = super().to_representation(value)
- 
+
         ret['dtstart_formated'] = formats.date_format(value.dtstart, 'DATETIME_FORMAT')
         if value.dtuntil:
             ret['dtuntil_formated'] = formats.date_format(value.dtuntil, 'DATETIME_FORMAT')
 
+        if is_detail:
+            queryset = value.rules.all()
+            serializer = RuleSerializer(queryset, many=True, context=self.context)
+            ret['rules'] = serializer.data
         return ret
 
-    def to_internal_value(self, data):
-        schedule = self.context.get('schedule')
-        data = super().to_internal_value(data)
 
-        data['schedule'] = schedule
-        return data
-
-    @transaction.atomic
-    def create(self, validated_data):
-        try:
-            instance = Recurrence.objects.create(**validated_data)
-        except (ValidationError, Exception) as e:
-            raise NotAcceptable({'detail': repr(e)})
-        return instance
-
-    @transaction.atomic
-    def update(self, instance, validated_data):
-        for key, value in validated_data.items():
-            if hasattr(instance, key):
-                old_value = getattr(instance, key, None)
-                if value and old_value != value:
-                    setattr(instance, key, value)
-
-        instance.save()
-        return instance
-
-
-class ScheduleSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
+class ScheduleSerializer(serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='helpdesk_api:consultant:schedule-detail',
                                                lookup_field='uuid', read_only=True)
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    schedule_expertises = ScheduleExpertiseSerializer(many=True, fields=('uuid', 'expertise', 'expertise_label',))
-
-    # display purpose
-    recurrence = RecurrenceSerializer(many=False, read_only=True)
-    expertises = serializers.SlugRelatedField(slug_field='expertise_label', read_only=True,
-                                              many=True, source='schedule_expertises')
+    schedule_expertises = ScheduleExpertiseSerializer(many=True, fields=('uuid', 'expertise',))
+    recurrence = RecurrenceSerializer(many=False, read_only=True, fields=('dtstart', 'dtuntil', 'freq', 'wkst', 'rules'))
  
     class Meta:
         model = Schedule
@@ -141,18 +106,21 @@ class ScheduleSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializ
         request = self.context.get('request')
         ret = super().to_representation(value)
 
-        ret['permalink'] = request.build_absolute_uri(value.permalink)
+        permalink = reverse('helpdesk_view:consultant:schedule_detail', kwargs={'uuid': value.uuid})
+        ret['permalink'] = request.build_absolute_uri(permalink)
         return ret
 
     @transaction.atomic
     def create(self, validated_data):
         schedule_expertises = list()
         expertises = validated_data.pop('schedule_expertises')
+        recurrence = validated_data.pop('recurrence')
+        rules = recurrence.pop('rules')
+
         instance = Schedule.objects.create(**validated_data)
 
         # set expertises
         for item in expertises:
-            print(item)
             obj = ScheduleExpertise(schedule=instance, expertise=item['expertise'])
             schedule_expertises.append(obj)
 
@@ -161,45 +129,65 @@ class ScheduleSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializ
                 ScheduleExpertise.objects.bulk_create(schedule_expertises, ignore_conflicts=False)
             except (Exception, IntegrityError) as e:
                 raise NotAcceptable({'detail': repr(e)})
+
+        # set recurrence
+        if recurrence:
+            recurrence = Recurrence.objects.create(schedule=instance, **recurrence)
+
+        # set rules and the values
+        if recurrence and rules:
+            for rule in rules:
+                rtype = rule.get('type')
+                identifier = rule.get('identifier')
+                rule_values = rule.get('rule_values')
+
+                # create rule object
+                rule_obj = Rule.objects.create(type=rtype, identifier=identifier,
+                                               mode=INCLUSION, recurrence=recurrence)
+                if rule_obj:
+                    for v in rule_values:
+                        f = 'value_%s' % rtype
+                        v = v.get(f)
+                        fv = {f: v}
+                        RuleValue.objects.create(rule=rule_obj, **fv)
         return instance
 
     @transaction.atomic
     def update(self, instance, validated_data):
         expertises_uuid = list()
         submited_expertises = list()
-        expertises = validated_data.pop('schedule_expertises', None)
+        expertises = validated_data.pop('schedule_expertises')
+        
+        # extract Expertise only, not ScheduleExpertise
+        # this submited by user in frontend
+        for item in expertises:
+            expertise = item.get('expertise', '')
+            if expertise:
+                submited_expertises.append(expertise)
+                expertises_uuid.append(expertise.uuid)
 
-        if expertises:
-            # extract Expertise only, not ScheduleExpertise
-            # this submited by user in frontend
-            for item in expertises:
-                expertise = item.get('expertise', '')
-                if expertise:
-                    submited_expertises.append(expertise)
-                    expertises_uuid.append(expertise.uuid)
+        # current user expertises
+        x = list()
+        current_expertises = instance.schedule_expertises.filter(Q(expertise__uuid__in=expertises_uuid))
+        for item in current_expertises:
+            x.append(item.expertise)
 
-            # current user expertises
-            x = list()
-            current_expertises = instance.schedule_expertises.filter(Q(expertise__uuid__in=expertises_uuid))
-            for item in current_expertises:
-                x.append(item.expertise)
+        # collect removed ScheduleExpertise
+        removed_expertises = instance.schedule_expertises.exclude(Q(expertise__uuid__in=expertises_uuid))
+        if removed_expertises.exists():
+            removed_expertises.delete()
 
-            # collect removed ScheduleExpertise
-            removed_expertises = instance.schedule_expertises.exclude(Q(expertise__uuid__in=expertises_uuid))
-            if removed_expertises.exists():
-                removed_expertises.delete()
+        # collect new expertises, fresh not exists in database
+        create_expertises = list()
+        new_expertises = list(set(submited_expertises) - set(x))
+        if new_expertises:
+            for item in new_expertises:
+                obj = ScheduleExpertise(schedule=instance, expertise=item)
+                create_expertises.append(obj)
 
-            # collect new expertises, fresh not exists in database
-            create_expertises = list()
-            new_expertises = list(set(submited_expertises) - set(x))
-            if new_expertises:
-                for item in new_expertises:
-                    obj = ScheduleExpertise(schedule=instance, expertise=item)
-                    create_expertises.append(obj)
-
-            # bulk created
-            if create_expertises:
-                ScheduleExpertise.objects.bulk_create(create_expertises)
+        # bulk created
+        if create_expertises:
+            ScheduleExpertise.objects.bulk_create(create_expertises)
 
         # update instance
         for key, value in validated_data.items():

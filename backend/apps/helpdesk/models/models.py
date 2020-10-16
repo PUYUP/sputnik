@@ -1,8 +1,8 @@
 from utils.generals import is_model_registered
 
-from .eav import *
 from .schedule import *
 from .issue import *
+from .rrule import *
 
 __all__ = []
 
@@ -26,42 +26,33 @@ if not is_model_registered('helpdesk', 'ScheduleExpertise'):
 
 
 # 3
-if not is_model_registered('helpdesk', 'Attribute'):
-    class Attribute(AbstractAttribute):
-        class Meta(AbstractAttribute.Meta):
-            db_table = 'helpdesk_attribute'
+if not is_model_registered('helpdesk', 'Recurrence'):
+    class Recurrence(AbstractRecurrence):
+        class Meta(AbstractRecurrence.Meta):
+            db_table = 'helpdesk_recurrence'
 
-    __all__.append('Attribute')
+    __all__.append('Recurrence')
 
 
 # 4
-if not is_model_registered('helpdesk', 'AttributeValue'):
-    class AttributeValue(AbstractAttributeValue):
-        class Meta(AbstractAttributeValue.Meta):
-            db_table = 'helpdesk_attribute_value'
+if not is_model_registered('helpdesk', 'Rule'):
+    class Rule(AbstractRule):
+        class Meta(AbstractRule.Meta):
+            db_table = 'helpdesk_recurrence_rule'
 
-    __all__.append('AttributeValue')
+    __all__.append('Rule')
 
 
 # 5
-if not is_model_registered('helpdesk', 'AttributeOption'):
-    class AttributeOption(AbstractAttributeOption):
-        class Meta(AbstractAttributeOption.Meta):
-            db_table = 'helpdesk_attribute_option'
+if not is_model_registered('helpdesk', 'RuleValue'):
+    class RuleValue(AbstractRuleValue):
+        class Meta(AbstractRuleValue.Meta):
+            db_table = 'helpdesk_recurrence_rule_value'
 
-    __all__.append('AttributeOption')
+    __all__.append('RuleValue')
 
 
 # 6
-if not is_model_registered('helpdesk', 'AttributeOptionGroup'):
-    class AttributeOptionGroup(AbstractAttributeOptionGroup):
-        class Meta(AbstractAttributeOptionGroup.Meta):
-            db_table = 'helpdesk_attribute_option_group'
-
-    __all__.append('AttributeOptionGroup')
-
-
-# 7
 if not is_model_registered('helpdesk', 'Segment'):
     class Segment(AbstractSegment):
         class Meta(AbstractSegment.Meta):
@@ -70,7 +61,7 @@ if not is_model_registered('helpdesk', 'Segment'):
     __all__.append('Segment')
 
 
-# 8
+# 7
 if not is_model_registered('helpdesk', 'SLA'):
     class SLA(AbstractSLA):
         class Meta(AbstractSLA.Meta):
@@ -79,7 +70,7 @@ if not is_model_registered('helpdesk', 'SLA'):
     __all__.append('SLA')
 
 
-# 9
+# 8
 if not is_model_registered('helpdesk', 'Priority'):
     class Priority(AbstractPriority):
         class Meta(AbstractPriority.Meta):
@@ -88,7 +79,7 @@ if not is_model_registered('helpdesk', 'Priority'):
     __all__.append('Priority')
 
 
-# 10
+# 9
 if not is_model_registered('helpdesk', 'Issue'):
     class Issue(AbstractIssue):
         class Meta(AbstractIssue.Meta):
@@ -97,7 +88,7 @@ if not is_model_registered('helpdesk', 'Issue'):
     __all__.append('Issue')
 
 
-# 11
+# 10
 if not is_model_registered('helpdesk', 'Respond'):
     class Respond(AbstractRespond):
         class Meta(AbstractRespond.Meta):
@@ -106,7 +97,7 @@ if not is_model_registered('helpdesk', 'Respond'):
     __all__.append('Respond')
 
 
-# 12
+# 11
 if not is_model_registered('helpdesk', 'RespondLog'):
     class RespondLog(AbstractRespondLog):
         class Meta(AbstractRespondLog.Meta):
@@ -115,7 +106,7 @@ if not is_model_registered('helpdesk', 'RespondLog'):
     __all__.append('RespondLog')
 
 
-# 13
+# 12
 if not is_model_registered('helpdesk', 'Entry'):
     class Entry(AbstractEntry):
         class Meta(AbstractEntry.Meta):
@@ -124,7 +115,7 @@ if not is_model_registered('helpdesk', 'Entry'):
     __all__.append('Entry')
 
 
-# 14
+# 13
 if not is_model_registered('helpdesk', 'Assign'):
     class Assign(AbstractAssign):
         class Meta(AbstractAssign.Meta):
@@ -133,7 +124,7 @@ if not is_model_registered('helpdesk', 'Assign'):
     __all__.append('Assign')
 
 
-# 15
+# 14
 if not is_model_registered('helpdesk', 'Assigned'):
     class Assigned(AbstractAssigned):
         class Meta(AbstractAssigned.Meta):
@@ -142,7 +133,7 @@ if not is_model_registered('helpdesk', 'Assigned'):
     __all__.append('Assigned')
 
 
-# 16
+# 15
 if not is_model_registered('helpdesk', 'Gift'):
     class Gift(AbstractGift):
         class Meta(AbstractGift.Meta):
