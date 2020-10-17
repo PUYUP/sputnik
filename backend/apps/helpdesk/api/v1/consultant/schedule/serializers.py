@@ -8,32 +8,14 @@ from rest_framework import serializers
 from rest_framework.exceptions import NotAcceptable
 
 from utils.generals import get_model
-from apps.helpdesk.models.models import Recurrence, Rule, RuleValue
+from apps.helpdesk.models.models import Recurrence
+from apps.helpdesk.api.fields import DynamicFieldsModelSerializer
+
+from ..rrule.serializers import RuleSerializer
 
 Expertise = get_model('resume', 'Expertise')
 Schedule = get_model('helpdesk', 'Schedule')
 ScheduleExpertise = get_model('helpdesk', 'ScheduleExpertise')
-
-
-class DynamicFieldsModelSerializer(serializers.ModelSerializer):
-    """
-    A ModelSerializer that takes an additional `fields` argument that
-    controls which fields should be displayed.
-    """
-
-    def __init__(self, *args, **kwargs):
-        # Don't pass the 'fields' arg up to the superclass
-        fields = kwargs.pop('fields', None)
- 
-        # Instantiate the superclass normally
-        super(DynamicFieldsModelSerializer, self).__init__(*args, **kwargs)
-
-        if fields is not None and fields != '__all__':
-            # Drop any fields that are not specified in the `fields` argument.
-            allowed = set(fields)
-            existing = set(self.fields)
-            for field_name in existing - allowed:
-                self.fields.pop(field_name)
 
 
 class ScheduleExpertiseSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
@@ -49,27 +31,12 @@ class ScheduleExpertiseSerializer(DynamicFieldsModelSerializer, serializers.Mode
         return ret
 
 
-class RuleValueSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
-    class Meta:
-        model = RuleValue
-        fields = '__all__'
-
-
-class RuleSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
-    rule_values = RuleValueSerializer(many=True, fields=('value_integer', 'value_varchar', 'value_datetime',))
-
-    class Meta:
-        model = Rule
-        fields = '__all__'
-
-
 """ RECURRENCES """
 class RecurrenceSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
     url = serializers.SerializerMethodField(read_only=True)
-
-    # set to None because 'default' is required
-    # we set schedule object in to_internal_value
-    schedule = serializers.HiddenField(default=None)
+    schedule = serializers.SlugRelatedField(slug_field='uuid', queryset=Schedule.objects.all())
+    rules = RuleSerializer(many=True, read_only=True, fields=('uuid', 'identifier', 'mode', 'type',
+                                                              'url', 'rule_values',))
 
     class Meta:
         model = Recurrence
@@ -96,10 +63,7 @@ class RecurrenceSerializer(DynamicFieldsModelSerializer, serializers.ModelSerial
         return ret
 
     def to_internal_value(self, data):
-        schedule = self.context.get('schedule')
         data = super().to_internal_value(data)
-
-        data['schedule'] = schedule
         return data
 
     @transaction.atomic

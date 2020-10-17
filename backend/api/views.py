@@ -40,6 +40,8 @@ class RootApiView(APIView):
                 'consultant': {
                     'schedules': reverse('helpdesk_api:consultant:schedule-list', request=request,
                                          format=format, current_app='helpdesk_api:consultant'),
+                    'rules': reverse('helpdesk_api:consultant:rule-list', request=request,
+                                     format=format, current_app='helpdesk_api:consultant'),
                 }
             }
         })

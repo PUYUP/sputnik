@@ -9,14 +9,16 @@ Example;
 - inclusion: add date to recurrence, maybe a special day
 """
 
+from os import pipe
 import uuid
 from dateutil import rrule
+from operator import itemgetter
 
-from django.db import models
+from django.db import models, connection
 from django.db.utils import IntegrityError
 from django.utils.translation import gettext_lazy as _
 from django.utils.timezone import datetime
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 
 from utils.generals import get_model
 from utils.validators import non_python_keyword, IDENTIFIER_VALIDATOR
@@ -80,7 +82,7 @@ class AbstractRule(models.Model):
         verbose_name_plural = _("Recurrence Rules")
         constraints = [
             models.UniqueConstraint(
-                fields=['recurrence', 'mode', 'type', 'identifier'], 
+                fields=['recurrence', 'mode', 'identifier'], 
                 name='unique_recurrence_rule'
             )
         ]
@@ -92,55 +94,59 @@ class AbstractRule(models.Model):
         """
         values format;
             [
-                {'value': 'string', 'new_value': 'string'},
-                {'value': 'string', 'new_value': 'string'}
+                {'value': 'string', 'uuid': 'string'},
+                {'value': 'string', 'uuid': 'string'}
             ]
         """
         RuleValue = get_model('helpdesk', 'RuleValue')
-    
-        sets = list()
-        updates = list()
+
+        current_uuids = list()
+        new_values = list()
+        update_values = list()
         value_type = 'value_%s' % self.type
-   
-        for v in values:
-            sets.append(v.get('value', ''))
-            updates.append(v.get('new_value', ''))
 
-        # check value saved by filter out from database
-        value_in = {'%s__in' % value_type: sets}
-        saved_values = self.recurrence.rule_values \
-            .filter(rule__mode=self.mode, rule__identifier=self.identifier, **value_in)
-        saved_values_list = saved_values.values_list(value_type, flat=True)
+        for val in values:
+            value = val.get('value', None)
+            uuid = val.get('uuid', None)
 
-        # compare current values with new_value
-        unsaved_values = list(set(sets) - set(list(saved_values_list)))
+            # has uuid try to update
+            if uuid:
+                update_values.append({'value': value, 'uuid': uuid})
+                current_uuids.append(uuid)
+            else:
+                new_values.append({'value': value})
 
-        # update values
-        if saved_values:
-            update_values = list()
-            for v in saved_values:
-                # check value same
-                old_value = getattr(v, value_type)
-                item = list(filter(lambda x: x['value'] == old_value, values))
-                if item:
-                    new_value = item[0].get('new_value', '')
-                    if new_value:
-                        setattr(v, value_type, new_value)
-                        update_values.append(v)
+        # UPDATE
+        if update_values:
+            saved_rules = self.recurrence.rule_values \
+                .filter(rule__mode=self.mode, rule__identifier=self.identifier, uuid__in=current_uuids)
 
-            if update_values:
-                try:
-                    RuleValue.objects.bulk_update(update_values, [value_type])
-                except (IntegrityError, Exception) as e:
-                    raise ValidationError(repr(e))
+            if saved_rules.exists():
+                update_objs = list()
+                for obj in saved_rules:
+                    old_value = getattr(obj, value_type)
+                    item = list(filter(lambda x: x['uuid'] == str(obj.uuid), update_values))
+                    value = item[0].get('value')
 
-        # create new values
-        if unsaved_values:
+                    if value != old_value:
+                        setattr(obj, value_type, item[0].get('value'))
+                        update_objs.append(obj)
+
+                if update_objs:
+                    try:
+                        RuleValue.objects.bulk_update(update_objs, [value_type])
+                    except (IntegrityError, Exception) as e:
+                        raise ValidationError(repr(e))
+
+        # CREATE
+        if new_values:
             create_values = list()
-            for v in unsaved_values:
-                field = {value_type: v}
-                v_obj = RuleValue(rule=self, recurrence=self.recurrence, **field)
-                create_values.append(v_obj)
+            for v in new_values:
+                value = v.get('value', None)
+                if value:
+                    field = {value_type: value}
+                    v_obj = RuleValue(rule=self, recurrence=self.recurrence, **field)
+                    create_values.append(v_obj)
 
             if create_values:
                 try:

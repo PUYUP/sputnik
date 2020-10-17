@@ -1,9 +1,7 @@
-from collections import defaultdict
-
-from apps.helpdesk.models.models import Recurrence
+from apps.helpdesk.models.models import Recurrence, RuleValue
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction, IntegrityError
-from django.db.models import F, Prefetch, Q
+from django.db.models import Prefetch, Q
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from django.utils.translation import ugettext_lazy as _
@@ -74,8 +72,10 @@ class ScheduleApiView(viewsets.ViewSet):
         queryset = Schedule.objects.prefetch_related(
             Prefetch('schedule_expertises'),
             Prefetch('schedule_expertises__expertise'),
-            Prefetch('schedule_expertises__expertise__topic')
-        )
+            Prefetch('schedule_expertises__expertise__topic'),
+            Prefetch('recurrence')
+        ) \
+        .select_related('recurrence')
 
         try:
             if is_update:
@@ -97,8 +97,9 @@ class ScheduleApiView(viewsets.ViewSet):
         queryset = Schedule.objects \
             .prefetch_related(Prefetch('user'), Prefetch('schedule_expertises'),
                               Prefetch('schedule_expertises__expertise'),
-                              Prefetch('schedule_expertises__expertise__topic')) \
-            .select_related('user') \
+                              Prefetch('schedule_expertises__expertise__topic'),
+                              Prefetch('recurrence')) \
+            .select_related('user', 'recurrence') \
             .order_by('sort_order')
 
         # check permission
@@ -354,8 +355,8 @@ class ScheduleApiView(viewsets.ViewSet):
                     "identifier": "byweekday",
                     "type": "integer",
                     "values": [
-                        {"value": 2, "uuid": 5},
-                        {"value": 3, "uuid": 7}
+                        {"value": 2, "uuid": "7d0981db-ff64-4df8-bcdf-7b7daecfd6ca"},
+                        {"value": 3, "uuid": "69e7a5ba-5375-4f6e-8274-f7fca96e9d35"}
                     ]
                 }
             ]
@@ -375,40 +376,14 @@ class ScheduleApiView(viewsets.ViewSet):
                 values = r.rule_values.all()
                 rule_values.append(
                     {
+                        'uuid': r.uuid,
                         'identifier': r.identifier,
                         'type': r.type,
                         'values': [{'uuid': str(v.uuid), 'value': getattr(v, field)} for v in values],
                     }
                 )
 
-            print(rule_values)
-            """
-            rules = recurrence.rule_values \
-                .prefetch_related(Prefetch('rule'), Prefetch('recurrence'), Prefetch('recurrence__schedule')) \
-                .select_related('rule', 'recurrence', 'recurrence__schedule') \
-                .all()
-
-            rule_list = defaultdict(list)
-            rule_collections = defaultdict(list)
-
-            for rv in rules:
-                rtype = rv.rule.type
-                identifier = rv.rule.identifier
-                value_type = 'value_%s' % rtype
-                value = getattr(rv, value_type)
-
-                rule_list[identifier].append({'uuid': str(rv.uuid), 'value': value})
-                rule_collections[identifier] = {
-                    'identifier': identifier, 
-                    'type': rtype,
-                    'values': rule_list[identifier]
-                }
-
-            for _i, k in enumerate(rule_collections):
-                v = rule_collections[k]
-                rule_values.append(v)
-            """
-        return Response('rule_values', status=response_status.HTTP_200_OK)
+        return Response(rule_values, status=response_status.HTTP_200_OK)
 
     """ RULE: CREATE """
     @method_decorator(never_cache)
@@ -420,15 +395,8 @@ class ScheduleApiView(viewsets.ViewSet):
 
         schedule = self.get_schedule(uuid=uuid)
         recurrence = getattr(schedule, 'recurrence', None)
-        context = {'request': request, 'schedule': schedule}
         rules = request.data
 
-        """
-        [
-            {'value': 'string', 'new_value': 'string'},
-            {'value': 'string', 'new_value': 'string'}
-        ]
-        """
         for r in rules:
             identifier = r.get('identifier')
             values = r.get('values')
@@ -439,10 +407,7 @@ class ScheduleApiView(viewsets.ViewSet):
                 values_set = list()
 
                 for v in values:
-                    new_value = v.get('new_value')
                     vdict = {'value': v.get('value')}
-                    if new_value:
-                        vdict['new_value'] = new_value
                     values_set.append(vdict)
 
                 try:
@@ -450,3 +415,51 @@ class ScheduleApiView(viewsets.ViewSet):
                 except Exception as e:
                     raise NotAcceptable({'detail': repr(e)})
         return Response({'detail': _("Rules created")}, status=response_status.HTTP_201_CREATED)
+
+    """ RULE: UPDATE """
+    @method_decorator(never_cache)
+    @transaction.atomic
+    @rules.mapping.patch
+    def rule_update(self, request, uuid=None, recurrence_uuid=None):
+        if not request.data:
+            raise NotAcceptable()
+
+        schedule = self.get_schedule(uuid=uuid)
+        recurrence = getattr(schedule, 'recurrence', None)
+        rules = request.data
+
+        for r in rules:
+            identifier = r.get('identifier')
+            values = r.get('values')
+            rtype = r.get('type')
+
+            rule, _creaed = Rule.objects.get_or_create(identifier=identifier, recurrence_id=recurrence.id, type=rtype)
+            if rule:
+                values_set = list()
+
+                for v in values:
+                    uuid = v.get('uuid')
+                    vdict = {'value': v.get('value')}
+                    if uuid:
+                        vdict['uuid'] = uuid
+                    values_set.append(vdict)
+
+                try:
+                    rule.save_values(values_set)
+                except Exception as e:
+                    raise NotAcceptable({'detail': repr(e)})
+        return Response({'detail': _("Rules updated")}, status=response_status.HTTP_200_OK)
+
+    """ RULE: DELETE """
+    @action(detail=True, methods=['delete'],
+            permission_classes=[IsAuthenticated, IsConsultantOnly],
+            url_path='recurrences/(?P<recurrence_uuid>[^/.]+)/rules/(?P<rule_value_uuid>[^/.]+)', url_name='recurrences-rules-delete')
+    def rules_delete(self, request, uuid=None, recurrence_uuid=None, rule_value_uuid=None):
+        """ DELETE RULE VALUE """
+        try:
+            queryset = RuleValue.objects.get(uuid=rule_value_uuid, recurrence__schedule__user__uuid=request.user.uuid)
+        except ObjectDoesNotExist:
+            raise NotFound()
+
+        queryset.delete()
+        return Response({'detail': _("Delete success!")}, status=response_status.HTTP_204_NO_CONTENT)

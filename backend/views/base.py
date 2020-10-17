@@ -18,17 +18,6 @@ class HomeView(View):
     context = dict()
 
     def get(self, request):
-        values = [
-            {'value': 101, 'new_value': '5'}
-        ]
-
-        # print(values)
-
-        schedule = Schedule.objects.get(id=1)
-        rule_byweekday = schedule.recurrence.rules.get(identifier='byweekday', mode=INCLUSION)
-        rule_byweekday.save_values(values=values)
-        # print(rule_byweekday, 'AAAAAAAAAAAAAAA')
-
         if self.request.user.is_authenticated:
             roles = request.user.roles_identifier()
             if CLIENT in roles:
