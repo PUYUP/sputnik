@@ -69,7 +69,7 @@ def verifycodecode_save_handler(sender, instance, created, **kwargs):
                 'email': getattr(instance, 'email', None),
                 'passcode': getattr(instance, 'passcode', None)
             }
-            # send_verifycode_email.delay(data)
+            send_verifycode_email.delay(data)
 
         # mark older VerifyCode Code to expired
         oldest = instance.__class__.objects \
