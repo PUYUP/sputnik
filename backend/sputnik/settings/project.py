@@ -151,6 +151,6 @@ REDIS_URL = 'redis://' + REDIS_HOST + ':' + REDIS_PORT + '/0'
 
 
 # Firebase configuration
-service_file = '%s/%s' % (PROJECT_PATH, 'firebase-58c34c542620.json')
-cred = credentials.Certificate(service_file) 
-default_app = initialize_app(cred)
+# service_file = '%s/%s' % (PROJECT_PATH, 'firebase-58c34c542620.json')
+# cred = credentials.Certificate(service_file) 
+# default_app = initialize_app(cred)
