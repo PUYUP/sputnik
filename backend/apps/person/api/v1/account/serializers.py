@@ -8,7 +8,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ObjectDoesNotExist
 
 from rest_framework import serializers
-from firebase_admin.auth import get_user_by_phone_number
+# from firebase_admin.auth import get_user_by_phone_number
 
 from utils.generals import get_model
 from apps.person.utils.constants import CHANGE_MSISDN
@@ -82,6 +82,8 @@ class AccountSerializer(serializers.ModelSerializer):
                     Passcode provided by Firebase JavaScript SDK on the frontend
                     After passcode verified, we check the msisdn exists in Firebase with Python
                     """
+
+                    """
                     formated_value = value.replace('0', '+62', 1);
 
                     try:
@@ -91,6 +93,8 @@ class AccountSerializer(serializers.ModelSerializer):
                            raise serializers.ValidationError(_(u"MSISDN tidak terdaftar"))
                     except:
                         raise serializers.ValidationError(_(u"Kode verifikasi pembaruan MSISDN salah"))
+                    """
+                    pass
                 else:
                     with transaction.atomic():
                         try:

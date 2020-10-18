@@ -1,7 +1,7 @@
 from datetime import timedelta
 from django.contrib.messages import constants as messages
 
-from firebase_admin import credentials, initialize_app
+# from firebase_admin import credentials, initialize_app
 
 from .base import *
 
