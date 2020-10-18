@@ -1,8 +1,6 @@
-from pprint import pp
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Prefetch
-from django.db.models.expressions import Value
 from django.urls import reverse
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ObjectDoesNotExist

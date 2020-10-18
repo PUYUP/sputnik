@@ -1,10 +1,9 @@
-from pprint import pp
+
 from django.conf import settings
 from django.db import transaction, IntegrityError
 from django.contrib import messages
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
-from django.forms.models import model_to_dict
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import EmailValidator
@@ -14,8 +13,6 @@ from rest_framework import serializers
 # PROJECT UTILS
 from utils.generals import get_model
 from utils.validators import non_python_keyword, IDENTIFIER_VALIDATOR
-from apps.person.utils.auth import set_roles
-from apps.person.utils.constants import ROLE_IDENTIFIERS, ROLES_ALLOWED
 
 from apps.person.api.validator import (
     EmailDuplicateValidator,

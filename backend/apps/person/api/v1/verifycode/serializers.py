@@ -1,9 +1,6 @@
-from pprint import pp
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import Q
-from django.core.validators import EmailValidator
-from django.template import context
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 

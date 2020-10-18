@@ -1,11 +1,9 @@
-from pprint import pp
 import uuid
 
 from django.conf import settings
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.contenttypes.fields import GenericRelation
-from django.core.exceptions import ValidationError
 
 from apps.resume.utils.validators import year_validator
 from apps.resume.utils.constants import EDUCATION_STATUS, DRAFT
