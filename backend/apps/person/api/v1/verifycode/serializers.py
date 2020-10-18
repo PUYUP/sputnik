@@ -86,24 +86,24 @@ class VerifyCodeSerializer(VerifyCodeFieldsModelSerializer, serializers.ModelSer
         user = request.user
 
         # normalize
-        ret = super().to_representation(instance)
+        ret = super().to_representation(value)
 
-        if hasattr(instance, 'msisdn'):
-            ret['msisdn'] = instance.msisdn
+        if hasattr(value, 'msisdn'):
+            ret['msisdn'] = value.msisdn
         else:
             if user:
                 account = getattr(user, 'account', dict())
                 ret['msisdn'] = getattr(account, 'msisdn', None)
 
-        if hasattr(instance, 'email'):
-            ret['email'] = instance.email
+        if hasattr(value, 'email'):
+            ret['email'] = value.email
         else:
             if user:
                 ret['email'] = user.email
 
         # this data not for validate response
         if not is_validate:
-            ret['created'] = getattr(instance, 'created', None)
+            ret['created'] = getattr(value, 'created', None)
             ret['info'] = info
 
         # prepare for password recovery
