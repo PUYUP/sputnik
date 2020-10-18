@@ -178,4 +178,4 @@ Mysql;
 3.  GRANT ALL PRIVILEGES ON * . * TO 'tanyapakar_db_user'@'localhost';
     GRANT ALL PRIVILEGES ON tanyapakar_db.* TO 'tanyapakar_db_user'@'localhost';
 4.  FLUSH PRIVILEGES;
-5.  CREATE DATABASE tanyapakar_db;
+5.  CREATE DATABASE tanyapakar_db CHARACTER SET utf8;

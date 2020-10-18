@@ -59,13 +59,10 @@ CSRF_TRUSTED_ORIGINS = [
 # Django CORS
 # ------------------------------------------------------------------------------
 # https://pypi.org/project/django-cors-headers/
-if DEBUG:
-    CORS_ALLOW_ALL_ORIGINS = True
-else:
-    CORS_ALLOW_CREDENTIALS = True
-    CORS_ALLOWED_ORIGINS = [
-        'https://tanyapakar.com'
-    ]
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    'http://tanyapakar.com'
+]
 
 
 
