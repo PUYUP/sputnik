@@ -11,6 +11,7 @@ ALLOWED_HOSTS = [
     '[::1]', 
     '117.53.45.28',
     'tanyapakar.com',
+    'www.tanyapakar.com',
 ]
 
 
