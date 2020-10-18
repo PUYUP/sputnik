@@ -162,3 +162,20 @@ server {
               return 301 https://$host$request_uri;
         } # managed by Certbot
 }
+
+
+
+
+
+
+
+
+
+
+Mysql;
+1.  sudo mysql
+2.  CREATE USER 'tanyapakar_db_user'@'localhost' IDENTIFIED BY 'K65&&hyrt#@!hgrtr';
+3.  GRANT ALL PRIVILEGES ON * . * TO 'tanyapakar_db_user'@'localhost';
+    GRANT ALL PRIVILEGES ON tanyapakar_db.* TO 'tanyapakar_db_user'@'localhost';
+4.  FLUSH PRIVILEGES;
+5.  CREATE DATABASE tanyapakar_db;
