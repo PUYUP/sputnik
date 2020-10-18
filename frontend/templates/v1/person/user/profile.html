@@ -1,0 +1,196 @@
+{% extends 'v1/base/base-consultant.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block head_title %}{% trans "Profil" noop %}{% endblock %}
+
+{% block main %}
+    <div class="uk-width-1-1">
+        <h6 class="uk-text-uppercase uk-content-title"><strong>{% trans 'Profil' noop %}</strong></h6>
+
+        <div class="uk-center">
+            <div class="uk-width-1-2@s uk-text-center uk-margin-auto">
+                <img id="profile-picture" data-src="" width="" height="" alt="" uk-img>
+            </div>
+
+            <div class="js-upload uk-placeholder uk-text-center">
+                <span uk-icon="icon: cloud-upload"></span>
+                <span class="uk-text-middle">{% trans 'Drag foto disini atau' %}</span>
+                <div uk-form-custom>
+                    <input type="file" multiple>
+                    <span class="uk-link">{% trans 'pilih satu' %}</span>
+                </div>
+            </div>
+        </div>
+
+        <progress id="js-progressbar" class="uk-progress" value="0" max="100" hidden></progress>
+
+        <form id="person-profile-form" class="uk-form-stacked" action="{% url 'person_view:profile' %}" method="POST">
+            {% csrf_token %}
+
+            <div class="uk-margin">
+                <label class="uk-form-label" for="first_name">{% trans 'Nama lengkap' %}</label>
+                <div class="uk-form-controls">
+                    <input class="uk-input" type="text" id="first_name" name="first_name" placeholder="Contoh: John Doe" autocomplete="off">
+                </div>
+            </div>
+
+            <div class="uk-margin">
+                <label class="uk-form-label" for="headline">{% trans 'Sorotan' %}</label>
+                <div class="uk-form-controls">
+                    <input class="uk-input" type="text" id="headline" name="headline" placeholder="Contoh: Software Engineer" autocomplete="off">
+                </div>
+            </div>
+
+            <div class="uk-margin">
+                <label class="uk-form-label" for="gender">{% trans 'Jenis Kelamin' %}</label>
+                <div class="uk-form-controls">
+                    <select id="gender" name="gender" class="uk-select">
+                    </select>
+                </div>
+            </div>
+
+            <div class="uk-margin">
+                <label class="uk-form-label" for="about">{% trans 'Tentang' %}</label>
+                <div class="uk-form-controls">
+                    <textarea class="uk-textarea" id="about" name="about" placeholder="Saya adalah..." autocomplete="off"></textarea>
+                </div>
+            </div>
+
+            <div class="uk-text-right uk-margin-top">
+                <button type="submit" class="uk-button uk-button-primary">Simpan</button>
+            </div>
+        </form>
+    </div>
+{% endblock %}
+
+{% block js %}
+    <script type="text/javascript">
+        window.addEventListener('DOMContentLoaded', function() {
+            // GENDERS
+            var genderChoices = JSON.parse('{{ gender_choices|safe }}');
+            var genderOption = '';
+            var currentGender = '{{ user.profile.gender }}';
+
+            $.each(genderChoices, function(k, v) {
+                genderOption += `<option value="${k}" ${k == currentGender ? "selected" : ''}>${v}</option>`;
+            });
+
+            $('#gender').html(genderOption);
+
+            // ...
+            // LOAD PROFILE
+            // ...
+            var loadProfile = function() {
+                $.ajax({
+                    method: 'GET',
+                    url: API_ENDPOINT + 'person/users/{{ user.uuid }}/profile/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    cache: false,
+                    success: function(response) {
+                        var values = $('#person-profile-form').serializeArray();
+                        
+                        $.each(values, function(i, v) {
+                            $('#' + v.name).val(response[v.name]);
+                        });
+
+                        $('#profile-picture').attr('data-src', response?.picture);
+                    }
+                });
+            }
+
+            loadProfile();
+
+            // ...
+            // SUBMIT FORM
+            // ...
+            $(document).on('submit', 'form#person-profile-form', function(e) {
+                e.preventDefault();
+
+                var values = $(this).serializeArray(),
+                    param = {};
+
+                $.each(values, function(i, v) {
+                    param[v.name] = v.value;
+                });
+
+                saveProfile(param);
+            });
+
+            var saveProfile = function(param) {
+                $.ajax({
+                    method: 'PATCH',
+                    url: API_ENDPOINT + 'person/users/{{ user.uuid }}/profile/',
+                    dataType: 'json',
+                    contentType: "application/json; charset=utf-8",
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    data: JSON.stringify({...param}),
+                    cache: false,
+                    success: function(response) {
+                        UIkit.notification({
+                            message: "{% trans 'Profil berhasi perbarui' %}",
+                            status: 'success',
+                            timeout: 2000
+                        });
+                    }
+                });
+            }
+
+            // ...
+            // PICTURE UPLOAD
+            // ...
+            var bar = document.getElementById('js-progressbar');
+
+            UIkit.upload('.js-upload', {
+                url: API_ENDPOINT + 'person/users/{{ user.uuid }}/profile/',
+                method: 'PATCH',
+                name: 'picture',
+                mime: 'image/*',
+                multiple: false,
+                beforeSend: function (arguments) {
+                    // console.log('beforeSend', arguments);
+                    arguments.headers = {'X-CSRFToken': Cookies.get('csrftoken')};
+                },
+                beforeAll: function () {
+                    // console.log('beforeAll', arguments);
+                },
+                load: function () {
+                    // console.log('load', arguments);
+                },
+                error: function () {
+                    // console.log('error', arguments);
+                },
+                complete: function () {
+                    // console.log('complete', arguments);
+                },
+
+                loadStart: function (e) {
+                    bar.removeAttribute('hidden');
+                    bar.max = e.total;
+                    bar.value = e.loaded;
+                },
+
+                progress: function (e) {
+                    bar.max = e.total;
+                    bar.value = e.loaded;
+                },
+
+                loadEnd: function (e) {
+                    bar.max = e.total;
+                    bar.value = e.loaded;
+                },
+
+                completeAll: function (arguments) {
+                    var response = JSON.parse(arguments.response);
+
+                    setTimeout(function () {
+                        bar.setAttribute('hidden', 'hidden');
+                        $('#profile-picture').attr('data-src', response?.picture);
+                    }, 750);
+                }
+            });
+        });
+    </script>
+{% endblock %}

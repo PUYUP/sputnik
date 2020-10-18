@@ -1,0 +1,68 @@
+/***
+ * Generals
+ */
+html, body, main { height: 100%; font-family: sans-serif; }
+
+/***
+ * UIkit override
+ */
+.uk-notification-message { font-size: 1rem; }
+.uk-text-small { font-size: .825rem; }
+.uk-button { padding: 0 20px; }
+.uk-nav-header {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/***
+ * App
+ */
+.uk-list-issue-meta>:nth-child(n+2) {
+    margin-top: 5px;
+}
+
+.uk-nav-menu {
+    top: 0;
+    left: auto;
+}
+
+.uk-nav-menu .uk-navbar-toggle {
+    min-height: auto;
+}
+
+/* Large devices (desktops, less than 1200px) */
+@media (max-width: 1199px) {
+    
+}
+
+/* Medium devices (tablets, less than 992px) */
+@media (max-width: 991.98px) {
+
+}
+
+/* Medium devices (tablets, less than 992px) */
+@media (max-width: 960px) {
+    .uk-content-title {
+        text-align: right;
+    }
+
+    .uk-modal-title {
+        font-size: 1.3rem;
+    }
+}
+
+/* Small devices (landscape phones, less than 768px) */
+@media (max-width: 767px) {
+
+}
+
+/* Small devices (landscape phones, less than 768px) */
+@media (max-width: 640px) {
+    
+}
+
+/* Extra small devices (portrait phones, less than 576px) */
+@media (max-width: 575px) {
+    
+}

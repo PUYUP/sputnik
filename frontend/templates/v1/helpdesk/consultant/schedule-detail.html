@@ -1,0 +1,565 @@
+{% extends 'v1/base/base-consultant.html' %}
+{% load i18n static %}
+{% load crispy_forms_tags %}
+
+{% block head_title %}{% trans 'Detail Jadwal' noop %}{% endblock %}
+
+{% block main %}
+    <h6 class="uk-text-uppercase uk-content-title uk-margin-remove-top">
+        <strong>{% trans 'Detail Jadwal' noop %}</strong>
+    </h6>
+
+    <div id="schedule-form">
+        <!-- SCHEDULE FORM -->
+    </div>
+
+    <div class="uk-width-1-1">
+        <div id='calendar'></div>
+    </div>
+
+    <div id="add-segment-modal" class="uk-modal" uk-modal>
+        <div class="uk-modal-dialog">
+            <button class="uk-modal-close-outside uk-close-large" type="button" uk-close></button>
+            
+            <div class="uk-container uk-container-small uk-padding">
+                <ul id="segment-accordion" uk-accordion>
+                    <li id="segment" class="uk-open">
+                        <a class="uk-accordion-title" href="#">{% trans "Pilih kanal" noop %}</a>
+                        <div class="uk-accordion-content uk-margin-remove-top">
+                            <form id="helpdesk-segment-form" class="uk-form-stacked" method="POST" action="${scheduleURL}">
+                                {% csrf_token %}
+
+                                <div class="uk-margin">
+                                    <div class="uk-form-controls">
+                                        <div class="uk-margin">
+                                            <label>
+                                                <input class="uk-radio" type="radio" name="canal" value="text" required> 
+                                                {% trans 'Teks' noop %}
+                                            </label>
+
+                                            <p class="uk-text-small uk-margin-remove uk-text-italic uk-text-muted" style="margin-top: 4px !important;">
+                                                {% trans 'Diskusi seperti chat' noop %}
+                                            </p>
+                                        </div>
+                                            
+                                        <div class="uk-margin">
+                                            <label>
+                                                <input class="uk-radio" type="radio" name="canal" value="voice" required> 
+                                                {% trans 'Call' noop %}
+                                            </label>
+
+                                            <p class="uk-text-small uk-margin-remove uk-text-italic uk-text-muted" style="margin-top: 4px !important;">
+                                                {% trans 'Panggilan suara' noop %}
+                                            </p>
+                                        </div>
+
+                                        <div class="uk-margin">
+                                            <label>
+                                                <input class="uk-radio" type="radio" name="canal" value="video" required> 
+                                                {% trans 'Video' noop %}
+                                            </label>
+
+                                            <p class="uk-text-small uk-margin-remove uk-text-italic uk-text-muted" style="margin-top: 4px !important;">
+                                                {% trans 'Tatap muka seperti Zoom' noop %}
+                                            </p>
+                                        </div>
+
+                                        <div class="uk-grid uk-grid-small uk-child-width-1-2@s" uk-gird>
+                                            <div>
+                                                <div class="uk-margin">
+                                                    <label for="open_hour">{% trans 'Jam buka' noop %}</label>
+                                                    <input class="uk-input" type="time" id="open_hour" name="open_hour" required>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <div class="uk-margin">
+                                                    <label for="close_hour">{% trans 'Jam tutup' noop %}</label>
+                                                    <input class="uk-input" type="time" id="close_hour" name="close_hour" required>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="uk-margin">
+                                            <label for="max_opened">{% trans 'Konsultasi maksimal' noop %}</label>
+                                            <input class="uk-input" type="number" id="max_opened" name="max_opened" required>
+                                            <p class="uk-margin-small-top uk-text-small">{% trans "Ini penting, pastikan sesuai dengan waktu Anda" noop %}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </li>
+
+                    <li id="segment-sla">
+                        <a class="uk-accordion-title" href="#">{% trans "SLA konsultasi" noop %}</a>
+                        <div class="uk-accordion-content">
+                            <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor reprehenderit.</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block style %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.3.2/main.min.css" type="text/css">
+{% endblock %}
+
+{% block js %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+
+    <!-- rrule lib -->
+    <script src='https://cdn.jsdelivr.net/npm/rrule@2.6.4/dist/es5/rrule.min.js' defer></script>
+
+    <!-- fullcalendar bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.3.2/main.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.3.2/locales-all.min.js" defer></script>
+
+    <!-- the rrule-to-fullcalendar connector. must go AFTER the rrule lib -->
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/rrule@5.2.0/main.global.min.js' defer></script>
+
+    <script type="text/javascript">
+        window.addEventListener('DOMContentLoaded', function() {
+            var scheduleURL = "{% url 'helpdesk_view:consultant:schedule_detail' uuid %}";
+            var wkstChoices = JSON.parse('{{ wkst_choices | safe }}');
+
+            /*
+            setTimeout(function() {
+                var calendarEl = document.getElementById('calendar');
+                var calendar = new FullCalendar.Calendar(calendarEl, {
+                    timeZone: 'UTC',
+                    initialView: 'dayGridMonth',
+                    events: [
+                        {
+                            rrule: {
+                                freq: 'weekly',
+                                interval: 1,
+                                byweekday: [ 'mo', 'fr' ],
+                                dtstart: '2020-02-01T10:30:00'
+                            }
+                        }
+                    ]
+                });
+
+                calendar.render();
+            }, 100);
+            */
+    
+            // ...
+            // LOAD EXPERTISES
+            // ...
+            var loadExpertise = function(currentExpertises=[]) {
+                $.ajax({
+                    method: 'GET',
+                    url: API_ENDPOINT + 'resume/expertises/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    cache: false,
+                    success: function(response) {
+                        var items = '';
+
+                        $.each(response, function(k, v) {
+                            var checked = currentExpertises.includes(v.uuid) ? 'checked' : '';
+
+                            items += `<div>
+                                <label>
+                                    <input type="checkbox" id="checkbox-${v.uuid}" name="expertise" value="${v.uuid}" ${checked}>
+                                    ${v.topic_label}
+                                </label>
+                            </div>`;
+                        });
+
+                        $('#uk-expertise-choices > div').html(items);
+                    }
+                });
+            }
+    
+            // ...
+            // LOAD
+            // ...
+            var loadSchedule = function() {
+                $.ajax({
+                    method: 'GET',
+                    url: API_ENDPOINT + 'helpdesk/consultant/schedules/{{ uuid }}/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    cache: false,
+                    success: function(response) {
+                        if (response) {
+                            var expertises = '';
+                            var currentExpertises = [];
+                            var recurrence = response?.recurrence;
+                            var dtstart = new Date(recurrence?.dtstart).toISOString().split('T')[0];
+                            var dtstart_open_hour = new Date(recurrence?.dtstart).toISOString().split('T')[1],
+                                dtstart_open_hour = dtstart_open_hour.split('.')[0];
+
+                            var rules = recurrence?.rules;
+                            var byweekday = rules.find(x => x.identifier === 'byweekday');
+                            var byweekday_values = byweekday?.rule_values;
+
+                            var form = `<form id="helpdesk-schedule-form" class="uk-form-stacked" method="POST" action="${scheduleURL}">
+                                {% csrf_token %}
+
+                                <div class="uk-margin uk-margin-remove-top">
+                                    <label class="uk-form-label uk-text-bold" for="label">{% trans 'Label jadwal' %} *</label>
+                                    <div class="uk-form-controls">
+                                        <input class="uk-input uk-width-1-1" type="text" id="label" name="label" placeholder="Ex: Konsultasi Memasak" autocomplete="off" value="${response.label}" required>
+                                    </div>
+                                </div>
+
+                                <div class="uk-margin uk-margin-remove-top">
+                                    <label class="uk-form-label uk-text-bold" for="expertise">{% trans 'Keahlian jadwal ini' %} *</label>
+                                    <div id="uk-expertise-choices" class="uk-form-controls">
+                                        <div class="uk-child-width-1-2 uk-child-width-1-3@s uk-grid uk-grid-small" uk-grid>
+                                            <!-- CHOICES HERE -->
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <section id="recurrence">
+                                    <div class="uk-margin">
+                                        <label class="uk-form-label uk-text-bold" for="dtstart">{% trans 'Mulai buka pada' %} *</label>
+                                        <div class="uk-form-controls">
+                                            <input type="date" class="uk-input uk-width-1-1" id="dtstart" name="dtstart" value="${dtstart}" required>
+                                        </div>
+                                    </div>
+
+                                    <div class="uk-margin">
+                                        <label class="uk-form-label uk-text-bold" for="label">{% trans 'Setiap hari' %} *</label>
+                                        <div class="uk-form-controls">
+                                            <div class="uk-form-controls">
+                                                <div class="uk-child-width-1-2 uk-child-width-1-3@s uk-grid uk-grid-small" uk-grid>`;
+                                                    $.each(wkstChoices, function(k, v) {
+                                                        if (k != 'FD') {
+                                                            var checked = '',
+                                                                uuid = '';
+                            
+                                                            if (byweekday_values) {
+                                                                var value = byweekday_values.find(x => x.value_varchar === k);
+                                                                checked = value ? 'checked' : '';
+                                                                uuid = value?.uuid ? `data-uuid="${value?.uuid}"` : '';
+                                                            }
+    
+                                                            form += `<div>
+                                                                <label>
+                                                                    <input type="checkbox" id="checkbox-${k}" name="byweekday" value="${k}" ${uuid} ${checked}>
+                                                                    ${v}
+                                                                </label>
+                                                            </div>`;
+                                                        }
+                                                    });
+                                                form += `</div>
+                                            </div>
+                                        </div>
+                                    </div> <!-- /.byweekday -->
+
+                                    <div class="uk-margin">
+                                        <label class="uk-form-label uk-text-bold" for="label">{% trans 'Segmen' %} *</label>
+                                        <ul class="uk-list uk-list-divider">
+                                            <li>
+                                                <button type="button" id="add-segment" class="uk-button uk-button-small">
+                                                    {% trans 'Tambah' noop %}
+                                                </button>
+                                            </li>
+                                            
+                                            <li>
+                                                Teks
+
+                                                <ul class="uk-list uk-list-hyphen uk-text-small uk-list-issue-meta">
+                                                    <li>Jam buka <strong>08:00</strong> sampai <strong>10:00</strong></li>
+                                                    <li>Maksimal 10 konsultasi</li>
+
+                                                    <li>
+                                                        SLA 1 jam Rp 5.000 <br />
+                                                        <strong>Prioritas:</strong>
+                                                        <ul class="uk-list uk-list-hyphen uk-text-small uk-list-issue-meta uk-margin-remove-top">
+                                                            <li>Genting +Rp 1.500</li>
+                                                            <li>Sedang +Rp 1.000</li>
+                                                            <li>Rendah +Rp 750</li>
+                                                        </ul>
+                                                    </li>
+
+                                                    <li>SLA 2 jam Rp 3.500</li>
+                                                    <li>SLA 5 jam Rp 2.500</li>
+                                                </ul>
+                                            </li>
+
+                                            <li>Voice</li>
+                                            <li>Video</li>\
+                                        </ul>
+                                    </div> <!-- /.segment -->
+                                </section>
+
+                                <div class="uk-flex uk-margin-top">
+                                    <div class="uk-margin-auto-left">
+                                        <button type="submit" class="uk-button uk-button-primary" data-uuid="${response.uuid}">{% trans 'Simpan' %}</button>
+                                    </div>
+                                </div>
+
+                                <hr />
+
+                                <button type="button" id="delete" class="uk-button uk-button-danger uk-button-small">{% trans 'Hapus jadwal' noop %}</button>
+                            </form>`;
+
+                            $('#schedule-form').html(form);
+                            
+                            $.each(response.schedule_expertises, function(k, v) {
+                                currentExpertises.push(v.expertise);
+                            });
+
+                            loadExpertise(currentExpertises);
+
+                            // set global
+                            window.recurrence_uuid = response?.recurrence.uuid;
+                            window.schedule_uuid = response?.uuid;
+                            window.byweekday_uuid = byweekday?.uuid;
+                        }
+                    }
+                });
+            }
+
+            loadSchedule();
+
+            // ...
+            // SUBMIT
+            // ...
+            $(document).on('submit', '#helpdesk-schedule-form', function(e) {
+                e.preventDefault();
+
+                // clear all alert
+                $(this).find('.uk-alert').remove();
+
+                var values = $(this).serializeArray(),
+                    uuid = $(this).find('button[type="submit"]').attr('data-uuid');
+                    param = {},
+                    expertises = [],
+                    byweekdaysCreate = [],
+                    byweekdaysDelete = [];
+
+                // collect all weeekdays
+                var byweekdaysEl = $('input[name=byweekday]');
+
+                $.each(byweekdaysEl, function(i, v) {
+                    var uid =  $(v).attr('data-uuid');
+                    var value = $(v).val();
+                    var checked = $(v).is(':checked' );
+                    var obj = {'value_varchar': checked ? value : ''};
+
+                    if (uid) {
+                        // update
+                        obj['uuid'] = uid;
+                        if (!checked) byweekdaysDelete.push(obj);
+                    } else {
+                        // create
+                        if (value && checked) byweekdaysCreate.push(obj);
+                    }
+                });
+
+                // filtering value
+                $.each(values, function(i, v) {
+                    if(v.name === 'expertise') {
+                        // EXPERTISE
+                        var obj = {'expertise': v.value};
+                        expertises.push(obj);
+
+                    } else {
+                        param[v.name] = v.value;
+                    }
+                });
+
+                // schedule
+                param['schedule_expertises'] = expertises;
+                doUpdate(param, uuid);
+
+                var byweekdayData = {
+                    "type": "varchar", 
+                    "identifier": "byweekday"
+                }
+
+                // create recurrence rule
+                if (byweekdaysCreate && byweekdaysCreate.length > 0) {
+                    byweekdayData['recurrence'] = window.recurrence_uuid;
+                    byweekdayData['rule_values'] = byweekdaysCreate;
+                    createRule(byweekdayData);
+                }
+
+                // update recurrence rule
+                if (byweekdaysDelete && byweekdaysDelete.length > 0) {
+                    byweekdayData['rule_values'] = byweekdaysDelete;
+                    deleteRule(byweekdayData);
+                }
+            });
+    
+            // ...
+            // UPDATE
+            // ...
+            var doUpdate = function(param, uuid) {
+                $.ajax({
+                    method: 'PATCH',
+                    url: API_ENDPOINT + 'helpdesk/consultant/schedules/' + uuid + '/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(param),
+                    cache: false,
+                    success: function(response) {
+                        UIkit.notification({
+                            message: 'Berhasil diperbarui',
+                            status: 'success',
+                            timeout: 2000
+                        });
+                    },
+                    error: function(error) {
+                        var errorJSON = error?.responseJSON;
+
+                        if (error && errorJSON) {
+                            $.each(errorJSON, function(k, v) {
+                                var message = '';
+
+                                if(Array.isArray(v)) {
+                                    message = v.join(' ');
+                                } else {
+                                    message = v;
+                                }
+                                
+                                var el = $('#' + k);
+                                el.closest('.uk-form-controls').after('<p class="uk-text-small uk-text-danger uk-alert">' + message + '</p>');
+                            });
+                        }
+                    }
+                });
+            }
+
+            var createRule = function(data) {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'helpdesk/consultant/rules/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    cache: false,
+                    success: function(response) {
+                        var rule_values = response?.rule_values;
+
+                        $.each(rule_values, function(i, v) {
+                            $('input[value=' + v.value_varchar + ']').attr('data-uuid', v.uuid);
+                        });
+                    },
+                    error: function(error) {
+                    }
+                });
+            }
+
+            var deleteRule = function(data) {
+                $.ajax({
+                    method: 'DELETE',
+                    url: API_ENDPOINT + 'helpdesk/consultant/rules/' + window.byweekday_uuid + '/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    cache: false,
+                    success: function(response) {
+                        var rule_values = data?.rule_values;
+
+                        $.each(rule_values, function(i, v) {
+                            $('input[data-uuid=' + v.uuid + ']').removeAttr('data-uuid');
+                        });
+                    }
+                });
+            }
+
+            // ... 
+            // DELETE
+            // ...
+            $(document).on('click', '#delete', function(e) {
+                e.preventDefault();
+
+                var uuid = $(this).attr('data-uuid');
+
+                Swal.fire({
+                    title: 'Apakah Yakin?',
+                    text: "Tindakan ini menghapus data selamanya.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Ya, Hapus'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        doDelete(uuid, $(this));
+                    }
+                });
+            });
+
+            var doDelete = function(uuid, $this) {
+                $.ajax({
+                    method: 'DELETE',
+                    url: API_ENDPOINT + 'helpdesk/consultant/schedules/' + window.schedule_uuid + '/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    cache: false,
+                    success: function(response) {
+                        Turbolinks.visit("{% url 'helpdesk_view:consultant:schedule' %}");
+                    }
+                });
+            }
+
+
+            // ...
+            // ADD SEGMENT
+            // ...
+            $(document).on('click', '#add-segment', function(e) {
+                e.preventDefault();
+
+                UIkit.modal('#add-segment-modal').show();
+            });
+
+            UIkit.util.on('#segment-accordion', 'show', function(e) {
+                var target = $(e.target);
+
+                if (target.is('#segment-sla')) {
+                    $('#helpdesk-segment-form').trigger('submit');
+                }
+            });
+
+
+            // ...
+            // FORM SEGMENT SUBMIT
+            // ...
+            $(document).on('submit', '#helpdesk-segment-form', function(e) {
+                var values = $(this).serializeArray();
+                var param = {'schedule': "{{ uuid }}"};
+
+                // filtering value
+                $.each(values, function(i, v) {
+                    param[v.name] = v.value;
+                });
+
+                doCreateSegment(param);
+
+                e.preventDefault();
+            });
+
+            var doCreateSegment = function(data) {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'helpdesk/consultant/segments/{{ uuid }}/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    data: data,
+                    cache: false,
+                    success: function(response) {
+                        console.log(response);
+                    }
+                });
+            }
+        });
+    </script>
+{% endblock %}

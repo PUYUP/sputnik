@@ -128,16 +128,17 @@ class RuleApiView(viewsets.ViewSet):
                 raise NotAcceptable({'detail': repr(e)})
             return Response(serializer.data, status=response_status.HTTP_200_OK)
         return Response(serializer.errors, status=response_status.HTTP_406_NOT_ACCEPTABLE)
-    
+
     """ SCHEDULE: DESTROY """
     @method_decorator(never_cache)
     @transaction.atomic
     def destroy(self, request, uuid=None, format=None):
         values = request.data.get('rule_values', list())
         values_uuid = [item.get('uuid') for item in values]
-        
+
         queryset = RuleValue.objects \
-            .prefetch_related(Prefetch('recurrence'), Prefetch('recurrence__schedule'), Prefetch('recurrence__schedule__user')) \
+            .prefetch_related(Prefetch('recurrence'), Prefetch('recurrence__schedule'),
+                              Prefetch('recurrence__schedule__user')) \
             .select_related('recurrence') \
             .filter(uuid__in=values_uuid, recurrence__schedule__user_id=request.user.id)
 

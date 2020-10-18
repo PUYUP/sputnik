@@ -1,0 +1,479 @@
+{% extends 'v1/base/base-consultant.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block head_title %}{% trans 'Sertifikasi' noop %}{% endblock %}
+
+{% block main %}
+    <h6 class="uk-text-uppercase uk-content-title uk-margin-remove-top">
+        <strong>{% trans 'Sertifikasi' noop %}</strong>
+    </h6>
+
+    <button type="button" id="add-item" class="uk-button uk-button-primary uk-button-small">
+        {% trans 'Tambah' %}
+    </button>
+
+    <ul id="uk-item-list" class="uk-list uk-list-divider" uk-sortable="handle: .uk-item">
+        <!-- LIST HERE -->
+    </ul>
+{% endblock %}
+
+{% block js %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+    
+    <script type="text/javascript">
+        window.addEventListener('DOMContentLoaded', function() {
+            var monthChoices = JSON.parse('{{ month_choices | safe }}');
+            var monthOptions = '';
+
+            $.each(monthChoices, function(k, v) {
+                monthOptions += `<option value="${k}">${v}</option>`;
+            });
+
+            var $modalEl = `<div id="modal-form" uk-modal data-bg-close="false">
+                <div class="uk-modal-dialog">
+                    <div class="uk-modal-header">
+                        <h4 class="uk-modal-title uk-text-medium uk-margin-remove-bottom">{% trans 'Sertifikasi' %}</h4>
+                        <button class="uk-modal-close-default" type="button" uk-close></button>
+                    </div>
+
+                    <div class="uk-modal-body">
+                        <form id="resume-certificate-form" class="uk-form-stacked" method="POST" action="{% url 'resume_view:certificate' %}">
+                            {% csrf_token %}
+
+                            <div class="uk-margin uk-margin-remove-top">
+                                <label class="uk-form-label" for="name">{% trans 'Nama sertifikasi' %} *</label>
+                                <div class="uk-form-controls">
+                                    <input class="uk-input" type="text" id="name" name="name" placeholder="Ex: Cisco Certified Network Associate Security (CCNA)" autocomplete="off" required>
+                                </div>
+                            </div>
+
+                            <div class="uk-margin">
+                                <label class="uk-form-label" for="organization">{% trans 'Organisasi pemberi' %} *</label>
+                                <div class="uk-form-controls">
+                                    <input class="uk-input" type="text" id="organization" name="organization" placeholder="Ex: Amazon Web Service" autocomplete="off" required>
+                                </div>
+                            </div>
+
+                            <div class="uk-margin">
+                                <label class="uk-form-label" for="has_expiration">
+                                    <input type="checkbox" id="has_expiration" name="has_expiration">
+                                    {% trans 'Memiliki kadarluasa' %}
+                                </label>
+                            </div>
+
+                            <div class="uk-grid-small uk-child-width-1-2 uk-margin-top" uk-grid>
+                                <div>
+                                    <div class="uk-margin">
+                                        <label class="uk-form-label">{% trans 'Berlaku sejak' %} *</label>
+                                        
+                                        <div class="uk-form-controls">
+                                            <input type="date" id="issued" name="issued" class="uk-input" placeholder="{% trans 'dd/mm/yyyy' noop %}" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div id="uk-expired" class="uk-margin" style="display: none;">
+                                        <label class="uk-form-label">{% trans 'Sampai' %} *</label>
+                                        
+                                        <div class="uk-form-controls">
+                                            <input type="date" id="expired" name="expired" class="uk-input" placeholder="{% trans 'dd/mm/yyyy' noop %}">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="uk-margin">
+                                <label class="uk-form-label" for="credential_id">{% trans 'ID Sertifikat' %}</label>
+                                <div class="uk-form-controls">
+                                    <input class="uk-input" type="text" id="credential_id" name="credential_id" placeholder="KD2952KF" autocomplete="off">
+                                </div>
+                            </div>
+
+                            <div class="uk-margin">
+                                <label class="uk-form-label" for="credential_url">{% trans 'URL Sertifikat' %}</label>
+                                <div class="uk-form-controls">
+                                    <input class="uk-input" type="text" id="credential_url" name="credential_url" placeholder="http://..." autocomplete="off">
+                                </div>
+                            </div>
+
+                            <div class="uk-margin">
+                                <label class="uk-form-label" for="description">{% trans 'Keterangan' %}</label>
+                                <div class="uk-form-controls">
+                                    <textarea class="uk-textarea" id="description" name="description" placeholder="Keterangan tambahan jika ada..." autocomplete="off"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="uk-margin">
+                                <label class="uk-form-label" for="status">
+                                    <input type="checkbox" id="status" name="status" value="publish" checked>
+                                    {% trans 'Terbitkan' %}
+                                </label>
+                            </div>
+
+                            <div class="uk-flex">
+                                <div>
+                                    <button class="uk-button uk-button-default uk-modal-close" type="button">{% trans 'Cancel' noop %}</button>
+                                </div>
+
+                                <div class="uk-margin-auto-left">
+                                    <button type="submit" class="uk-button uk-button-primary">{% trans 'Simpan' %}</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>`;
+
+            // ...
+            // ITEM
+            // ...
+            var objItem = function(obj) {
+                return `<li id="certificate-${obj.id}" class="uk-item" data-uuid="${obj.uuid}" data-sort-order="${obj.sort_order}" data-json='${JSON.stringify(obj)}'>
+                    <div class="uk-flex">
+                        <div class="uk-width-1-1">
+                            <strong>${obj.name}</strong>
+                            ${obj.status != 'publish' ? `<span class="uk-label uk-label-warning uk-text-small"><small>Konsep</small></span>` : ``}
+                            ${obj.organization ? `
+                                <p class="uk-margin-remove uk-text-muted uk-text-small">
+                                    ${obj.organization} / ${obj.issued_formated} ${obj.expired ? '&mdash; ' + obj.expired_formated : ''}
+                                </p>
+                            ` : ``}
+                            
+                            ${obj.start_month ? 
+                                `<p class="uk-margin-remove uk-text-muted uk-text-small">
+                                    ${obj.start_month_display} ${obj.start_year}
+                                    &mdash; 
+                                    ${obj.end_month ? obj.end_month_display + ` ` + obj.end_year : ` Sekarang`}
+                                </p>` 
+                            : ``}
+
+                            ${obj.credential_id ? 
+                                `<p class="uk-margin-remove uk-text-muted uk-text-small">
+                                    ${obj.credential_id ? 'ID: ' + obj.credential_id : ''}
+                                    ${obj.credential_url ? ' &middot; URL: ' + obj.credential_url : ''}
+                                </p>` 
+                            : ``}
+                            
+                            ${obj.description ? `<p class="uk-margin-remove-bottom uk-margin-small-top uk-text-small">${obj.description}</p>` : ``}
+                        </div>
+
+                        <div class="uk-margin-auto-left" style="width: 20px;">
+                            <a href="" uk-icon="icon: more-vertical" class="uk-text-muted"></a>
+                            <div uk-dropdown="mode: click; pos: bottom-right" class="uk-dropdown-item">
+                                <ul class="uk-nav uk-dropdown-nav">
+                                    <li><a href="#" id="edit" class="uk-dropdown-close">Edit</a></li>
+                                    <li><a href="#" id="delete" class="uk-dropdown-close" data-uuid="${obj.uuid}">Hapus</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </li>`;
+            }
+
+            // ... 
+            // ADD
+            // ...
+            $(document).on('click', '#add-item', function(e) {
+                e.preventDefault();
+
+                $($modalEl).appendTo('body');
+                UIkit.modal('#modal-form').show();
+            });
+
+            // ...
+            // LOAD
+            // ...
+            var loadCertificate = function() {
+                $.ajax({
+                    method: 'GET',
+                    url: API_ENDPOINT + 'resume/certificates/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    cache: false,
+                    success: function(response) {
+                        var items = '';
+
+                        $.each(response, function(k, v) {
+                            items += objItem(v);
+                        });
+
+                        $('#uk-item-list').html(items);
+                    }
+                });
+            }
+
+            loadCertificate();
+
+            UIkit.sortable('#uk-item-list');
+            UIkit.util.on('#uk-item-list', 'stop', function (event) {
+                var sortItems = [];
+
+                $.each(event.target.children, function(i, v) {
+                    var item = {
+                        'uuid': $(v).attr('data-uuid'),
+                        'sort_order': i + 1
+                    }
+
+                    sortItems.push(item);
+                });
+
+                doSorting(sortItems);
+            });
+
+            // ... 
+            // SORTABLE
+            // ... 
+            var doSorting = function(param) {
+                $.ajax({
+                    method: 'PATCH',
+                    url: API_ENDPOINT + 'resume/certificates/bulk-updates/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(param),
+                    cache: false,
+                    success: function(response) {
+                        UIkit.notification({
+                            message: 'Berhasil diperbarui',
+                            status: 'success',
+                            timeout: 2000
+                        });
+                    }
+                });
+            }
+
+            // ...
+            // SUBMIT FORM
+            // ...
+            $(document).on('submit', '#resume-certificate-form', function(e) {
+                e.preventDefault();
+
+                // clear all alert
+                $(this).find('.uk-alert').remove();
+
+                var values = $(this).serializeArray(),
+                    uuid = $(this).find('button[type="submit"]').attr('data-uuid');
+                    param = {},
+                    hasExpiration = false,
+                    hasStatus = false;
+                
+                $.each(values, function(i, v) {
+                    if (v.name === 'has_expiration') hasExpiration = true;
+                    if (v.name === 'status') hasStatus = true;
+                    
+                    var value = v.value;
+                    if (v.name === 'expired' && !value) value = null;
+
+                    param[v.name] = value;
+                });
+
+                // set to false if has_expiration not true
+                if (!hasExpiration) param['has_expiration'] = false;
+                if (!hasStatus) param['status'] = null;
+
+                if (uuid) {
+                    doUpdate(param, uuid);
+                } else {
+                    doSave(param);
+                }
+            });
+
+            // ...
+            // PRE-CHECK
+            // ...
+            $(document).on('change', 'input#has_expiration', function(e) {
+                if ($(this).is(':checked')) {
+                    $('input#expired').prop('required', true);
+                    $('#uk-expired').show();
+                } else {
+                    $('input#expired').prop('required', false);
+                    $('#uk-expired').find('input').val('');
+                    $('#uk-expired').hide();
+                }
+            });
+
+            // ...
+            // SAVE FORM
+            // ...
+            var doSave = function(param) {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'resume/certificates/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(param),
+                    cache: false,
+                    success: function(response) {
+                        UIkit.notification({
+                            message: 'Berhasil ditambahkan',
+                            status: 'success',
+                            timeout: 2000
+                        });
+
+                        UIkit.modal('#modal-form').hide();
+
+                        var item = objItem(response);
+
+                        $('#uk-item-list').append(item);
+                        $('#resume-certificate-form')[0].reset();
+                    },
+                    error: function(error) {
+                        var errorJSON = error?.responseJSON;
+
+                        if (error && errorJSON) {
+                            $.each(errorJSON, function(k, v) {
+                                var message = '';
+
+                                if(Array.isArray(v)) {
+                                    message = v.join(' ');
+                                } else {
+                                    message = v;
+                                }
+                                
+                                var el = $('#' + k);
+                                el.closest('.uk-form-controls').after('<p class="uk-text-small uk-text-danger uk-alert">' + message + '</p>');
+                            });
+                        }
+                    }
+                });
+            }
+
+            // ...
+            // UPDATE FORM
+            // ...
+            var doUpdate = function(param, uuid) {
+                $.ajax({
+                    method: 'PATCH',
+                    url: API_ENDPOINT + 'resume/certificates/' + uuid + '/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(param),
+                    cache: false,
+                    success: function(response) {
+                        UIkit.notification({
+                            message: 'Berhasil diperbarui',
+                            status: 'success',
+                            timeout: 2000
+                        });
+
+                        UIkit.modal('#modal-form').hide();
+
+                        var item = objItem(response);
+
+                        $('#certificate-' + response.id).replaceWith(item);
+                        $('#resume-certificate-form')[0].reset();
+                    },
+                    error: function(error) {
+                        var errorJSON = error?.responseJSON;
+
+                        if (error && errorJSON) {
+                            $.each(errorJSON, function(k, v) {
+                                var message = '';
+
+                                if(Array.isArray(v)) {
+                                    message = v.join(' ');
+                                } else {
+                                    message = v;
+                                }
+                                
+                                var el = $('#' + k);
+                                el.closest('.uk-form-controls').after('<p class="uk-text-small uk-text-danger uk-alert">' + message + '</p>');
+                            });
+                        }
+                    }
+                });
+            }
+
+            // ... 
+            // DELETE
+            // ...
+            $(document).on('click', '#delete', function(e) {
+                e.preventDefault();
+
+                var uuid = $(this).attr('data-uuid');
+
+                Swal.fire({
+                    title: 'Apakah Yakin?',
+                    text: "Tindakan ini menghapus data selamanya.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Ya, Hapus'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        doDelete(uuid, $(this));
+                    }
+                });
+            });
+
+            var doDelete = function(uuid, $this) {
+                $.ajax({
+                    method: 'DELETE',
+                    url: API_ENDPOINT + 'resume/certificates/' + uuid + '/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    cache: false,
+                    success: function(response) {
+                        Swal.fire(
+                            'Berhasil!',
+                            'Data telah dihapus permanen.',
+                            'success'
+                        )
+
+                        $this.closest('li.uk-item').remove();
+                    }
+                });
+            }
+
+            // ...
+            // EDIT
+            // ...
+            $(document).on('click', '#edit', function(e) {
+                e.preventDefault();
+                
+                var data = $(this).closest('li.uk-item').attr('data-json'),
+                    json = (data ? JSON.parse(data) : {});
+                
+                $($modalEl).appendTo('body');
+                UIkit.modal('#modal-form').show();
+
+                UIkit.util.on('#modal-form', 'shown', function() {
+                    var $thisModal = $(this);
+
+                    $.each(json, function(n, v) {
+                        if (n === 'has_expiration') {
+                            if (v === true) {
+                                $thisModal.find('form #' + n).prop('checked', true);
+                                $('#uk-expired').show();
+                            }
+                        } else if (n === 'status') {
+                            if (v === 'publish') {
+                                $thisModal.find('form #' + n).prop('checked', true);
+                            } else {
+                                $thisModal.find('form #' + n).prop('checked', false);
+                            }
+                        } else {
+                            $thisModal.find('form #' + n).val(v);
+                        }
+                    });
+                });
+
+                $('#modal-form button[type="submit"]').attr('data-uuid', json.uuid);
+            });
+
+            UIkit.util.on(document.body, 'hidden', function(e) {
+                if ($(e.target).hasClass('uk-modal')) {
+                    $(e.target).remove();
+                }
+            });
+        });
+    </script>
+{% endblock %}

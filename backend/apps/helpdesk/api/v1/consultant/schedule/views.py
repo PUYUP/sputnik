@@ -98,7 +98,9 @@ class ScheduleApiView(viewsets.ViewSet):
             .prefetch_related(Prefetch('user'), Prefetch('schedule_expertises'),
                               Prefetch('schedule_expertises__expertise'),
                               Prefetch('schedule_expertises__expertise__topic'),
-                              Prefetch('recurrence')) \
+                              Prefetch('recurrence'), Prefetch('segments'),
+                              Prefetch('segments__user'), Prefetch('segments__slas'),
+                              Prefetch('segments__slas__user')) \
             .select_related('user', 'recurrence') \
             .order_by('sort_order')
 
@@ -129,7 +131,7 @@ class ScheduleApiView(viewsets.ViewSet):
             try:
                 serializer.save()
             except (ValidationError, IntegrityError) as e:
-                return Response({'detail': repr(e)}, status=response_status.HTTP_406_NOT_ACCEPTABLE)
+                raise NotAcceptable({'detail': repr(e)})
             return Response(serializer.data, status=response_status.HTTP_201_CREATED)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
@@ -139,7 +141,7 @@ class ScheduleApiView(viewsets.ViewSet):
         queryset = self.get_schedule(uuid=uuid)
         serializer = ScheduleSerializer(queryset, many=False, context=context,
                                         fields=('schedule_expertises', 'uuid', 'label', 'is_active',
-                                                'create_date', 'recurrence',))
+                                                'create_date', 'recurrence', 'segments',))
         return Response(serializer.data, status=response_status.HTTP_200_OK)
 
     """ SCHEDULE: UPDATE """

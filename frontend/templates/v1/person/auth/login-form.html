@@ -1,0 +1,65 @@
+<form id="person-login-form" action="{{ submit_url }}" method="POST">
+    {% csrf_token %}
+
+    <div class="uk-margin">
+        <div class="uk-inline uk-width-1-1">
+            <span class="uk-form-icon" uk-icon="icon: {{ input_icon }}"></span>
+            <input class="uk-input" type="text" id="account" name="account" placeholder="{{ placeholder }}" autocomplete="off">
+        </div>
+    </div>
+    
+    <div class="uk-text-right uk-margin-large-top">
+        <button type="submit" class="uk-button uk-button-primary">Berikutnya</button>
+    </div>
+</form>
+
+<script type="text/javascript">
+    var account;
+
+    document.addEventListener('turbolinks:load', function() {
+        account = Cookies.get('person_login');
+        if (account) $('input#account').val(account);
+    });
+
+    window.addEventListener('DOMContentLoaded', function() {
+        // SUBMIT FORM
+        $(document).on('submit', 'form#person-login-form', function(event) {
+            event.preventDefault();
+
+            var account = $(this).find('input#account').val();
+            if (account) doLogin(account);
+        });
+
+        // SEND FORM DATA
+        var doLogin = function(account) {
+            $.ajax({
+                method: 'POST',
+                url: API_ENDPOINT + 'person/users/check-account/',
+                headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                xhrFields: {
+                    withCredentials: true
+                },
+                data: {account: account},
+                cache: false,
+                success: function(response) {
+                    Cookies.set(
+                        '{{ cookie_key }}', 
+                        account, 
+                        {expires: COOKIE_AGE, path: '/', secure: {% if request.is_secure %}true{% else %}false{% endif %}}
+                    );
+                    
+                    Turbolinks.visit('{{ redirect_url }}');
+                },
+                error: function(error) {
+                    if (error && error?.responseJSON) {
+                        UIkit.notification({
+                            message: error?.responseJSON?.detail,
+                            status: 'danger',
+                            timeout: 2000
+                        });
+                    }
+                }
+            });
+        }
+    });
+</script>

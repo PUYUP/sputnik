@@ -1,0 +1,215 @@
+{% extends 'v1/base/base-clean.html' %}
+
+{% load i18n %}
+
+{% block head_title %}{% trans "Lengkapi akun" noop %}{% endblock %}
+
+{% block main %}
+    <section class="uk-container uk-container-xsmall uk-flex uk-flex-middle uk-flex-center uk-margin-bottom">
+        <div class="uk-width-2-3@m">
+            <form id="person-register-capture-form" action="{% url 'person_view:register_capture' %}" method="POST">
+                {% csrf_token %}
+
+                <h1 class="uk-width-1-1 uk-text-center uk-margin-medium-bottom">
+                    <a href="{% url 'home' %}" class="uk-text-emphasis">{{ app_name }}</a>
+                </h1>
+                
+                <hr class="uk-divider-icon"></hr>
+                <h4 class="uk-text-medium">Lengkapi param sebenar-benarnya</h4>
+
+                <div class="uk-margin">
+                    <div class="uk-form-label uk-margin-small-bottom"><strong>Mendaftar sebagai?</strong></div>
+
+                    <div class="uk-form-controls">
+                        <div class="uk-margin">
+                            <label>
+                                <input class="uk-radio" type="radio" name="roles" value="client" required> 
+                                Klien
+                            </label>
+
+                            <p class="uk-text-small uk-margin-remove uk-text-italic uk-text-muted" style="margin-top: 4px !important;">
+                                Mulai berkonsultasi dengan para konsultan propesional.
+                            </p>
+                        </div>
+                            
+                        <div class="uk-margin">
+                            <label>
+                                <input class="uk-radio" type="radio" name="roles" value="consultant" required> 
+                                Konsultan
+                            </label>
+
+                            <p class="uk-text-small uk-margin-remove uk-text-italic uk-text-muted" style="margin-top: 4px !important;">
+                                Anda adalah seorang pakar / konsultan.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="uk-margin">
+                    <div class="uk-inline uk-width-1-1">
+                        <span class="uk-form-icon" uk-icon="icon: user"></span>
+                        <input class="uk-input" type="text" id="username" name="username" placeholder="Nama pengguna" autocomplete="off" required>
+                    </div>
+                </div>
+
+                <div class="uk-margin">
+                    <div class="uk-inline uk-width-1-1">
+                        <span class="uk-form-icon" uk-icon="icon: mail"></span>
+                        <input class="uk-input" type="email" id="email" name="email" placeholder="Alamat email aktif" autocomplete="off" readonly required>
+                    </div>
+                </div>
+
+                <div class="uk-margin">
+                    <div class="uk-inline uk-width-1-1">
+                        <span class="uk-form-icon" uk-icon="icon: file-text"></span>
+                        <input class="uk-input" type="text" id="first_name" name="first_name" placeholder="Nama lengkap" autocomplete="off" required>
+                    </div>
+                </div>
+
+                <div class="uk-margin">
+                    <div class="uk-inline uk-width-1-1">
+                        <span class="uk-form-icon" uk-icon="icon: lock"></span>
+                        <input class="uk-input" type="password" id="password1" name="password1" placeholder="Kata sandi" autocomplete="off" required>
+                    </div>
+                </div>
+
+                <div class="uk-margin">
+                    <div class="uk-inline uk-width-1-1">
+                        <span class="uk-form-icon" uk-icon="icon: refresh"></span>
+                        <input class="uk-input" type="password" id="password2" name="password2" placeholder="Ulangi kata sandi" autocomplete="off" required>
+                    </div>
+                </div>
+
+                <div class="uk-margin">
+                    <p class="uk-margin-remove">Sudah punya akun? <a href="{% url 'person_view:login' %}">Masuk</a></p>
+                </div>
+
+                <div class="uk-text-right uk-margin-top">
+                    <button type="submit" class="uk-button uk-button-primary">Daftar</button>
+                </div>
+            </form>
+        </div>
+    </section>
+{% endblock %}
+
+{% block js %}
+    <script type="text/javascript">
+        window.addEventListener('DOMContentLoaded', function() {
+            var verifyCode = Cookies.get('person_verifycode_result'),
+                verifyCodeObject = verifyCode ? JSON.parse(verifyCode) : {};
+            
+            if (!verifyCode && verifyCodeObject?.challenge !== 'register_validation') Turbolinks.visit("{% url 'home' %}");
+
+            $('input#email').val(verifyCodeObject?.email);
+
+            // SUBMIT FORM
+            $(document).on('submit', 'form#person-register-capture-form', function(e) {
+                e.preventDefault();
+
+                // clear all alert
+                $(this).find('.uk-alert').remove();
+
+                var values = $(this).serializeArray(),
+                    param = {};
+
+                $.each(values, function(i, v) {
+                    param[v.name] = v.value;
+
+                    // roles set as list object
+                    if (v.name == 'roles') {
+                        var role = {'identifier': v.value};
+                        param[v.name] = [role];
+                    }
+                });
+
+                var password1 = param?.password1,
+                    password2 = param?.password2
+    
+                if (password1 !== password2) {
+                    UIkit.notification({
+                        message: "{% trans 'Kata sandi tidak sama' %}",
+                        status: 'danger',
+                        timeout: 2000
+                    });
+
+                    return false;
+                }
+
+                param['challenge'] = verifyCodeObject?.challenge;
+                param['token'] = verifyCodeObject?.token;
+                param['password'] = password2;
+
+                doRegister(param);
+            });
+
+            // SEND FORM DATA
+            var doRegister = function(param) {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'person/users/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify({...param}),
+                    cache: false,
+                    success: function(response) {
+                        UIkit.notification({
+                            message: 'Pendaftaran berhasil. Mengalihkan...',
+                            status: 'success',
+                            timeout: 2000
+                        });
+
+                        Cookies.remove('person_verifycode_result', {path: '/'});
+
+                        // Login
+                        doLogin(param?.email, param?.password);
+                    },
+                    error: function(error) {
+                        var errorJSON = error?.responseJSON;
+
+                        if (error && errorJSON) {
+                            $.each(errorJSON, function(k, v) {
+                                var message = '';
+
+                                if(Array.isArray(v)) {
+                                    message = v.join(' ');
+                                } else {
+                                    message = v;
+                                }
+                                
+                                var el = $('#' + k);
+                                if (k === 'password') el = $('#password2');
+                                el.closest('.uk-margin').after('<p class="uk-text-small uk-text-danger uk-alert">' + message + '</p>');
+                            });
+                        }
+                    }
+                });
+            }
+
+            // LOGIN
+            var doLogin = function(account, password) {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'person/token/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    data: {username: account, password: password},
+                    cache: false,
+                    success: function(response) {
+                        Turbolinks.visit("{% url 'home' %}");
+                    },
+                    error: function(error) {
+                        if (error && error?.responseJSON) {
+                            UIkit.notification({
+                                message: error?.responseJSON?.detail,
+                                status: 'danger',
+                                timeout: 2000
+                            });
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+{% endblock %}

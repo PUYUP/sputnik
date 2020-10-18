@@ -43,7 +43,7 @@ class AbstractSchedule(models.Model):
 
     def clean(self):
         # limited schedule each user
-        if self.user:
+        if not self.pk and self.user:
             c = self.__class__.objects.filter(user_id=self.user.id).count()
             if c > MAX_ALLOWED_SCHEDULE:
                 raise ValidationError({'user': _(u"Max %s schedules" % MAX_ALLOWED_SCHEDULE)})

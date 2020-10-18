@@ -1,5 +1,3 @@
-import sys
-
 from .base import *
 from .project import *
 
@@ -11,8 +9,8 @@ ALLOWED_HOSTS = [
     'localhost', 
     '127.0.0.1', 
     '[::1]', 
-    'openpeo.herokuapp.com',
-    'api.openpeo.com',
+    '117.53.45.28',
+    'tanyapakar.com',
 ]
 
 
@@ -31,13 +29,13 @@ sentry_sdk.init(
 # Django Sessions
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/2.2/ref/settings/
-SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False
 SESSION_COOKIE_HTTPONLY = False
 
 SECURE_REFERRER_POLICY = 'same-origin'
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
-SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT = False
 SECURE_HSTS_SECONDS = 5
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
@@ -47,25 +45,27 @@ X_FRAME_OPTIONS = 'DENY'
 # Django csrf
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/2.2/ref/csrf/
-CSRF_COOKIE_DOMAIN = '.openpeo.com'
+CSRF_COOKIE_DOMAIN = '.tanyapakar.com'
 CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
 CSRF_COOKIE_SECURE = True
 CSRF_USE_SESSIONS = False
 CSRF_COOKIE_HTTPONLY = False
 CSRF_TRUSTED_ORIGINS = [
-    'openpeo-dev.firebaseapp.com',
-    '.openpeo.com'
+    '.tanyapakar.com'
 ]
 
 
 # Django CORS
 # ------------------------------------------------------------------------------
 # https://pypi.org/project/django-cors-headers/
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    'https://openpeo-dev.firebaseapp.com',
-    'https://openpeo.com'
-]
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOW_CREDENTIALS = True
+    CORS_ALLOWED_ORIGINS = [
+        'https://tanyapakar.com'
+    ]
+
 
 
 # Static files (CSS, JavaScript, Images)
@@ -80,23 +80,11 @@ MEDIA_ROOT = os.path.join(PROJECT_ROOT, 'frontend/media')
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
-"""
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'd2ma6sopic7bhj',
-        'USER': 'gvmwasekarxsqr',
-        'PASSWORD': '9620ac1a6ecf2ac4bc0ee2e5ee01ee74a2845e699779213bd87d9c616cc67171',
-        'HOST': 'ec2-52-22-216-69.compute-1.amazonaws.com',
-        'PORT': '5432'
-    }
-}
-"""
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'openpeo_db',
-        'USER': 'openpeo_db_user',
+        'NAME': 'tanyapakar_db',
+        'USER': 'tanyapakar_db_user',
         'PASSWORD': 'K65&&hyrt#@!hgrtr',
         'HOST': '127.0.0.1',   # Or an IP Address that your DB is hosted on
         'PORT': '',

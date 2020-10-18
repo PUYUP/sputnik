@@ -1,0 +1,28 @@
+{% extends 'v1/base/base-clean.html' %}
+
+{% load i18n %}
+{% block head_title %}{% trans "Beranda" noop %}{% endblock %}
+
+{% block main %}
+    <section class="uk-container uk-container-xsmall uk-height-1-1 uk-flex uk-flex-middle uk-flex-center">
+        <div class="uk-width-2-3@m uk-text-center">
+            {% if user.is_authenticated %}
+                <a href="{% url 'person_view:logout' %}" class="uk-button uk-button-danger">{% trans "Keluar" noop %}</a>
+            {% else %}
+                <h1 class="uk-width-1-1 uk-text-center uk-margin-medium-bottom">{{ app_name }}</h1>
+                <hr class="uk-divider-icon"></hr>
+                <h5 class="uk-text-medium">{% trans "Membantu Anda mendapatkan jawaban terbaik dari pakar profesional dengan mudah dan cepat." %}</h5>
+                
+                <div class="uk-margin-large-top" uk-grid>
+                    <div class="uk-width-1-2@s">
+                        <a href="{% url 'person_view:login' %}" class="uk-button uk-button-primary uk-width-1-1">{% trans "Akses Akun" noop %}</a>
+                    </div>
+
+                    <div class="uk-width-1-2@s">
+                        <a href="{% url 'person_view:register' %}" class="uk-button uk-button-secondary uk-width-1-1">{% trans "Buat Akun" noop %}</a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}

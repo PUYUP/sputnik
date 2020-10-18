@@ -1,0 +1,153 @@
+{% extends 'v1/base/base-clean.html' %}
+
+{% load i18n %}
+
+{% block head_title %}{% trans "Validasi kode verifikasi" noop %}{% endblock %}
+
+{% block main %}
+    <section class="uk-container uk-container-xsmall uk-height-1-1 uk-flex uk-flex-middle uk-flex-center">
+        <div class="uk-width-2-3@m">
+            <form id="person-verifycode-validate-form" action="{% url 'person_view:verifycode_validate' %}" method="POST">
+                {% csrf_token %}
+                
+                <h1 class="uk-width-1-1 uk-text-center uk-margin-medium-bottom">
+                    <a href="{% url 'home' %}" class="uk-text-emphasis">{{ app_name }}</a>
+                </h1>
+
+                <hr class="uk-divider-icon"></hr>
+                <p id="info">Kode verifikasi dikirim ke alamat email Anda.</p>
+
+                <div class="uk-margin">
+                    <div class="uk-inline uk-width-1-1">
+                        <span class="uk-form-icon" uk-icon="icon: unlock"></span>
+                        <input class="uk-input" type="text" id="passcode" name="passcode" placeholder="Masukkan disini" autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="uk-margin">
+                    <p class="uk-margin-remove-bottom">
+                        Tidak menerima kode verifikasi? <br />
+                        <a href="javascript:void(0);" id="verifycode-resend">Kirim ulang</a>
+                    </p>
+                </div>
+
+                <div class="uk-text-right uk-margin-large-top">
+                    <button type="submit" class="uk-button uk-button-primary">Verifikasi</button>
+                </div>
+            </form>
+        </div>
+    </section>
+{% endblock %}
+
+{% block js %}
+    <script type="text/javascript">
+        window.addEventListener('DOMContentLoaded', function() {
+            var verifyCode = Cookies.get('person_verifycode_validation'),
+                verifyCodeObject = verifyCode ? JSON.parse(verifyCode) : {},
+                info = verifyCodeObject?.info;
+
+            // REDIRECT IF COOKIE NOT SET
+            if (!verifyCode) Turbolinks.visit("{% url 'home' %}");
+
+            $('#info').html(info);
+            $('input#passcode').focus();
+        
+            // SUBMIT FORM
+            $(document).on('submit', 'form#person-verifycode-validate-form', function(event) {
+                event.preventDefault();
+                
+                var passcode = $(this).find('input#passcode').val();
+                if (passcode) doValidate(passcode);
+            });
+
+            // SEND FORM DATA
+            var doValidate = function(passcode) {
+                var verifyCode = Cookies.get('person_verifycode_validation'),
+                    verifyCodeObject = verifyCode ? JSON.parse(verifyCode) : {};
+
+                $.ajax({
+                    method: 'PATCH',
+                    url: API_ENDPOINT + 'person/verifycodes/' + passcode + '/validate/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    data: {
+                        passcode: passcode,
+                        token: verifyCodeObject?.token,
+                        challenge: verifyCodeObject?.challenge,
+                        email: verifyCodeObject?.email
+                    },
+                    cache: false,
+                    success: function(response) {
+                        Cookies.remove('person_verifycode_validation', {path: '/'});
+                        Cookies.set(
+                            'person_verifycode_result', 
+                            JSON.stringify(response), 
+                            {expires: COOKIE_AGE, path: '/', secure: {% if request.is_secure %}true{% else %}false{% endif %}}
+                        );
+
+                        Turbolinks.visit(verifyCodeObject?.redirect_to);
+                    },
+                    error: function(error) {
+                        if (error && error?.responseJSON) {
+                            UIkit.notification({
+                                message: error?.responseJSON?.detail,
+                                status: 'danger',
+                                timeout: 2000
+                            });
+                        }
+                    }
+                });
+            }
+
+            // RESEND VERIFYCODE
+            $(document).on('click', '#verifycode-resend', function(e) {
+                event.preventDefault();
+                doResendVerifyCode();
+            });
+        
+            var doResendVerifyCode = function() {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'person/verifycodes/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    data: {
+                        email: verifyCodeObject?.email, 
+                        challenge: verifyCodeObject?.challenge
+                    },
+                    cache: false,
+                    success: function(response) {
+                        // after verifycode validate redirected to a page define below
+                        response['redirect_to'] = verifyCodeObject?.redirect_to;
+
+                        Cookies.set(
+                            'person_verifycode_validation', 
+                            JSON.stringify(response), 
+                            {expires: COOKIE_AGE, path: '/', secure: {% if request.is_secure %}true{% else %}false{% endif %}}
+                        );
+
+                        UIkit.notification({
+                            message: "{% trans 'Kode verifikasi berhasil dikirim ulang' noop %}",
+                            status: 'success',
+                            timeout: 2000
+                        });
+                    },
+                    error: function(error) {
+                        if (error && error?.responseJSON) {
+                            UIkit.notification({
+                                message: error?.responseJSON?.detail,
+                                status: 'danger',
+                                timeout: 2000
+                            });
+                        }
+                    }
+                });
+            }
+        });
+
+        // BEFORE PAGE CHANGE
+        document.addEventListener('turbolinks:request-start', function() {
+            UIkit.notification.closeAll();
+        });
+    </script>
+{% endblock %}

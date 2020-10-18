@@ -42,6 +42,10 @@ class RootApiView(APIView):
                                          format=format, current_app='helpdesk_api:consultant'),
                     'rules': reverse('helpdesk_api:consultant:rule-list', request=request,
                                      format=format, current_app='helpdesk_api:consultant'),
+                    'segments': reverse('helpdesk_api:consultant:segment-list', request=request,
+                                        format=format, current_app='helpdesk_api:consultant'),
+                    'slas': reverse('helpdesk_api:consultant:sla-list', request=request,
+                                    format=format, current_app='helpdesk_api:consultant'),
                 }
             }
         })

@@ -1,0 +1,74 @@
+<ul class="uk-nav-default uk-nav-parent-icon" uk-nav>
+    <li class="uk-nav-header uk-padding-remove-top">
+        <strong>{{ app_name }}</strong>
+        &mdash; {{ user.username }}
+    </li>
+
+    <li class="{% if url_name == 'dashboard' %}uk-active{% endif %}">
+        <a href="{% url 'person_view:consultant:dashboard' %}"><span class="uk-margin-small-right" uk-icon="icon: home"></span> Dasbor</a>
+    </li>
+
+    <li class="uk-parent {% if url_name == 'profile' or url_name == 'security' %}uk-open{% endif %}">
+        <a href="#"><span class="uk-margin-small-right" uk-icon="icon: user"></span> Akun</a>
+
+        <ul class="uk-nav-sub">
+            <li class="{% if url_name == 'profile' %}uk-active{% endif %}">
+                <a href="{% url 'person_view:profile' %}">Profil</a>
+            </li>
+
+            <li class="{% if url_name == 'security' %}uk-active{% endif %}">
+                <a href="{% url 'person_view:security' %}">Keamanan</a>
+            </li>
+        </ul>
+    </li>
+
+    <li class="uk-parent {% if url_name == 'education' or url_name == 'experience' or url_name == 'certificate' or url_name == 'expertise' %}uk-open{% endif %}">
+        <a href="#"><span class="uk-margin-small-right" uk-icon="icon: file-text"></span> Resume</a>
+
+        <ul class="uk-nav-sub">
+            <li class="{% if url_name == 'education' %}uk-active{% endif %}">
+                <a href="{% url 'resume_view:education' %}">Pendidikan</a>
+            </li>
+
+            <li class="{% if url_name == 'experience' %}uk-active{% endif %}">
+                <a href="{% url 'resume_view:experience' %}">Pengalaman Kerja</a>
+            </li>
+
+            <li class="{% if url_name == 'certificate' %}uk-active{% endif %}">
+                <a href="{% url 'resume_view:certificate' %}">Sertifikasi</a>
+            </li>
+ 
+            <li class="{% if url_name == 'expertise' %}uk-active{% endif %}">
+                <a href="{% url 'resume_view:expertise' %}">Keahlian</a>
+            </li>
+        </ul>
+    </li>
+
+    <li class="uk-parent {% if url_name == 'schedule' or url_name == 'schedule_detail' %}uk-open{% endif %}">
+        <a href="#"><span class="uk-margin-small-right" uk-icon="icon: calendar"></span> Kalender</a>
+
+        <ul class="uk-nav-sub">
+            <li class="{% if url_name == 'schedule' or url_name == 'schedule_detail' %}uk-active{% endif %}">
+                <a href="{% url 'helpdesk_view:consultant:schedule' %}">Jadwal</a>
+            </li>
+
+            <li><a href="#">Libur</a></li>
+        </ul>
+    </li>
+
+    <li class="uk-parent">
+        <a href="#"><span class="uk-margin-small-right" uk-icon="icon: comment"></span> Konsultasi</a>
+        <ul class="uk-nav-sub">
+            <li><a href="#">Baru</a></li>
+            <li><a href="#">Saat Ini</a></li>
+            <li><a href="#">Tertunda</a></li>
+            <li><a href="#">Selesai</a></li>
+            <li><a href="#">Menolak</a></li>
+        </ul>
+    </li>
+
+    <li class="uk-nav-header">Lain-lain</li>
+    <li><a href="#"><span class="uk-margin-small-right" uk-icon="icon: question"></span> Petunjuk</a></li>
+    <li class="uk-nav-divider"></li>
+    <li><a href="{% url 'person_view:logout' %}"><span class="uk-margin-small-right" uk-icon="icon: sign-out"></span> Keluar</a></li>
+</ul>

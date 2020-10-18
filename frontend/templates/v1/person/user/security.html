@@ -1,0 +1,547 @@
+{% extends 'v1/base/base-consultant.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block head_title %}{% trans "Keamanan" noop %}{% endblock %}
+
+{% block main %}
+    <div class="uk-width-1-1">
+        <h6 class="uk-text-uppercase uk-content-title"><strong>{% trans 'Keamanan' noop %}</strong></h6>
+
+        <div>
+            <ul class="uk-child-width-expand uk-tab-bottom" uk-tab>
+                <li class="uk-active"><a href="#">Utama</a></li>
+                <li><a href="#">MSISDN</a></li>
+                <li><a href="#">Sandi</a></li>
+            </ul>
+
+            <ul id="uk-security-tab" class="uk-switcher uk-margin">
+                <li id="tab-base">
+                    <form id="person-base-form" action="{% url 'person_view:security' %}" method="POST" class="uk-margin-top">
+                        {% csrf_token %}
+                        
+                        <div class="uk-margin uk-flex" uk-margin>
+                            <div class="uk-inline uk-width-1-1" style="padding-right: 15px;">
+                                <span class="uk-form-icon" uk-icon="icon: user"></span>
+                                <input class="uk-input" type="text" id="username" name="username" placeholder="Nama pengguna" autocomplete="off">
+                            </div>
+
+                            <button type="button" class="uk-button uk-button-default uk-update-security">{% trans 'Update' noop %}</button>
+                        </div>
+
+                        <div class="uk-margin uk-flex" uk-margin>
+                            <div class="uk-inline uk-width-1-1" style="padding-right: 15px;">
+                                <span class="uk-form-icon" uk-icon="icon: mail"></span>
+                                <input class="uk-input" type="email" id="email" name="email" placeholder="Alamat email" autocomplete="off">
+                            </div>
+
+                            <button type="button" class="uk-button uk-button-default uk-update-security">{% trans 'Update' noop %}</button>
+                        </div>
+                    </form>
+                </li>
+
+                <li id="tab-account">
+                    <form id="person-account-form" action="{% url 'person_view:security' %}" method="POST" class="uk-margin-top">
+                        {% csrf_token %}
+
+                        <p>{% trans 'Memerlukan validasi nomor ponsel melalui SMS. Pastikan nomor aktif.' noop %}</p>
+                        
+                        <div class="uk-margin uk-flex" uk-margin>
+                            <div class="uk-inline uk-width-1-1" style="padding-right: 15px;">
+                                <span class="uk-form-icon" uk-icon="icon: phone"></span>
+                                <input class="uk-input" type="text" id="msisdn" name="msisdn" placeholder="Nomor ponsel 08xxx" autocomplete="off">
+                            </div>
+
+                            <button type="button" id="save-account" class="uk-button uk-button-default uk-update-security">
+                                <div class="uk-flex uk-flex-middle">
+                                    <div class="uk-loading" style="display: none;"><span uk-spinner="ratio: 1" style="width: 15px;height: 15px;margin-right: 10px;position: relative;top: -2px;"></span></div>
+                                    <div>{% trans 'Update' noop %}</div>
+                                </div>
+                            </button>
+                        </div>
+                    </form>
+
+                    <div id="recaptcha-container" class="recaptcha-container"></div>
+                </li>
+
+                <li id="tab-password">
+                    <form id="person-password-form" class="uk-form-stacked" action="{% url 'person_view:security' %}" method="POST" class="uk-margin-top">
+                        {% csrf_token %}
+                        
+                        <div class="uk-margin">
+                            <label class="uk-form-label" for="password">{% trans 'Kata sandi lama' %}</label>
+
+                            <div class="uk-form-controls uk-margin-remove-top">
+                                <div class="uk-inline uk-width-1-1">
+                                    <span class="uk-form-icon" uk-icon="icon: unlock"></span>
+                                    <input class="uk-input" type="password" id="password" name="password" placeholder="Sandi akun saat ini" autocomplete="off">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="uk-margin">
+                            <label class="uk-form-label" for="password1">{% trans 'Kata sandi baru' %}</label>
+
+                            <div class="uk-form-controls uk-margin-remove-top">
+                                <div class="uk-inline uk-width-1-1">
+                                    <span class="uk-form-icon" uk-icon="icon: lock"></span>
+                                    <input class="uk-input" type="password" id="password1" name="password1" placeholder="Kata sandi baru" autocomplete="off">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="uk-margin">
+                            <label class="uk-form-label" for="password12">{% trans 'Ulangi kata sandi baru' %}</label>
+
+                            <div class="uk-form-controls uk-margin-remove-top">
+                                <div class="uk-inline uk-width-1-1">
+                                    <span class="uk-form-icon" uk-icon="icon: refresh"></span>
+                                    <input class="uk-input" type="password" id="password2" name="password2" placeholder="Ulangi Kata sandi baru" autocomplete="off">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="uk-text-right uk-margin-top">
+                            <button type="submit" class="uk-button uk-button-primary">Simpan</button>
+                        </div>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+{% endblock %}
+
+{% block js %}
+    <script src="https://www.gstatic.com/firebasejs/7.22.1/firebase-app.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/7.22.1/firebase-auth.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+
+    <script type="text/javascript">
+        window.addEventListener('DOMContentLoaded', function() {
+            // TODO: Replace the following with your app's Firebase project configuration
+            var firebaseConfig = {
+                apiKey: "AIzaSyAz0DQd1tsmd6OJBvPuXSQvhZNru2MMkdg",
+                authDomain: "tanya-pakar.firebaseapp.com",
+                databaseURL: "https://tanya-pakar.firebaseio.com",
+                projectId: "tanya-pakar",
+                storageBucket: "tanya-pakar.appspot.com",
+                messagingSenderId: "854268550769",
+                appId: "1:854268550769:web:595fba9d9f92144fb0c5d0"
+            };
+
+            // Initialize Firebase
+            firebase.initializeApp(firebaseConfig);
+
+            // ...
+            // LOAD USER
+            // ...
+            var loadUser = function() {
+                $.ajax({
+                    method: 'GET',
+                    url: API_ENDPOINT + 'person/users/{{ user.uuid }}/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    cache: false,
+                    success: function(response) {
+                        var base_form = $('#person-base-form').serializeArray();
+                        var account_form = $('#person-account-form').serializeArray();
+
+                        $.each(base_form, function(i, v) {
+                            $('#' + v.name).val(response?.account[v.name]);
+                        });
+
+                        $.each(account_form, function(i, v) {
+                            $('#' + v.name).val(response?.account[v.name]);
+                        });
+
+                        window.email = response?.email;
+                        window.username = response?.username;
+                        window.msisdn = response?.account?.msisdn;
+                    }
+                });
+            }
+
+            loadUser();
+
+            var isNumeric = function(str) {
+                if (typeof str != "string") return false // we only process strings!  
+                return !isNaN(str) && // use type coercion to parse the _entirety_ of the string (`parseFloat` alone does not do this)...
+                    !isNaN(parseFloat(str)) // ...and ensure strings of whitespace fail
+            }
+
+            var errorAlert = function(message) {
+                Swal.fire(
+                    'Kesalahan!',
+                    message,
+                    'error'
+                )
+            }
+
+            $(document).on('click', '.uk-update-security', function(e) {
+                e.preventDefault();
+
+                var $this = $(this),
+                    $wrap = $this.closest('.uk-margin'),
+                    value = $wrap.find('input').val(),
+                    name = $wrap.find('input').attr('name'),
+                    hasChanged = false;
+
+                // clear all alert
+                $('.uk-alert').remove();
+
+                if (name === 'email') {
+                    // this action need verify value
+                    // so we use verifycode for that
+                    if (value !== window.email) {
+                        hasChanged = true;
+        
+                        doRequestVerifyCode({
+                            key: name,
+                            value: value,
+                            old_value: window.email,
+                            challenge: 'change_email',
+                        });
+                    }
+
+                } else if (name === 'msisdn') {
+                    window.new_msisdn = value;
+
+                    if (window.new_msisdn !== window.msisdn) {
+                        if (isNumeric(value)) {
+                            hasChanged = true;
+
+                            window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+                                'size': 'normal',
+                                'callback': function(response) {
+                                    // reCAPTCHA solved, allow signInWithPhoneNumber.
+                                    // ...
+                                    console.log(response);
+                                },
+                                'expired-callback': function() {
+                                    // Response expired. Ask user to solve reCAPTCHA again.
+                                    // ...
+                                }
+                            });
+
+                            window.recaptchaVerifier.render().then(function (widgetId) {
+                                window.recaptchaWidgetId = widgetId;
+      
+                                var captchaMessage = `<p class="uk-alert-captcha uk-alert uk-alert-light uk-text-small">
+                                    Untuk melanjutkan buktikan Anda bukan robot.
+                                </p>`;
+                                
+                                $('#recaptcha-container').prepend(captchaMessage);
+                            });
+     
+                            var phoneNumber = window.new_msisdn.replace(/^0+/, '+62');
+                            var appVerifier = window.recaptchaVerifier;
+
+                            firebase.auth().signInWithPhoneNumber(phoneNumber, appVerifier)
+                                .then(function (confirmationResult) {
+                                    window.confirmationResult = confirmationResult;
+
+                                    // Start validation
+                                    Swal.fire({
+                                        title: 'Validasi Kode Verifikasi',
+                                        input: 'text',
+                                        html: `SMS kode verifikasi dikirim ke nomor ${window.new_msisdn}`,
+                                        inputAttributes: {
+                                            autocapitalize: 'off'
+                                        },
+                                        showCancelButton: true,
+                                        confirmButtonText: 'Validasi',
+                                        showLoaderOnConfirm: true,
+                                        allowOutsideClick: false,
+                                        preConfirm: (passcode) => {
+                                            return window.confirmationResult.confirm(passcode).then(function (result) {
+                                                user = result.user;
+                                            }).catch(function (error) {
+                                                Swal.showValidationMessage(
+                                                    `Request failed: ${error}`
+                                                )
+                                            });
+                                        }
+
+                                    }).then((result) => {
+                                        if (result.isConfirmed) {
+                                            doSave({[name]: value, 'provider': 'firebase', 'provider_value': phoneNumber}, 'account/');
+                                        } else if (result.isDismissed) {
+                                            // Reset recaptcha
+                                            console.log(window.msisdn);
+      
+                                            $this.prop('disabled', false);
+                                            $this.find('.uk-loading').hide();
+                                        }
+
+                                        window.recaptchaVerifier.clear();
+                                        $('.uk-alert-captcha').remove();
+                                    });
+                                }).catch(function (error) {
+                                    console.log(error);
+
+                                    // Reset recaptcha
+                                    window.recaptchaVerifier.clear();
+                                    $('.uk-alert-captcha').remove();
+
+                                    if (error.code == 'auth/invalid-phone-number') {
+                                        errorAlert('Nomor ponsel tidak benar');
+                                    } else {
+                                        errorAlert('Terjadi kesalahan. Coba lagi nanti');
+                                    }
+
+                                    $this.prop('disabled', false);
+                                    $this.find('.uk-loading').hide();
+                                });
+                            
+                        } else {
+                            errorAlert('Nomor ponsel tidak benar');
+                        }
+                    }
+
+                } else if (value !== window.username) {
+                    doSave({[name]: value});
+                }
+
+                // has changed?
+                if (hasChanged) {
+                    // prevent button clicked twice
+                    $this.prop('disabled', true);
+                    $this.find('.uk-loading').show();
+                }
+            });
+
+            // ...
+            // REQUEST VERIFYCODE
+            // ...
+            var doRequestVerifyCode = function(param) {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'person/verifycodes/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    data: {
+                        [param?.key]: param?.value,
+                        challenge: param?.challenge,
+                    },
+                    cache: false,
+                    success: function(response) {
+                        window.token = response?.token;
+                        window.challenge = response?.challenge;
+                        window.token = response?.token;
+                        window.email = response?.email;
+
+                        Swal.fire({
+                            title: 'Validasi Kode Verifikasi',
+                            input: 'text',
+                            inputAttributes: {
+                                autocapitalize: 'on'
+                            },
+                            showCancelButton: true,
+                            confirmButtonText: 'Validasi',
+                            showLoaderOnConfirm: true,
+                            preConfirm: (passcode) => {
+                                const verifyData = {
+                                    passcode: passcode,
+                                    token: window.token,
+                                    email: window.email,
+                                    challenge: window.challenge,
+                                }
+
+                                return fetch(`${API_ENDPOINT}person/verifycodes/${passcode}/validate/`, {
+                                    method: 'PATCH',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRFToken': Cookies.get('csrftoken')
+                                    },
+                                    withCredentials: true,
+                                    body: JSON.stringify(verifyData)
+                                })
+                                .then(response => {
+                                    if (!response.ok) {
+                                        throw new Error(response.statusText)
+                                    }
+                                    return response.json()
+                                })
+                                .catch(error => {
+                                    Swal.showValidationMessage(
+                                        `Request failed: ${error}`
+                                    )
+                                })
+                            },
+                            allowOutsideClick: () => !Swal.isLoading()
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                doSave({
+                                    [param?.key]: param?.value,
+                                    token: window.token,
+                                    challenge: param?.challenge
+                                });
+                            } else {
+                                if (param?.key === 'email') {
+                                    $('input#email').val(param?.old_value);
+                                    window.email = param?.old_value;
+                                }
+                            }
+                        });
+                    },
+                    error: function(error) {
+                        if (error && error?.responseJSON) {
+                            UIkit.notification({
+                                message: error?.responseJSON?.detail,
+                                status: 'danger',
+                                timeout: 2000
+                            });
+                        }
+                    }
+                });
+            }
+
+            // ...
+            // SAVE
+            // ...
+            var doSave = function(param, target='') {
+                $.ajax({
+                    method: 'PATCH',
+                    url: API_ENDPOINT + 'person/users/{{ user.uuid }}/' + target,
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    data: {...param},
+                    cache: false,
+                    success: function(response) {
+                        UIkit.notification({
+                            message: 'Update berhasil',
+                            status: 'success',
+                            timeout: 2000
+                        });
+
+                        $('.uk-update-security').prop('disabled', false);
+                        $('.uk-update-security .uk-loading').hide();
+
+                        window.username = response?.username;
+                        window.msisdn = response?.msisdn;
+                    },
+                    error: function(error) {
+                        var errorJSON = error?.responseJSON;
+
+                        if (error && errorJSON) {
+                            $.each(errorJSON, function(k, v) {
+                                var message = '';
+
+                                if(Array.isArray(v)) {
+                                    message = v.join(' ');
+                                } else {
+                                    message = v;
+                                }
+                                
+                                var el = $('#' + k);
+                                var alert = `<div class="uk-text-small uk-text-danger uk-alert" uk-alert data-duration="50">
+                                    <a class="uk-alert-close" uk-close></a>
+                                    ${message}
+                                </div>`;
+
+                                el.closest('.uk-margin').after(alert);
+                            });
+                        }
+                    }
+                });
+            }
+
+
+            // ...
+            // SET NEW PASSWORD
+            // ...
+            $(document).on('submit', 'form#person-password-form', function(e) {
+                e.preventDefault();
+
+                // clear all alert
+                $('.uk-alert').remove();
+                
+                var values = $(this).serializeArray(),
+                    param = {};
+
+                $.each(values, function(i, v) {
+                    param[v.name] = v.value;
+                });
+
+                password = param?.password,
+                password1 = param?.password1,
+                password2 = param?.password2;
+
+                if (password && password1 && password2) {
+                    if (password && (password1 === password2)) {
+                        var param = {
+                            password: password,
+                            password1: password1,
+                            password2: password2,
+                        }
+                        
+                        doChangePassword(param);
+                    } else {
+                        Swal.fire(
+                            'Info',
+                            'Kata sandi baru tidak sama',
+                            'warning'
+                        );
+                    }
+
+                } else {
+                    Swal.fire(
+                        'Info',
+                        'Semua inputan wajib diisi',
+                        'warning'
+                    );
+                }
+            });
+
+            var doChangePassword = function(param) {
+                $.ajax({
+                    method: 'PATCH',
+                    url: API_ENDPOINT + 'person/users/{{ user.uuid }}/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    data: {...param},
+                    cache: false,
+                    success: function(response) {
+                        UIkit.notification({
+                            message: 'Kata sandi berhasil diperbarui',
+                            status: 'success',
+                            timeout: 2000
+                        });
+
+                        Turbolinks.visit("{% url 'person_view:login' %}");
+                    },
+                    error: function(error) {
+                        var errorJSON = error?.responseJSON;
+
+                        if (error && errorJSON) {
+                            $.each(errorJSON, function(k, v) {
+                                var message = '';
+
+                                if(Array.isArray(v)) {
+                                    message = v.join(' ');
+                                } else {
+                                    message = v;
+                                }
+                                
+                                var el = $('#' + k);
+                                var alert = `<div class="uk-text-small uk-text-danger uk-alert" uk-alert data-duration="50">
+                                    <a class="uk-alert-close" uk-close></a>
+                                    ${message}
+                                </div>`;
+
+                                if (k === 'password') el = $('#password2');
+                                el.closest('.uk-margin').after(alert);
+                            });
+                        }
+                    }
+                });
+            }
+
+            UIkit.util.on('#uk-security-tab', 'shown', function(e) {
+                if ($(e.target).is('#tab-account')) {
+                    
+                }
+            });
+        });
+    </script>
+{% endblock %}

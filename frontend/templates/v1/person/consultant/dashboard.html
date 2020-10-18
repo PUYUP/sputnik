@@ -1,0 +1,104 @@
+{% extends 'v1/base/base-consultant.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block head_title %}{% trans "Dasbor" noop %}{% endblock %}
+
+{% block main %}
+    <h6 class="uk-text-uppercase uk-content-title uk-margin-remove-top">
+        <strong>{% trans 'Ringkasan' noop %}</strong>
+    </h6>
+
+    <div class="uk-child-width-1-3@m uk-child-width-1-2@s uk-text-center uk-grid-small" uk-grid>
+        <div>
+            <div class="uk-card uk-card-default uk-card-small uk-card-body uk-box-shadow-small">
+                <h3 class="uk-card-title uk-margin-remove-bottom">130</h3>
+                <p class="uk-margin-small-top">Baru</p>
+            </div>
+        </div>
+
+        <div>
+            <div class="uk-card uk-card-default uk-card-small uk-card-body uk-box-shadow-small">
+                <h3 class="uk-card-title uk-margin-remove-bottom">5</h3>
+                <p class="uk-margin-small-top">Saat Ini</p>
+            </div>
+        </div>
+
+        <div>
+            <div class="uk-card uk-card-default uk-card-small uk-card-body uk-box-shadow-small">
+                <h3 class="uk-card-title uk-margin-remove-bottom">7</h3>
+                <p class="uk-margin-small-top">Tertunda</p>
+            </div>
+        </div>
+
+        <div>
+            <div class="uk-card uk-card-default uk-card-small uk-card-body uk-box-shadow-small">
+                <h3 class="uk-card-title uk-margin-remove-bottom">3.459</h3>
+                <p class="uk-margin-small-top">Selesai</p>
+            </div>
+        </div>
+
+        <div>
+            <div class="uk-card uk-card-default uk-card-small uk-card-body uk-box-shadow-small">
+                <h3 class="uk-card-title uk-margin-remove-bottom">431</h3>
+                <p class="uk-margin-small-top">Menolak</p>
+            </div>
+        </div>
+
+        <div>
+            <div class="uk-card uk-card-default uk-card-small uk-card-body uk-box-shadow-small">
+                <h3 class="uk-card-title uk-margin-remove-bottom">7.452</h3>
+                <p class="uk-margin-small-top">Total</p>
+            </div>
+        </div>
+    </div>
+
+    <h6 class="uk-text-uppercase"><strong>Segera Layani</strong></h6>
+
+    <ul class="uk-list uk-list-divider uk-list-issue">
+        <li>
+            <a href="#">
+                <span class="uk-text-muted">#B5XX51 :</span>
+                <strong>Jelaskan manajemen bisnis</strong>
+            </a>
+
+            <ul class="uk-list uk-list-hyphen uk-text-small uk-list-issue-meta">
+                <li>SLA 20 menit lagi</li>
+                <li>Prioritas High</li>
+                <li>Saluran Video Call</li>
+            </ul>
+        </li>
+
+        <li>
+            <a href="#">
+                <span class="uk-text-muted">#J8735KI :</span>
+                <strong>Konsultasi tentang AWS dan skalabilitasnya</strong>
+            </a>
+
+            <ul class="uk-list uk-list-hyphen uk-text-small uk-list-issue-meta">
+                <li>SLA 25 menit lagi</li>
+                <li>Prioritas Medium</li>
+                <li>Saluran Teks</li>
+            </ul>
+        </li>
+
+        <li>
+            <a href="#">
+                <span class="uk-text-muted">#Z7828D :</span>
+                <strong>Metode periklanan yang baik dan benar</strong>
+            </a>
+
+            <ul class="uk-list uk-list-hyphen uk-text-small uk-list-issue-meta">
+                <li>SLA 1 jam lagi</li>
+                <li>Prioritas Low</li>
+                <li>Saluran Call</li>
+            </ul>
+        </li>
+    </ul>
+{% endblock %}
+
+{% block js %}
+    <script type="text/javascript">
+        
+    </script>
+{% endblock %}

@@ -3,6 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from utils.generals import get_model
 
+User = get_model('person', 'User')
 Schedule = get_model('helpdesk', 'Schedule')
 ScheduleExpertise = get_model('helpdesk', 'ScheduleExpertise')
 Recurrence = get_model('helpdesk', 'Recurrence')

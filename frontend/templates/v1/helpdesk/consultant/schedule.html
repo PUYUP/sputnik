@@ -1,0 +1,263 @@
+{% extends 'v1/base/base-consultant.html' %}
+{% load i18n static %}
+{% load crispy_forms_tags %}
+
+{% block head_title %}{% trans 'Jadwal Konsultasi' noop %}{% endblock %}
+
+{% block main %}
+    <h6 class="uk-text-uppercase uk-content-title uk-margin-remove-top">
+        <strong>{% trans 'Jadwal Konsultasi' noop %}</strong>
+    </h6>
+
+    <button type="button" id="add-item" class="uk-button uk-button-primary uk-button-small">
+        {% trans 'Tambah' %}
+    </button>
+
+    <ul id="uk-item-list" class="uk-list uk-list-divider" uk-sortable="handle: .uk-item">
+        <!-- LIST HERE -->
+    </ul>
+{% endblock %}
+
+{% block js %}
+    <script type="text/javascript">
+        window.addEventListener('DOMContentLoaded', function() {
+            var $modalEl = `<div id="modal-form" uk-modal data-bg-close="false">
+                <div class="uk-modal-dialog">
+                    <div class="uk-modal-header">
+                        <h4 class="uk-modal-title uk-text-medium uk-margin-remove-bottom">{% trans 'Jadwal' %}</h4>
+                        <button class="uk-modal-close-default" type="button" uk-close></button>
+                    </div>
+
+                    <div class="uk-modal-body">
+                        <form id="helpdesk-schedule-form" class="uk-form-stacked" method="POST" action="{% url 'helpdesk_view:consultant:schedule' %}">
+                            {% csrf_token %}
+
+                            <div class="uk-margin uk-margin-remove-top">
+                                <label class="uk-form-label" for="label">{% trans 'Label jadwal' %} *</label>
+                                <div class="uk-form-controls">
+                                    <input class="uk-input uk-width-1-1" type="text" id="label" name="label" placeholder="Ex: Konsultasi Memasak" autocomplete="off" required>
+                                </div>
+                            </div>
+
+                            <div class="uk-margin uk-margin-remove-top">
+                                <label class="uk-form-label" for="expertise">{% trans 'Keahlian jadwal ini' %} *</label>
+                                <div id="uk-expertise-choices" class="uk-form-controls">
+                                    <div class="uk-child-width-1-3@s" uk-grid>
+                                        <!-- CHOICES HERE -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="uk-flex uk-margin-top">
+                                <div>
+                                    <button class="uk-button uk-button-default uk-modal-close" type="button">{% trans 'Cancel' noop %}</button>
+                                </div>
+
+                                <div class="uk-margin-auto-left">
+                                    <button type="submit" class="uk-button uk-button-primary">{% trans 'Berikutnya' %}</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>`;
+
+            // ...
+            // ITEM
+            // ...
+            var objItem = function(obj) {
+                var expertises = '';
+
+                $.each(obj.expertises, function(i, v) {
+                    expertises += `<span class="uk-margin-small-right uk-text-emphasis uk-text-small">${v}</span>`;
+                });
+
+                return `<li id="schedule-${obj.id}" class="uk-item" data-uuid="${obj.uuid}" data-json='${JSON.stringify(obj)}'>
+                    <a href="${obj.permalink}" class="uk-flex">
+                        <div class="uk-width-1-1">
+                            <strong>${obj.label}</strong>
+                            <br />
+                            ${expertises}
+                        </div>
+                    </a>
+                </li>`;
+            }
+
+            // ... 
+            // ADD
+            // ...
+            $(document).on('click', '#add-item', function(e) {
+                e.preventDefault();
+
+                $($modalEl).appendTo('body');
+                UIkit.modal('#modal-form').show();
+
+                // Load expertises
+                loadExpertise();
+            });
+
+            // ...
+            // LOAD
+            // ...
+            var loadSchedule = function() {
+                $.ajax({
+                    method: 'GET',
+                    url: API_ENDPOINT + 'helpdesk/consultant/schedules/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    cache: false,
+                    success: function(response) {
+                        var items = '';
+
+                        $.each(response, function(k, v) {
+                            items += objItem(v);
+                        });
+
+                        $('#uk-item-list').html(items);
+                    }
+                });
+            }
+
+            loadSchedule();
+
+            UIkit.sortable('#uk-item-list');
+            UIkit.util.on('#uk-item-list', 'stop', function (event) {
+                var sortItems = [];
+
+                $.each(event.target.children, function(i, v) {
+                    var item = {
+                        'uuid': $(v).attr('data-uuid'),
+                        'sort_order': i + 1
+                    }
+
+                    sortItems.push(item);
+                });
+
+                doSorting(sortItems);
+            });
+
+            // ... 
+            // SORTABLE
+            // ... 
+            var doSorting = function(param) {
+                $.ajax({
+                    method: 'PATCH',
+                    url: API_ENDPOINT + 'helpdesk/consultant/schedules/bulk-updates/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(param),
+                    cache: false,
+                    success: function(response) {
+                        UIkit.notification({
+                            message: 'Berhasil diperbarui',
+                            status: 'success',
+                            timeout: 2000
+                        });
+                    }
+                });
+            }
+
+            // ...
+            // LOAD EXPERTISES
+            // ...
+            var loadExpertise = function() {
+                $.ajax({
+                    method: 'GET',
+                    url: API_ENDPOINT + 'resume/expertises/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    cache: false,
+                    success: function(response) {
+                        var items = '';
+
+                        $.each(response, function(k, v) {
+                            items += `<div>
+                                <label>
+                                    <input type="checkbox" id="checkbox-${v.uuid}" name="expertise" value="${v.uuid}">
+                                    ${v.topic_label}
+                                </label>
+                            </div>`;
+                        });
+
+                        $('#uk-expertise-choices > div').html(items);
+                    }
+                });
+            }
+
+            // ...
+            // SUBMIT
+            // ...
+            $(document).on('submit', '#helpdesk-schedule-form', function(e) {
+                e.preventDefault();
+
+                // clear all alert
+                $(this).find('.uk-alert').remove();
+
+                var values = $(this).serializeArray(),
+                    uuid = $(this).find('button[type="submit"]').attr('data-uuid');
+                    param = {},
+                    expertises_list = [];
+                
+                $.each(values, function(i, v) {
+                    if (v.name === 'expertise') {
+                        var obj = {'expertise': v.value};
+                        expertises_list.push(obj);
+
+                    } else {
+                        param[v.name] = v.value;
+                    }
+                });
+
+                param['schedule_expertises'] = expertises_list;
+                doSave(param);
+            });
+
+            // ...
+            // SAVE
+            // ...
+            var doSave = function(param) {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'helpdesk/consultant/schedules/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(param),
+                    cache: false,
+                    success: function(response) {
+                        UIkit.notification({
+                            message: 'Berhasil ditambahkan',
+                            status: 'success',
+                            timeout: 2000
+                        });
+
+                        UIkit.modal('#modal-form').hide();
+                        Turbolinks.visit(response.permalink);
+                    },
+                    error: function(error) {
+                        var errorJSON = error?.responseJSON;
+
+                        if (error && errorJSON) {
+                            $.each(errorJSON, function(k, v) {
+                                var message = '';
+
+                                if(Array.isArray(v)) {
+                                    message = v.join(' ');
+                                } else {
+                                    message = v;
+                                }
+                                
+                                var el = $('#' + k);
+                                if (k === 'detail') el = $('#topic');
+                                el.closest('.uk-form-controls').after('<p class="uk-text-small uk-text-danger uk-alert">' + message + '</p>');
+                            });
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,124 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html class="loading" lang="en" data-textdirection="ltr">
+    <!-- BEGIN: Head-->
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
+        <meta name="description" content="Menjadi programer hebat">
+        <meta name="keywords" content="konsultasi pemprograman">
+        <meta name="author" content="{{ app_name }}">
+        <meta name="turbolinks-visit-control" content="reload">
+        <meta name="turbolinks-cache-control" content="no-cache">
+
+        <title>{% block head_title %}{% endblock %} | {{ app_name }}</title>
+        <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
+        <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon/favicon-32x32.png' %}">
+        <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon/favicon-16x16.png' %}">
+        <link rel="manifest" href="{% static 'favicon/site.webmanifest' %}">
+        <link rel="mask-icon" href="{% static 'favicon/safari-pinned-tab.svg' %}" color="#5bbad5">
+        <meta name="msapplication-TileColor" content="#da532c">
+        <meta name="theme-color" content="#ffffff">
+
+        <!-- STYLESHEETS -->
+        <link rel="stylesheet" href="{% static 'vendors/uikit/css/uikit.min.css'%}" type="text/css">
+        <link rel="stylesheet" href="{% static 'css/app.css'%}" type="text/css">
+        {% block style %}{% endblock %}
+
+        <!-- TURBOLINKS -->
+        <script src="{% static 'js/turbolinks.js' %}" defer></script>
+        <script src="{% static 'js/js.cookie.min.js' %}" defer></script>
+        <script src="{% static 'js/jquery-3.5.1.min.js' %}" defer></script>
+        <script src="{% static 'vendors/uikit/js/uikit.min.js' %}" defer></script>
+        <script src="{% static 'vendors/uikit/js/uikit-icons.min.js' %}" defer></script>
+        
+        {% block js %}{% endblock %}
+
+        <script type="text/javascript">
+            var API_ENDPOINT = 'http://localhost:8000/api/{{ api_version }}/';
+            var COOKIE_AGE = new Date(new Date().getTime() + 15 * 60 * 1000); // 15 minutes
+
+            window.addEventListener('DOMContentLoaded', function() {
+                Turbolinks.start();
+
+                // ...
+                // SIDEBAR
+                // ...
+                UIkit.util.on('#offcanvas-usage', 'beforeshow', function (el) {
+                    if ($(el.target).hasClass('uk-offcanvas')) {
+                        $('#uk-sidebar ul.uk-nav').appendTo($(this).find('.uk-offcanvas-bar'));
+                    }
+                });
+
+                UIkit.util.on('#offcanvas-usage', 'hidden', function (el) {
+                    if ($(el.target).hasClass('uk-offcanvas')) {
+                        $(this).find('ul.uk-nav').appendTo('#uk-sidebar');
+                    }
+                });
+            
+                /*
+                // persist scrolls
+                // pirated from https://github.com/turbolinks/turbolinks-classic/issues/205
+                var elementsWithPersistentScrolls, persistentScrollsPositions;
+
+                elementsWithPersistentScrolls = ['.turbolinks-disable-scroll'];
+                persistentScrollsPositions = {};
+
+                $(document).on('turbolinks:before-visit', function() {
+                    var i, len, results, selector;
+                    persistentScrollsPositions = {};
+                    results = [];
+                    for (i = 0, len = elementsWithPersistentScrolls.length; i < len; i++) {
+                        selector = elementsWithPersistentScrolls[i];
+                        results.push(persistentScrollsPositions[selector] = $(selector).scrollTop());
+                    }
+                    return results;
+                });
+
+                $(document).on('turbolinks:load', function() {
+                    var results, scrollTop, selector;
+                    results = [];
+                    for (selector in persistentScrollsPositions) {
+                        scrollTop = persistentScrollsPositions[selector];
+                        results.push($(selector).scrollTop(scrollTop));
+                    }
+                    return results;
+                });
+                */
+            });
+        </script>
+    </head>
+
+    <body>
+        <main class="app-main">
+            <section class="uk-container uk-container-small uk-margin-large-top">
+                <div class="uk-grid-divider" uk-grid>
+                    <div id="uk-sidebar" class="uk-width-medium uk-visible@m">
+                        {% include 'v1/person/consultant/sidebar.html' %}
+                    </div> <!-- /.sidebar -->
+
+                    <div class="uk-width-expand uk-position-relative">
+                        <div class="uk-hidden@m uk-position-absolute uk-nav-menu">
+                            <a class="uk-navbar-toggle uk-padding-remove-left" href="#offcanvas-usage" uk-toggle>
+                                <span uk-navbar-toggle-icon></span> <span class="uk-margin-small-left">Menu</span>
+                            </a>
+                        </div>
+
+                        <div class="uk-margin-large-bottom">
+                            {% block main %}{% endblock %}
+                        </div>
+                    </div> <!-- /.content -->
+                </div> <!-- /.grid -->
+            </section>
+        </main>
+
+        <div id="offcanvas-usage" uk-offcanvas="overlay: true">
+            <div class="uk-offcanvas-bar">
+                <button class="uk-offcanvas-close" type="button" uk-close></button>
+            </div>
+        </div>
+
+        {% block footer %}{% endblock %}
+    </body>
+</html>

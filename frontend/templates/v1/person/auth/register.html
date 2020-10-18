@@ -1,0 +1,114 @@
+{% extends 'v1/base/base-clean.html' %}
+
+{% load i18n %}
+
+{% block head_title %}{% trans "Buat Akun Baru" noop %}{% endblock %}
+
+{% block main %}
+    <section class="uk-container uk-container-xsmall uk-height-1-1 uk-flex uk-flex-middle uk-flex-center">
+        <div class="uk-width-2-3@m">
+            <h1 class="uk-width-1-1 uk-text-center uk-margin-medium-bottom">
+                <a href="{% url 'home' %}" class="uk-text-emphasis">{{ app_name }}</a>
+            </h1>
+
+            <hr class="uk-divider-icon"></hr>
+            <h4 class="uk-text-medium">{% trans "Buat akun baru" noop %}</h4>
+
+            <form id="person-check-email-form" action="{% url 'person_view:register' %}" method="POST">
+                {% csrf_token %}
+
+                <div class="uk-margin">
+                    <div class="uk-inline uk-width-1-1">
+                        <span class="uk-form-icon" uk-icon="icon: mail"></span>
+                        <input class="uk-input" type="email" id="email" name="email" placeholder="{% trans 'Alamat email aktif' noop %}" autocomplete="off">
+                    </div>
+                </div>
+                
+                <div class="uk-text-right uk-margin-large-top">
+                    <button type="submit" class="uk-button uk-button-primary">Berikutnya</button>
+                </div>
+            </form>
+        </div>
+    </section>
+{% endblock %}
+
+{% block js %}
+    <script type="text/javascript">
+        window.addEventListener('DOMContentLoaded', function() {
+            var cookieData = Cookies.get('person_register_email_login'),
+                cookieDataObject = cookieData ? JSON.parse(cookieData) : {};
+                
+            if (!cookieDataObject) Turbolinks.visit("{% url 'home' %}");
+
+            // SUBMIT FORM
+            $(document).on('submit', 'form#person-check-email-form', function(event) {
+                event.preventDefault();
+
+                var email = $(this).find('input#email').val();
+                if (email) doCheckEmail(email);
+            });
+
+            // SEND FORM DATA
+            var doCheckEmail = function(email) {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'person/users/check-email/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    data: {email: email},
+                    cache: false,
+                    success: function(response) {
+                        doRequestVerifyCode(email);
+                    },
+                    error: function(error) {
+                        if (error && error?.responseJSON) {
+                            UIkit.notification({
+                                message: error?.responseJSON?.detail,
+                                status: 'danger',
+                                timeout: 2000
+                            });
+                        }
+                    }
+                });
+            }
+
+            // ...
+            // CREATE VERIFYCODE
+            // ...
+            var doRequestVerifyCode = function(email) {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'person/verifycodes/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    data: {
+                        email: email, 
+                        challenge: 'register_validation'
+                    },
+                    cache: false,
+                    success: function(response) {
+                        // after verifycode validate redirected to a page define below
+                        response['redirect_to'] = "{% url 'person_view:register_capture' %}";
+
+                        Cookies.set(
+                            'person_verifycode_validation', 
+                            JSON.stringify(response), 
+                            {expires: COOKIE_AGE, path: '/', secure: {% if request.is_secure %}true{% else %}false{% endif %}}
+                        );
+
+                        Turbolinks.visit("{% url 'person_view:verifycode_validate' %}");
+                    },
+                    error: function(error) {
+                        if (error && error?.responseJSON) {
+                            UIkit.notification({
+                                message: error?.responseJSON?.detail,
+                                status: 'danger',
+                                timeout: 2000
+                            });
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+{% endblock %}

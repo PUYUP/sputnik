@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db.utils import IntegrityError
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.utils import formats
 
 from rest_framework import serializers
@@ -10,6 +10,7 @@ from rest_framework.exceptions import NotAcceptable
 from utils.generals import get_model
 from apps.helpdesk.models.models import Recurrence
 from apps.helpdesk.api.fields import DynamicFieldsModelSerializer
+from apps.helpdesk.api.v1.consultant.segment.serializers import SegmentSerializer
 
 from ..rrule.serializers import RuleSerializer
 
@@ -86,6 +87,13 @@ class RecurrenceSerializer(DynamicFieldsModelSerializer, serializers.ModelSerial
         return instance
 
 
+class ScheduleListSerializer(serializers.ListSerializer):
+    def to_representation(self, value):
+        if value.exists():
+            value = value.prefetch_related(Prefetch('segments'), Prefetch('expertises'))
+        return super().to_representation(value)
+
+
 class ScheduleSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='helpdesk_api:consultant:schedule-detail',
                                                lookup_field='uuid', read_only=True)
@@ -96,10 +104,14 @@ class ScheduleSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializ
     recurrence = RecurrenceSerializer(many=False, read_only=True)
     expertises = serializers.SlugRelatedField(slug_field='expertise_label', read_only=True,
                                               many=True, source='schedule_expertises')
+    segments = SegmentSerializer(many=True, read_only=True,
+                                 fields=('uuid', 'slas', 'canal', 'canal_display', 'url',
+                                         'open_hour', 'close_hour', 'max_opened', 'is_active',))
  
     class Meta:
         model = Schedule
         fields = '__all__'
+        list_serializer_class = ScheduleListSerializer
 
     def to_representation(self, value):
         request = self.context.get('request')
