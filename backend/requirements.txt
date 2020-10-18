@@ -16,5 +16,4 @@ eventlet>=0.25.2
 pyotp>=2.3.0
 gunicorn>=19.9.0
 Pillow>=6.2.1
-firebase-admin>=4.4.0
 mysqlclient>=2.0.1
