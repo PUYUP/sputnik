@@ -17,7 +17,7 @@
         <div id='calendar'></div>
     </div>
 
-    <div id="add-segment-modal" class="uk-modal" uk-modal>
+    <div id="add-segment-modal" class="uk-modal" uk-modal="bg-close: false">
         <div class="uk-modal-dialog">
             <button class="uk-modal-close-outside uk-close-large" type="button" uk-close></button>
             
@@ -31,60 +31,64 @@
 
                                 <div class="uk-margin">
                                     <div class="uk-form-controls">
-                                        <div class="uk-margin">
-                                            <label>
-                                                <input class="uk-radio" type="radio" name="canal" value="text" required> 
-                                                {% trans 'Teks' noop %}
-                                            </label>
+                                        <div class="uk-margin uk-input-group">
+                                            <div class="uk-margin">
+                                                <label>
+                                                    <input class="uk-radio" type="radio" name="canal" value="text" required> 
+                                                    {% trans 'Teks' noop %}
+                                                </label>
 
-                                            <p class="uk-text-small uk-margin-remove uk-text-italic uk-text-muted" style="margin-top: 4px !important;">
-                                                {% trans 'Diskusi seperti chat' noop %}
-                                            </p>
-                                        </div>
-                                            
-                                        <div class="uk-margin">
-                                            <label>
-                                                <input class="uk-radio" type="radio" name="canal" value="voice" required> 
-                                                {% trans 'Call' noop %}
-                                            </label>
+                                                <p class="uk-text-small uk-margin-remove uk-text-italic uk-text-muted" style="margin-top: 4px !important;">
+                                                    {% trans 'Diskusi seperti chat' noop %}
+                                                </p>
+                                            </div>
+                                                
+                                            <div class="uk-margin">
+                                                <label>
+                                                    <input class="uk-radio" type="radio" name="canal" value="voice" required> 
+                                                    {% trans 'Call' noop %}
+                                                </label>
 
-                                            <p class="uk-text-small uk-margin-remove uk-text-italic uk-text-muted" style="margin-top: 4px !important;">
-                                                {% trans 'Panggilan suara' noop %}
-                                            </p>
-                                        </div>
+                                                <p class="uk-text-small uk-margin-remove uk-text-italic uk-text-muted" style="margin-top: 4px !important;">
+                                                    {% trans 'Panggilan suara' noop %}
+                                                </p>
+                                            </div>
 
-                                        <div class="uk-margin">
-                                            <label>
-                                                <input class="uk-radio" type="radio" name="canal" value="video" required> 
-                                                {% trans 'Video' noop %}
-                                            </label>
+                                            <div>
+                                                <label>
+                                                    <input class="uk-radio" type="radio" name="canal" value="video" required> 
+                                                    {% trans 'Video' noop %}
+                                                </label>
 
-                                            <p class="uk-text-small uk-margin-remove uk-text-italic uk-text-muted" style="margin-top: 4px !important;">
-                                                {% trans 'Tatap muka seperti Zoom' noop %}
-                                            </p>
+                                                <p class="uk-text-small uk-margin-remove uk-text-italic uk-text-muted" style="margin-top: 4px !important;">
+                                                    {% trans 'Tatap muka seperti Zoom' noop %}
+                                                </p>
+                                            </div>
                                         </div>
 
                                         <div class="uk-grid uk-grid-small uk-child-width-1-2@s" uk-gird>
                                             <div>
-                                                <div class="uk-margin">
+                                                <div class="uk-margin uk-input-group">
                                                     <label for="open_hour">{% trans 'Jam buka' noop %}</label>
                                                     <input class="uk-input" type="time" id="open_hour" name="open_hour" required>
                                                 </div>
                                             </div>
 
                                             <div>
-                                                <div class="uk-margin">
+                                                <div class="uk-margin uk-input-group">
                                                     <label for="close_hour">{% trans 'Jam tutup' noop %}</label>
                                                     <input class="uk-input" type="time" id="close_hour" name="close_hour" required>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div class="uk-margin">
+                                        <div class="uk-margin uk-input-group">
                                             <label for="max_opened">{% trans 'Konsultasi maksimal' noop %}</label>
                                             <input class="uk-input" type="number" id="max_opened" name="max_opened" required>
                                             <p class="uk-margin-small-top uk-text-small">{% trans "Ini penting, pastikan sesuai dengan waktu Anda" noop %}</p>
                                         </div>
+
+                                        <button type="submit" class="uk-button uk-button-primary uk-button-small">{% trans "Berikutnya" noop %}</button>
                                     </div>
                                 </div>
                             </form>
@@ -109,6 +113,7 @@
 
 {% block js %}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.2/dist/jquery.validate.min.js" defer></script>
 
     <!-- rrule lib -->
     <script src='https://cdn.jsdelivr.net/npm/rrule@2.6.4/dist/es5/rrule.min.js' defer></script>
@@ -515,25 +520,45 @@
             // ...
             // ADD SEGMENT
             // ...
-            $(document).on('click', '#add-segment', function(e) {
-                e.preventDefault();
-
-                UIkit.modal('#add-segment-modal').show();
+            UIkit.accordion('#segment-accordion', {
+                collapsible: false
             });
 
-            UIkit.util.on('#segment-accordion', 'show', function(e) {
-                var target = $(e.target);
+            var segmentForm = $('#helpdesk-segment-form').validate({
+                errorClass: 'uk-text-danger uk-margin-small-top uk-margin-small-bottom',
+                errorElement: 'p',
+                errorPlacement: function(error, element) {
+                    error.appendTo( element.closest('.uk-input-group') );
+                },
+                submitHandler: function(form, e) {
+                    var values = $(form).serializeArray();
 
-                if (target.is('#segment-sla')) {
-                    $('#helpdesk-segment-form').trigger('submit');
+                    UIkit.accordion('#segment-accordion').toggle(1);
+                    e.preventDefault();
                 }
+            });
+
+            $(document).on('click', '#add-segment', function(e) {
+                e.preventDefault();
+                UIkit.modal('#add-segment-modal').show();
+
+                UIkit.accordion('#segment-accordion', {
+                    collapsible: false
+                });
+            });
+            
+            UIkit.util.on('#segment-accordion', 'beforehidex beforeshowx', function(e) {
+                e.preventDefault();
             });
 
 
             // ...
             // FORM SEGMENT SUBMIT
             // ...
-            $(document).on('submit', '#helpdesk-segment-form', function(e) {
+            $(document).on('submit', '#helpdesk-segment-formxx', function(e) {
+                e.stopImmediatePropagation();
+                e.preventDefault();
+
                 var values = $(this).serializeArray();
                 var param = {'schedule': "{{ uuid }}"};
 

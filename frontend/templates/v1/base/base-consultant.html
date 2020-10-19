@@ -36,7 +36,7 @@
         {% block js %}{% endblock %}
 
         <script type="text/javascript">
-            var API_ENDPOINT = 'http://tanyapakar.com/api/{{ api_version }}/';
+            var API_ENDPOINT = '{% if request.is_secure %}https://{% else %}http://{% endif %}{{ request.META.HTTP_HOST }}/api/{{ api_version }}/';
             var COOKIE_AGE = new Date(new Date().getTime() + 15 * 60 * 1000); // 15 minutes
 
             window.addEventListener('DOMContentLoaded', function() {

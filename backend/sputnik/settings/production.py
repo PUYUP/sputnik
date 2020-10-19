@@ -55,6 +55,7 @@ CSRF_COOKIE_HTTPONLY = False
 CSRF_TRUSTED_ORIGINS = [
     '.tanyapakar.com'
 ]
+"""
 
 
 # Django CORS
@@ -65,7 +66,6 @@ CORS_ALLOW_CREDENTIALS = True
 # CORS_ALLOWED_ORIGINS = [
 #     'http://tanyapakar.com'
 # ]
-"""
 
 
 # Static files (CSS, JavaScript, Images)
