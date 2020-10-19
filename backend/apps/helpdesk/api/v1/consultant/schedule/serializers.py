@@ -89,7 +89,8 @@ class RecurrenceSerializer(DynamicFieldsModelSerializer, serializers.ModelSerial
 
 class ScheduleListSerializer(serializers.ListSerializer):
     def to_representation(self, value):
-        if value.exists():
+        schedule_uuid = self.context.get('uuid', None)
+        if value.exists() and schedule_uuid:
             value = value.prefetch_related(Prefetch('segments'), Prefetch('expertises'))
         return super().to_representation(value)
 
