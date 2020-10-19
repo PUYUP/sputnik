@@ -27,6 +27,7 @@ sentry_sdk.init(
 )
 
 
+"""
 # Django Sessions
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/2.2/ref/settings/
@@ -64,7 +65,7 @@ CORS_ALLOW_CREDENTIALS = True
 # CORS_ALLOWED_ORIGINS = [
 #     'http://tanyapakar.com'
 # ]
-
+"""
 
 
 # Static files (CSS, JavaScript, Images)
