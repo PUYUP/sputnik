@@ -34,7 +34,6 @@ class ScheduleExpertiseSerializer(DynamicFieldsModelSerializer, serializers.Mode
 
 """ RECURRENCES """
 class RecurrenceSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
-    url = serializers.SerializerMethodField(read_only=True)
     schedule = serializers.SlugRelatedField(slug_field='uuid', queryset=Schedule.objects.all())
     rules = RuleSerializer(many=True, read_only=True, fields=('uuid', 'identifier', 'mode', 'type',
                                                               'url', 'rule_values',))
@@ -43,17 +42,6 @@ class RecurrenceSerializer(DynamicFieldsModelSerializer, serializers.ModelSerial
         model = Recurrence
         fields = '__all__'
 
-    def get_url(self, obj):
-        from .views import ScheduleApiView
-
-        schedule_uuid = obj.schedule.uuid
-        recurrence_uuid = obj.uuid
-        view = ScheduleApiView()
-        view.basename = 'helpdesk_api:consultant:schedule'
-        view.request = self.context.get('request')
-        url = view.reverse_action('recurrences-update', args=[schedule_uuid, recurrence_uuid])
-        return url
-    
     def to_representation(self, value):
         ret = super().to_representation(value)
  
