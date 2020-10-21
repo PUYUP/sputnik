@@ -27,8 +27,6 @@ urlpatterns += static(settings.STATIC_URL,
 # https://docs.djangoproject.com/en/3.1/ref/contrib/admin/#django.contrib.admin.AdminSite.enable_nav_sidebar
 admin.site.enable_nav_sidebar = False
 
-
-"""
 if settings.DEBUG:
     import debug_toolbar
     urlpatterns = [
@@ -39,4 +37,3 @@ if settings.DEBUG:
                           document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL,
                           document_root=settings.STATIC_ROOT)
-"""

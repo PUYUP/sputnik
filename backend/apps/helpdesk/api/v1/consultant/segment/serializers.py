@@ -21,7 +21,7 @@ class SegmentSerializer(DynamicFieldsModelSerializer, serializers.ModelSerialize
     url = serializers.HyperlinkedIdentityField(view_name='helpdesk_api:consultant:segment-detail',
                                                lookup_field='uuid', read_only=True)
     schedule = serializers.SlugRelatedField(slug_field='uuid', queryset=Schedule.objects.all())
-    slas = SLASerializer(many=True)
+    slas = SLASerializer(many=True, read_only=True)
 
     class Meta:
         model = Segment

@@ -47,7 +47,7 @@
                 info = verifyCodeObject?.info;
 
             // REDIRECT IF COOKIE NOT SET
-            if (!verifyCode) Turbolinks.visit("{% url 'home' %}");
+            if (!verifyCode) window.location.href = "{% url 'home' %}";
 
             $('#info').html(info);
             $('input#passcode').focus();
@@ -85,7 +85,7 @@
                             {expires: COOKIE_AGE, path: '/', secure: {% if request.is_secure %}true{% else %}false{% endif %}}
                         );
 
-                        Turbolinks.visit(verifyCodeObject?.redirect_to);
+                        window.location.href = verifyCodeObject?.redirect_to;
                     },
                     error: function(error) {
                         if (error && error?.responseJSON) {
@@ -143,11 +143,6 @@
                     }
                 });
             }
-        });
-
-        // BEFORE PAGE CHANGE
-        document.addEventListener('turbolinks:request-start', function() {
-            UIkit.notification.closeAll();
         });
     </script>
 {% endblock %}

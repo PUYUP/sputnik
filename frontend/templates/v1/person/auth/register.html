@@ -38,7 +38,7 @@
             var cookieData = Cookies.get('person_register_email_login'),
                 cookieDataObject = cookieData ? JSON.parse(cookieData) : {};
                 
-            if (!cookieDataObject) Turbolinks.visit("{% url 'home' %}");
+            if (!cookieDataObject) window.location.href = "{% url 'home' %}";
 
             // SUBMIT FORM
             $(document).on('submit', 'form#person-check-email-form', function(event) {
@@ -96,7 +96,7 @@
                             {expires: COOKIE_AGE, path: '/', secure: {% if request.is_secure %}true{% else %}false{% endif %}}
                         );
 
-                        Turbolinks.visit("{% url 'person_view:verifycode_validate' %}");
+                        window.location.href = "{% url 'person_view:verifycode_validate' %}";
                     },
                     error: function(error) {
                         if (error && error?.responseJSON) {

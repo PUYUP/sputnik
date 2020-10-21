@@ -290,7 +290,7 @@
 
                 // set to false if currently not true
                 if (!hasCurrently) param['currently'] = false;
-                if (!hasStatus) param['status'] = null;
+                if (!hasStatus) param['status'] = 'draft';
 
                 if (uuid) {
                     doUpdate(param, uuid);

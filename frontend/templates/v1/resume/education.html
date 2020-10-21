@@ -81,6 +81,13 @@
                                 </div>
                             </div>
 
+                            <div class="uk-margin">
+                                <label class="uk-form-label" for="status">
+                                    <input type="checkbox" id="status" name="status" value="publish" checked>
+                                    {% trans 'Terbitkan' %}
+                                </label>
+                            </div>
+
                             <div class="uk-flex">
                                 <div>
                                     <button class="uk-button uk-button-default uk-modal-close" type="button">{% trans 'Cancel' noop %}</button>
@@ -103,6 +110,7 @@
                     <div class="uk-flex">
                         <div>
                             <strong>${obj.school}</strong>
+                            ${obj.status != 'publish' ? `<span class="uk-label uk-label-warning uk-text-small"><small>Konsep</small></span>` : ``}
 
                             ${obj.degree || obj.study ? `
                                 <p class="uk-margin-remove uk-text-small">
@@ -211,11 +219,16 @@
 
                 var values = $(this).serializeArray(),
                     uuid = $(this).find('button[type="submit"]').attr('data-uuid');
-                    param = {};
+                    param = {},
+                    hasStatus = false;
                 
                 $.each(values, function(i, v) {
+                    if (v.name === 'status') hasStatus = true;
+                    
                     param[v.name] = v.value;
                 });
+
+                if (!hasStatus) param['status'] = 'draft';
 
                 if (uuid) {
                     doUpdate(param, uuid);
@@ -377,8 +390,16 @@
                 UIkit.util.on('#modal-form', 'shown', function() {
                     var $thisModal = $(this);
 
-                    $.each(json, function(i, v) {
-                        $thisModal.find('form #' + i).val(v);
+                    $.each(json, function(n, v) {
+                        if (n === 'status') {
+                            if (v === 'publish') {
+                                $thisModal.find('form #' + n).prop('checked', true);
+                            } else {
+                                $thisModal.find('form #' + n).prop('checked', false);
+                            }
+                        } else {
+                            $thisModal.find('form #' + n).val(v);
+                        }
                     });
                 });
 

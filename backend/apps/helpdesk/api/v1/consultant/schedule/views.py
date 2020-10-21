@@ -1,4 +1,3 @@
-from apps.helpdesk.models.models import Recurrence, RuleValue
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction, IntegrityError
 from django.db.models import Prefetch, Q
@@ -14,11 +13,12 @@ from rest_framework.decorators import action
 
 from apps.helpdesk.utils.permissions import IsConsultantOnly
 from utils.generals import get_model
-from .serializers import RecurrenceSerializer, ScheduleSerializer
+from .serializers import RecurrenceSerializer, ScheduleExpertiseSerializer, ScheduleSerializer
 
 Schedule = get_model('helpdesk', 'Schedule')
 Recurrence = get_model('helpdesk', 'Recurrence')
 Rule = get_model('helpdesk', 'Rule')
+ScheduleExpertise = get_model('helpdesk', 'ScheduleExpertise')
 
 
 class ScheduleApiView(viewsets.ViewSet):
@@ -68,7 +68,7 @@ class ScheduleApiView(viewsets.ViewSet):
             return [permission() for permission in self.permission_classes]
 
     """ SCHEDULE: OBJECT """
-    def get_schedule(self, uuid=None, is_update=False):
+    def get_object(self, uuid=None, is_update=False):
         queryset = Schedule.objects.prefetch_related(
             Prefetch('schedule_expertises'),
             Prefetch('schedule_expertises__expertise'),
@@ -138,7 +138,7 @@ class ScheduleApiView(viewsets.ViewSet):
     """ SCHEDULE: GET """
     def retrieve(self, request, uuid=None):
         context = {'request': request, 'uuid': uuid}
-        queryset = self.get_schedule(uuid=uuid)
+        queryset = self.get_object(uuid=uuid)
         serializer = ScheduleSerializer(queryset, many=False, context=context,
                                         fields=('schedule_expertises', 'uuid', 'label', 'is_active',
                                                 'create_date', 'recurrence', 'segments',))
@@ -151,7 +151,7 @@ class ScheduleApiView(viewsets.ViewSet):
         context = {'request': request}
 
         # single object
-        queryset = self.get_schedule(uuid=uuid, is_update=True)
+        queryset = self.get_object(uuid=uuid, is_update=True)
 
         # check permission
         self.check_object_permissions(request, queryset)
@@ -168,7 +168,7 @@ class ScheduleApiView(viewsets.ViewSet):
     @transaction.atomic
     def destroy(self, request, uuid=None, format=None):
         # retrieve object
-        queryset = self.get_schedule(uuid=uuid)
+        queryset = self.get_object(uuid=uuid)
 
         # check permission
         self.check_object_permissions(request, queryset)
@@ -226,242 +226,233 @@ class ScheduleApiView(viewsets.ViewSet):
                 return Response({'detail': _(u"Update success")},
                                 status=response_status.HTTP_200_OK)
 
-    """ RECURRENCE: GET """
-    @action(detail=True, methods=['get'],
-            permission_classes=[IsAuthenticated, IsConsultantOnly],
-            url_path='recurrences', url_name='recurrences')
-    def recurrences(self, request, uuid=None):
-        """
-        POST
-        -------------------
 
-        Format;
-        
-            {
-                "dtstart": "YYYY-MM-DD HH:MM[:ss[.uuuuuu]][TZ]", [required]
-                "dtuntil": "YYYY-MM-DD HH:MM[:ss[.uuuuuu]][TZ]",
-                "freq": "integer", [required, default 1]
-                "count": "integer", [required, default 30]
-                "interval": "integer", [required, default 1]
-                "wkst": "string" [default MO]
-            }
+"""
+RECURRENCES
+"""
+class RecurrenceApiView(viewsets.ViewSet):
+    """
+    GET
+    -----------
 
-        Example;
-        If value not used ignore it from param below
+    Params;
 
-            {
-                "dtstart": "2020-10-13T20:22:37.489102+07:00",
-                "dtuntil": "",
-                "freq": 1,
-                "count": 30,
-                "interval": 1,
-                "wkst": "MO"
-            }
-        """
-        schedule = self.get_schedule(uuid=uuid)
-        context = {'request': request, 'schedule': schedule}
+        {
+            "schedule_uuid": "b2c76dda-bcd4-44e3-92a8-9a9bbb7edad9"
+        }
 
-        serializer = RecurrenceSerializer(schedule.recurrence, many=False, context=context)
+    POST
+    -----------
+
+    Params;
+
+        {
+            "schedule": "b2c76dda-bcd4-44e3-92a8-9a9bbb7edad9",
+            "dtstart": "2020-10-13T20:22:37.489102+07:00",
+            "dtuntil": "",
+            "freq": 1,
+            "count": 30,
+            "interval": 1,
+            "wkst": "MO"
+        }
+
+    PATCH
+    -----------
+
+    Params;
+
+        {
+            "dtstart": "2020-10-13T20:22:37.489102+07:00",
+            "dtuntil": "",
+            "freq": 1,
+            "count": 30,
+            "interval": 1,
+            "wkst": "MO"
+        }
+    """
+    lookup_field = 'uuid'
+    permission_classes = (IsAuthenticated, IsConsultantOnly,)
+
+    def initialize_request(self, request, *args, **kwargs):
+        self.user = request.user
+        self.schedule_uuid = request.GET.get('schedule_uuid', None)
+        self.uuid = kwargs.get('uuid', None)
+        return super().initialize_request(request, *args, **kwargs)
+
+    @property
+    def query(self):
+        query = Recurrence.objects \
+            .prefetch_related(Prefetch('schedule')) \
+            .select_related('schedule')
+        return query
+
+    def get_object(self, is_update=False):
+        try:
+            if is_update:
+                queryset = self.query.select_for_update() \
+                    .get(uuid=self.uuid, schedule__user__uuid=self.user.uuid)
+            else:
+                queryset = self.query.get(uuid=self.uuid, schedule__user__uuid=self.user.uuid)
+        except Exception as e:
+            raise NotAcceptable(detail=str(e))
+        return queryset
+
+    def get_objects(self):
+        try:
+            queryset = self.query.get(schedule__uuid=self.schedule_uuid)
+        except (ValidationError, Exception) as e:
+            raise NotAcceptable({'detail': repr(e)})
+        return queryset
+
+    def list(self, request, format=None):
+        context = {'request': request}
+        if self.schedule_uuid is None:
+            raise NotAcceptable({'detail': _("Param schedule_uuid required")})
+
+        queryset = self.get_objects()
+        serializer = RecurrenceSerializer(queryset, many=False, context=context)
         return Response(serializer.data, status=response_status.HTTP_200_OK)
 
-    """ RECURRENCE: CREATE """
+    def retrieve(self, request, uuid=None, format=None):
+        context = {'request': request}
+        queryset = self.get_objects()
+        serializer = RecurrenceSerializer(queryset, many=False, context=context)
+        return Response(serializer.data, status=response_status.HTTP_200_OK)
+
     @method_decorator(never_cache)
     @transaction.atomic
-    @recurrences.mapping.post
-    def recurrences_create(self, request, uuid=None):
-        if not request.data:
-            raise NotAcceptable()
-
-        schedule = self.get_schedule(uuid=uuid)
-        context = {'request': request, 'schedule': schedule}
-
+    def create(self, request, format=None):
+        context = {'request': request}
         serializer = RecurrenceSerializer(data=request.data, context=context)
         if serializer.is_valid(raise_exception=True):
             try:
                 serializer.save()
             except (ValidationError, IntegrityError) as e:
-                return Response({'detail': repr(e)}, status=response_status.HTTP_406_NOT_ACCEPTABLE)
-            return Response(serializer.data, status=response_status.HTTP_200_OK)
+                raise NotAcceptable({'detail': repr(e)})
+            return Response(serializer.data, status=response_status.HTTP_201_CREATED)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
-    """ RECURRENCE: UPDATE """
     @method_decorator(never_cache)
     @transaction.atomic
-    @action(methods=['get', 'patch'], detail=True,
-            permission_classes=[IsAuthenticated, IsConsultantOnly],
-            url_path='recurrences/(?P<recurrence_uuid>[^/.]+)', url_name='recurrences-update')
-    def recurrences_update(self, request, uuid=None, recurrence_uuid=None):
-        """
-        Param;
-    
-            {
-                "dtstart": "2020-10-13T20:22:37.489102+07:00",
-                "dtuntil": "",
-                "freq": 1,
-                "count": 30,
-                "interval": 1,
-                "wkst": "MO"
-            }
-        """
-        if not request.data:
-            raise NotAcceptable()
-
-        schedule = self.get_schedule(uuid=uuid)
-        context = {'request': request, 'schedule': schedule}
-
-        try:
-            instance = Recurrence.objects.select_for_update() \
-                .get(schedule__uuid=uuid, schedule__user__uuid=request.user.uuid,
-                     uuid=recurrence_uuid)
-        except (ValidationError, Exception, ObjectDoesNotExist) as e:
-            raise NotAcceptable({'detail': repr(e)})
-
-        serializer = RecurrenceSerializer(instance, data=request.data, partial=True, context=context)
+    def partial_update(self, request, uuid=None, format=None):
+        context = {'request': request}
+        queryset = self.get_object(is_update=True)
+        serializer = RecurrenceSerializer(queryset, data=request.data, partial=True,
+                                          context=context)
         if serializer.is_valid(raise_exception=True):
             try:
                 serializer.save()
             except (ValidationError, IntegrityError) as e:
-                return Response({'detail': repr(e)}, status=response_status.HTTP_406_NOT_ACCEPTABLE)
+                raise NotAcceptable({'detail': repr(e)})
             return Response(serializer.data, status=response_status.HTTP_200_OK)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
-    """ RULE: GET """
-    @action(detail=True, methods=['get'],
-            permission_classes=[IsAuthenticated, IsConsultantOnly],
-            url_path='recurrences/(?P<recurrence_uuid>[^/.]+)/rules', url_name='recurrences-rules')
-    def rules(self, request, uuid=None, recurrence_uuid=None):
-        """
-        POST
-        -----------------------
 
-        Params;
+"""
+EXPERTISES
+"""
+class ScheduleExpertiseApiView(viewsets.ViewSet):
+    """
+    GET
+    ------------
 
-            [
-                {
-                    "identifier": "byweekday",
-                    "type": "integer",
-                    "values": [
-                        {"value": 2},
-                        {"value": 3}
-                    ]
-                }
-            ]
-        
-        PATCH
-        -----------------------
+    Params;
 
-        Params;
+        {
+            "schedule_uuid": "abcf-afaa"
+        }
 
-            [
-                {
-                    "identifier": "byweekday",
-                    "type": "integer",
-                    "values": [
-                        {"value": 2, "uuid": "7d0981db-ff64-4df8-bcdf-7b7daecfd6ca"},
-                        {"value": 3, "uuid": "69e7a5ba-5375-4f6e-8274-f7fca96e9d35"}
-                    ]
-                }
-            ]
-        """
-        schedule = self.get_schedule(uuid=uuid)
-        recurrence = getattr(schedule, 'recurrence', None)
-        rule_values = list()
+    POST / PATCH
+    -----------
 
-        if recurrence:
-            rules = recurrence.rules \
-                .prefetch_related(Prefetch('rule_values')) \
-                .all()
-            
-            rule_values = list()
-            for r in rules:
-                field = 'value_%s' % r.type
-                values = r.rule_values.all()
-                rule_values.append(
-                    {
-                        'uuid': r.uuid,
-                        'identifier': r.identifier,
-                        'type': r.type,
-                        'values': [{'uuid': str(v.uuid), 'value': getattr(v, field)} for v in values],
-                    }
-                )
+    Params;
 
-        return Response(rule_values, status=response_status.HTTP_200_OK)
+        {
+            "schedule": "85eab55d-9466-4029-8725-10405d5594cd",
+            "expertise": "1182676b-29e7-4bca-8dfd-b3596cd61da9"
+        }
+    """
+    lookup_field = 'uuid'
+    permission_classes = (IsAuthenticated, IsConsultantOnly,)
 
-    """ RULE: CREATE """
-    @method_decorator(never_cache)
-    @transaction.atomic
-    @rules.mapping.post
-    def rules_create(self, request, uuid=None, recurrence_uuid=None):
-        if not request.data:
-            raise NotAcceptable()
+    def initialize_request(self, request, *args, **kwargs):
+        self.user = request.user
+        self.schedule_uuid = request.GET.get('schedule_uuid', None)
+        self.uuid = kwargs.get('uuid', None)
+        return super().initialize_request(request, *args, **kwargs)
 
-        schedule = self.get_schedule(uuid=uuid)
-        recurrence = getattr(schedule, 'recurrence', None)
-        rules = request.data
+    @property
+    def query(self):
+        query = ScheduleExpertise.objects \
+            .prefetch_related(Prefetch('schedule'), Prefetch('expertise'),
+                              Prefetch('expertise__topic')) \
+            .select_related('schedule', 'expertise')
+        return query
 
-        for r in rules:
-            identifier = r.get('identifier')
-            values = r.get('values')
-            rtype = r.get('type')
-
-            rule, _creaed = Rule.objects.get_or_create(identifier=identifier, recurrence_id=recurrence.id, type=rtype)
-            if rule:
-                values_set = list()
-
-                for v in values:
-                    vdict = {'value': v.get('value')}
-                    values_set.append(vdict)
-
-                try:
-                    rule.save_values(values_set)
-                except Exception as e:
-                    raise NotAcceptable({'detail': repr(e)})
-        return Response({'detail': _("Rules created")}, status=response_status.HTTP_201_CREATED)
-
-    """ RULE: UPDATE """
-    @method_decorator(never_cache)
-    @transaction.atomic
-    @rules.mapping.patch
-    def rule_update(self, request, uuid=None, recurrence_uuid=None):
-        if not request.data:
-            raise NotAcceptable()
-
-        schedule = self.get_schedule(uuid=uuid)
-        recurrence = getattr(schedule, 'recurrence', None)
-        rules = request.data
-
-        for r in rules:
-            identifier = r.get('identifier')
-            values = r.get('values')
-            rtype = r.get('type')
-
-            rule, _creaed = Rule.objects.get_or_create(identifier=identifier, recurrence_id=recurrence.id, type=rtype)
-            if rule:
-                values_set = list()
-
-                for v in values:
-                    uuid = v.get('uuid')
-                    vdict = {'value': v.get('value')}
-                    if uuid:
-                        vdict['uuid'] = uuid
-                    values_set.append(vdict)
-
-                try:
-                    rule.save_values(values_set)
-                except Exception as e:
-                    raise NotAcceptable({'detail': repr(e)})
-        return Response({'detail': _("Rules updated")}, status=response_status.HTTP_200_OK)
-
-    """ RULE: DELETE """
-    @action(detail=True, methods=['delete'],
-            permission_classes=[IsAuthenticated, IsConsultantOnly],
-            url_path='recurrences/(?P<recurrence_uuid>[^/.]+)/rules/(?P<rule_value_uuid>[^/.]+)', url_name='recurrences-rules-delete')
-    def rules_delete(self, request, uuid=None, recurrence_uuid=None, rule_value_uuid=None):
-        """ DELETE RULE VALUE """
+    def get_object(self, is_update=False):
         try:
-            queryset = RuleValue.objects.get(uuid=rule_value_uuid, recurrence__schedule__user__uuid=request.user.uuid)
-        except ObjectDoesNotExist:
-            raise NotFound()
+            if is_update:
+                queryset = self.query.select_for_update() \
+                    .get(uuid=self.uuid, schedule__user__uuid=self.user.uuid)
+            else:
+                queryset = self.query.get(uuid=self.uuid, schedule__user__uuid=self.user.uuid)
+        except Exception as e:
+            raise NotAcceptable(detail=str(e))
+        return queryset
 
+    def get_objects(self):
+        try:
+            queryset = self.query.filter(schedule__uuid=self.schedule_uuid)
+        except (ValidationError, Exception) as e:
+            raise NotAcceptable({'detail': repr(e)})
+        return queryset
+
+    def list(self, request, format=None):
+        context = {'request': request}
+        if self.schedule_uuid is None:
+            raise NotAcceptable({'detail': _("Param schedule_uuid required")})
+
+        queryset = self.get_objects()
+        serializer = ScheduleExpertiseSerializer(queryset, many=True, context=context)
+        return Response(serializer.data, status=response_status.HTTP_200_OK)
+
+    def retrieve(self, request, uuid=None, format=None):
+        context = {'request': request}
+        queryset = self.get_object()
+        serializer = ScheduleExpertiseSerializer(queryset, many=False, context=context)
+        return Response(serializer.data, status=response_status.HTTP_200_OK)
+
+    @method_decorator(never_cache)
+    @transaction.atomic
+    def create(self, request, format=None):
+        context = {'request': request}
+        serializer = ScheduleExpertiseSerializer(data=request.data, context=context)
+        if serializer.is_valid(raise_exception=True):
+            try:
+                serializer.save()
+            except (ValidationError, IntegrityError) as e:
+                raise NotAcceptable({'detail': repr(e)})
+            return Response(serializer.data, status=response_status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
+
+    @method_decorator(never_cache)
+    @transaction.atomic
+    def partial_update(self, request, uuid=None, format=None):
+        context = {'request': request}
+        queryset = self.get_object(is_update=True)
+        serializer = ScheduleExpertiseSerializer(queryset, data=request.data, partial=True,
+                                                 context=context)
+        if serializer.is_valid(raise_exception=True):
+            try:
+                serializer.save()
+            except (ValidationError, IntegrityError) as e:
+                raise NotAcceptable({'detail': repr(e)})
+            return Response(serializer.data, status=response_status.HTTP_200_OK)
+        return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
+
+    @method_decorator(never_cache)
+    @transaction.atomic
+    def destroy(self, request, uuid=None, format=None):
+        queryset = self.get_object()
         queryset.delete()
         return Response({'detail': _("Delete success!")}, status=response_status.HTTP_204_NO_CONTENT)

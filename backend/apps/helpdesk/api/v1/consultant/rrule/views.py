@@ -129,7 +129,6 @@ class RuleApiView(viewsets.ViewSet):
             return Response(serializer.data, status=response_status.HTTP_200_OK)
         return Response(serializer.errors, status=response_status.HTTP_406_NOT_ACCEPTABLE)
 
-    """ SCHEDULE: DESTROY """
     @method_decorator(never_cache)
     @transaction.atomic
     def destroy(self, request, uuid=None, format=None):

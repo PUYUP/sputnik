@@ -15,9 +15,7 @@ from rest_framework.exceptions import NotFound, NotAcceptable
 
 from utils.generals import get_model
 from utils.validators import validate_msisdn
-from apps.person.utils.constants import (
-    CHANGE_EMAIL, CHANGE_MSISDN, PASSWORD_RECOVERY
-)
+from apps.person.utils.constants import PASSWORD_RECOVERY
 from apps.person.utils.auth import get_users_by_email
 from ..verifycode.serializers import VerifyCodeSerializer
 

@@ -20,6 +20,9 @@ ScheduleExpertise = get_model('helpdesk', 'ScheduleExpertise')
 
 
 class ScheduleExpertiseSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name='helpdesk_api:consultant:expertise-detail',
+                                               lookup_field='uuid', read_only=True)
+    schedule = serializers.SlugRelatedField(slug_field='uuid', queryset=Schedule.objects.all())
     expertise = serializers.SlugRelatedField(slug_field='uuid', queryset=Expertise.objects.all())
 
     class Meta:

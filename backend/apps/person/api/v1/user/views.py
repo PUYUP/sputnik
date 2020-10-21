@@ -93,17 +93,21 @@ class UserApiView(viewsets.ViewSet):
             # action is not set return default permission_classes
             return [permission() for permission in self.permission_classes]
 
+    def initialize_request(self, request, *args, **kwargs):
+        self.uuid = kwargs.get('uuid', None)
+        return super().initialize_request(request, *args, **kwargs)
+
     # Get a object
-    def get_object(self, uuid=None, is_update=False):
+    def get_object(self, is_update=False):
         queryset = User.objects
 
         try:
             if is_update:
-                queryset = queryset.select_for_update().get(uuid=uuid)
+                queryset = queryset.select_for_update().get(uuid=self.uuid)
             else:
                 queryset = queryset.prefetch_related(Prefetch('educations'), Prefetch('certificates'),
                                                      Prefetch('experiences')) \
-                    .get(uuid=uuid)
+                    .get(uuid=self.uuid)
         except ObjectDoesNotExist:
             raise NotFound()
 
@@ -142,7 +146,7 @@ class UserApiView(viewsets.ViewSet):
     # Single User
     def retrieve(self, request, uuid=None, format=None):
         context = {'request': self.request}
-        queryset = self.get_object(uuid=uuid)
+        queryset = self.get_object()
 
         # limit when other user see the user
         fields = ('__all__')
@@ -184,7 +188,7 @@ class UserApiView(viewsets.ViewSet):
         context = {'request': self.request}
 
         # Single object
-        instance = self.get_object(uuid=uuid, is_update=True)
+        instance = self.get_object(is_update=True)
 
         serializer = UserSerializer(instance, data=request.data, partial=True, context=context)
         if serializer.is_valid(raise_exception=True):
@@ -196,8 +200,8 @@ class UserApiView(viewsets.ViewSet):
     @method_decorator(never_cache)
     @transaction.atomic
     @action(methods=['post'], detail=False, permission_classes=[AllowAny],
-            url_path='check-email', url_name='check_email_view')
-    def check_email_view(self, request):
+            url_path='check-email', url_name='check-email')
+    def check_email(self, request):
         """
         Params:
 
@@ -243,8 +247,8 @@ class UserApiView(viewsets.ViewSet):
     @method_decorator(never_cache)
     @transaction.atomic
     @action(methods=['post'], detail=False, permission_classes=[AllowAny],
-            url_path='check-msisdn', url_name='check_msisdn_view')
-    def check_msisdn_view(self, request):
+            url_path='check-msisdn', url_name='check-msisdn')
+    def check_msisdn(self, request):
         """
         Params:
 
@@ -281,8 +285,8 @@ class UserApiView(viewsets.ViewSet):
     @method_decorator(never_cache)
     @transaction.atomic
     @action(methods=['post'], detail=False, permission_classes=[AllowAny],
-            url_path='check-account', url_name='view_check_account')
-    def view_check_account(self, request):
+            url_path='check-account', url_name='check-account')
+    def check_account(self, request):
         """
         Params:
 
@@ -324,8 +328,8 @@ class UserApiView(viewsets.ViewSet):
     @method_decorator(never_cache)
     @transaction.atomic
     @action(methods=['post'], detail=False, permission_classes=[AllowAny],
-            url_path='check-username', url_name='check_username_view')
-    def check_username_view(self, request):
+            url_path='check-username', url_name='check-username')
+    def check_username(self, request):
         """
         Params:
 
@@ -357,8 +361,8 @@ class UserApiView(viewsets.ViewSet):
     @action(detail=True, methods=['get', 'patch'],
             permission_classes=[IsAuthenticated, IsCurrentUserOrReject],
             parser_classes=[JSONParser, MultiPartParser],
-            url_path='profile', url_name='view_profile')
-    def view_profile(self, request, uuid=None):
+            url_path='profile', url_name='profile')
+    def profile(self, request, uuid=None):
         context = {'request': self.request}
         try:
             queryset = Profile.objects.get(user__uuid=uuid)
@@ -383,8 +387,8 @@ class UserApiView(viewsets.ViewSet):
     @transaction.atomic
     @action(detail=True, methods=['get', 'patch'],
             permission_classes=[IsAuthenticated, IsCurrentUserOrReject],
-            url_path='account', url_name='view_account')
-    def view_account(self, request, uuid=None):
+            url_path='account', url_name='account')
+    def account(self, request, uuid=None):
         """
             {
                 "msisdn": "0144151511"
@@ -412,8 +416,8 @@ class UserApiView(viewsets.ViewSet):
     @method_decorator(never_cache)
     @transaction.atomic
     @action(methods=['post'], detail=False, permission_classes=[AllowAny],
-            url_path='password-recovery', url_name='view_password_recovery')
-    def view_password_recovery(self, request):
+            url_path='password-recovery', url_name='password-recovery')
+    def password_recovery(self, request):
         """
         Params:
 
@@ -481,8 +485,8 @@ class UserApiView(viewsets.ViewSet):
     @method_decorator(never_cache)
     @transaction.atomic
     @action(methods=['post'], detail=True, permission_classes=[IsAuthenticated, IsCurrentUserOrReject],
-            url_path='logout', url_name='view_logout')
-    def view_logout(self, request, uuid=None):
+            url_path='logout', url_name='logout')
+    def logout(self, request, uuid=None):
         logout(request)
         return Response({'detail': _(u"Logout!")}, status=response_status.HTTP_204_NO_CONTENT)
 

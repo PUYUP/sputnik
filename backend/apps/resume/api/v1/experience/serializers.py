@@ -12,7 +12,7 @@ Experience = get_model('resume', 'Experience')
 class ExperienceListSerializer(serializers.ListSerializer):
     def to_representation(self, value):
         request = self.context.get('request')
-        if value.exists():
+        if hasattr(value, 'exists') and value.exists():
             value = value.prefetch_related(Prefetch('user')) \
                 .select_related('user') \
                 .exclude(~Q(user__uuid=request.user.uuid) & Q(status=DRAFT))
@@ -20,6 +20,8 @@ class ExperienceListSerializer(serializers.ListSerializer):
 
 
 class ExperienceSerializer(serializers.ModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name='resume:experience-detail',
+                                               lookup_field='uuid', read_only=True)
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     class Meta:

@@ -508,7 +508,7 @@
                             timeout: 2000
                         });
 
-                        Turbolinks.visit("{% url 'person_view:login' %}");
+                        window.location.href = "{% url 'person_view:login' %}";
                     },
                     error: function(error) {
                         var errorJSON = error?.responseJSON;

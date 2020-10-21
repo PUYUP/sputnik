@@ -4,7 +4,6 @@ from django.utils import formats
 from django.utils.translation import ugettext_lazy as _
 
 from rest_framework import serializers
-from rest_framework.exceptions import NotAcceptable
 
 from utils.generals import get_model
 from apps.resume.utils.constants import DRAFT
@@ -23,6 +22,8 @@ class CertificateListSerializer(serializers.ListSerializer):
 
 
 class CertificateSerializer(serializers.ModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name='resume:certificate-detail',
+                                               lookup_field='uuid', read_only=True)
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     class Meta:

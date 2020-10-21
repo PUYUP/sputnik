@@ -73,7 +73,6 @@ EMAIL_USE_SSL = False
 # Django Debug Toolbar
 # ------------------------------------------------------------------------------
 # https://django-debug-toolbar.readthedocs.io/en/stable/installation.html
-"""
 if DEBUG:
     DEBUG_TOOLBAR_PATCH_SETTINGS = False
     INTERNAL_IPS = ('127.0.0.1', '10.0.2.2', 'localhost',)
@@ -103,4 +102,3 @@ if DEBUG:
     DEBUG_TOOLBAR_CONFIG = {
         'INTERCEPT_REDIRECTS': False,
     }
-"""

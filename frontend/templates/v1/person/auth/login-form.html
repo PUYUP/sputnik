@@ -16,12 +16,10 @@
 <script type="text/javascript">
     var account;
 
-    document.addEventListener('turbolinks:load', function() {
+    window.addEventListener('DOMContentLoaded', function() {
         account = Cookies.get('person_login');
         if (account) $('input#account').val(account);
-    });
 
-    window.addEventListener('DOMContentLoaded', function() {
         // SUBMIT FORM
         $(document).on('submit', 'form#person-login-form', function(event) {
             event.preventDefault();
@@ -48,7 +46,7 @@
                         {expires: COOKIE_AGE, path: '/', secure: {% if request.is_secure %}true{% else %}false{% endif %}}
                     );
                     
-                    Turbolinks.visit('{{ redirect_url }}');
+                    window.location.href = '{{ redirect_url }}';
                 },
                 error: function(error) {
                     if (error && error?.responseJSON) {

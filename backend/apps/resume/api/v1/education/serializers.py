@@ -13,7 +13,7 @@ Education = get_model('resume', 'Education')
 class EducationListSerializer(serializers.ListSerializer):
     def to_representation(self, value):
         request = self.context.get('request')
-        if value.exists():
+        if hasattr(value, 'exists') and value.exists():
             value = value.prefetch_related(Prefetch('user')) \
                 .select_related('user') \
                 .exclude(~Q(user__uuid=request.user.uuid) & Q(status=DRAFT))
@@ -21,6 +21,8 @@ class EducationListSerializer(serializers.ListSerializer):
 
 
 class EducationSerializer(CleanValidateMixin, serializers.ModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name='resume:education-detail',
+                                               lookup_field='uuid', read_only=True)
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     class Meta:

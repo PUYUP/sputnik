@@ -9,12 +9,12 @@ from rest_framework import status as response_status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.exceptions import NotFound, NotAcceptable
+from rest_framework.exceptions import NotAcceptable
 
 from utils.generals import get_model
 from .serializers import EducationSerializer
-from ....utils.permissions import IsEducationCreator
-from ....utils.constants import DRAFT
+from apps.resume.utils.permissions import IsEducationCreator
+from apps.resume.utils.constants import PUBLISH
 
 Education = get_model('resume', 'Education')
 
@@ -23,7 +23,9 @@ class EducationApiView(viewsets.ViewSet):
     """
     GET
     ---------------------
+
     Params:
+
         {
             "user_uuid": "UUID v4"
         }
@@ -31,9 +33,12 @@ class EducationApiView(viewsets.ViewSet):
     Example:
         api/v1/resume/educations/?user_uuid=a38704d0-dcc1-40b8-950f-2c2ef941d3d6
 
-    POST
+
+    POST / PATCH
     ---------------------
+
     Params:
+
         {
             "school": "string", [required]
             "degree": "string",
@@ -66,56 +71,55 @@ class EducationApiView(viewsets.ViewSet):
             # action is not set return default permission_classes
             return [permission() for permission in self.permission_classes]
 
+    def initialize_request(self, request, *args, **kwargs):
+        self.uuid = kwargs.get('uuid', None)
+        self.user = request.user
+        self.user_uuid = request.GET.get('user_uuid', None)
+
+        if not self.user_uuid:
+            if self.user.is_authenticated:
+                self.user_uuid = self.user.uuid
+
+        return super().initialize_request(request, *args, **kwargs)
+
     # Get a objects
-    def get_object(self, uuid=None, is_update=False):
+    def get_object(self, is_update=False):
         # start query
         queryset = Education.objects
 
         try:
             if is_update:
-                queryset = queryset.select_for_update().get(uuid=uuid)
+                queryset = queryset.select_for_update().get(uuid=self.uuid)
             else:
-                queryset = queryset.get(uuid=uuid)
-        except ValidationError as e:
+                queryset = queryset.get(uuid=self.uuid)
+        except (ValidationError, ObjectDoesNotExist) as e:
             raise NotAcceptable({'detail': repr(e)})
-        except ObjectDoesNotExist:
-            raise NotFound()
-
         return queryset
 
-    def get_objects(self, user_uuid=None):
-        user = self.request.user
+    def get_objects(self):
         queryset = Education.objects
 
         # If current user not creator show only PUBLISH status
         try:
             queryset = queryset.prefetch_related(Prefetch('user')) \
                 .select_related('user') \
-                .filter(user__uuid=user_uuid) \
-                .exclude(~Q(user__uuid=user.uuid) & Q(status=DRAFT)) \
+                .filter(user__uuid=self.user_uuid) \
+                .exclude(~Q(user__uuid=self.user.uuid) & ~Q(status=PUBLISH)) \
                 .order_by('sort_order')
-        except Exception as e:
+        except (ValidationError, Exception) as e:
             raise NotAcceptable(detail=repr(e))
-
         return queryset
 
     def list(self, request, format=None):
-        params_missed = dict()
         context = {'request': request}
-        user = request.user
-        user_uuid = request.query_params.get('user_uuid') # :user uuid
-
-        if not user_uuid and not user.is_authenticated:
-            params_missed.update({'user_uuid': _("Required")})
-        else:
-            user_uuid = user.uuid
-
-        # print error if params not provided
-        if params_missed:
-            raise NotAcceptable(detail=params_missed)
-
-        queryset = self.get_objects(user_uuid=user_uuid)
+        queryset = self.get_objects()
         serializer = EducationSerializer(queryset, many=True, context=context)
+        return Response(serializer.data, status=response_status.HTTP_200_OK)
+
+    def retrieve(self, request, uuid=None, format=None):
+        context = {'request': request}
+        queryset = self.get_object()
+        serializer = EducationSerializer(queryset, many=False, context=context)
         return Response(serializer.data, status=response_status.HTTP_200_OK)
 
     @method_decorator(never_cache)
@@ -137,7 +141,7 @@ class EducationApiView(viewsets.ViewSet):
         context = {'request': request}
 
         # single object
-        queryset = self.get_object(uuid=uuid, is_update=True)
+        queryset = self.get_object(is_update=True)
 
         # check permission
         self.check_object_permissions(request, queryset)
@@ -152,7 +156,7 @@ class EducationApiView(viewsets.ViewSet):
     @transaction.atomic
     def destroy(self, request, uuid=None, format=None):
         # single object
-        queryset = self.get_object(uuid=uuid)
+        queryset = self.get_object()
 
         # check permission
         self.check_object_permissions(request, queryset)
@@ -180,8 +184,7 @@ class EducationApiView(viewsets.ViewSet):
             ]
         """
         method = request.method
-        user = request.user
-        
+
         if not request.data:
             raise NotAcceptable()
 
@@ -192,7 +195,7 @@ class EducationApiView(viewsets.ViewSet):
                 uuid = v.get('uuid')
  
                 try:
-                    obj = Education.objects.get(user_id=user.id, uuid=uuid)
+                    obj = Education.objects.get(user_id=self.user.id, uuid=uuid)
                     setattr(obj, 'sort_order', i + 1) # auto set with sort index
 
                     update_objs.append(obj)

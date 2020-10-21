@@ -272,7 +272,7 @@
 
                 // set to false if has_expiration not true
                 if (!hasExpiration) param['has_expiration'] = false;
-                if (!hasStatus) param['status'] = null;
+                if (!hasStatus) param['status'] = 'draft';
 
                 if (uuid) {
                     doUpdate(param, uuid);

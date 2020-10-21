@@ -98,7 +98,7 @@
             var verifyCode = Cookies.get('person_verifycode_result'),
                 verifyCodeObject = verifyCode ? JSON.parse(verifyCode) : {};
             
-            if (!verifyCode && verifyCodeObject?.challenge !== 'register_validation') Turbolinks.visit("{% url 'home' %}");
+            if (!verifyCode && verifyCodeObject?.challenge !== 'register_validation') window.location.href = "{% url 'home' %}";
 
             $('input#email').val(verifyCodeObject?.email);
 
@@ -197,7 +197,7 @@
                     data: {username: account, password: password},
                     cache: false,
                     success: function(response) {
-                        Turbolinks.visit("{% url 'home' %}");
+                        window.location.href = "{% url 'home' %}";
                     },
                     error: function(error) {
                         if (error && error?.responseJSON) {

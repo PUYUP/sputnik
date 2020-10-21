@@ -98,6 +98,7 @@ class AbstractScheduleExpertise(models.Model):
 
 
 class AbstractSegment(models.Model):
+    _
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     create_date = models.DateTimeField(auto_now_add=True, null=True)
     update_date = models.DateTimeField(auto_now=True, null=True)
@@ -111,7 +112,7 @@ class AbstractSegment(models.Model):
                              validators=[IDENTIFIER_VALIDATOR, non_python_keyword])
     open_hour = models.TimeField()
     close_hour = models.TimeField()
-    max_opened = models.IntegerField(help_text=_("How many Issue allowed with status open"))
+    quota = models.IntegerField(help_text=_("How many Issue allowed with status open"))
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -139,6 +140,10 @@ class AbstractSegment(models.Model):
 
 
 class AbstractSLA(models.Model):
+    _ALLOC_TEXT = 10 # in replied
+    _ALLOC_VOICE = 60 # in minutes
+    _ALLOV_VIDEO = _ALLOC_VOICE
+
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     create_date = models.DateTimeField(auto_now_add=True, null=True)
     update_date = models.DateTimeField(auto_now=True, null=True)
@@ -157,6 +162,7 @@ class AbstractSLA(models.Model):
                                       null=True, blank=True)
     grace_periode = models.IntegerField(help_text=_("In hours"))
     cost = models.BigIntegerField()
+    allocation = models.IntegerField(null=True, help_text=_("If canal Text unit is replied, if other is minute"))
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -165,6 +171,13 @@ class AbstractSLA(models.Model):
         ordering = ['-cost']
         verbose_name = _("SLA")
         verbose_name_plural = _("SLA's")
+
+    def clean(self):
+        if not self.allocation:
+            raise ValidationError({'allocation': _(u"Can't empty")})
+        
+        if self.allocation <= 0:
+            raise ValidationError({'allocation': _(u"Must larger than 0")})
 
     def save(self, *args, **kwargs):
         self.user = self.segment.user

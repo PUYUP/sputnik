@@ -9,8 +9,6 @@
         <meta name="description" content="Menjadi programer hebat">
         <meta name="keywords" content="konsultasi pemprograman">
         <meta name="author" content="{{ app_name }}">
-        <meta name="turbolinks-visit-control" content="reload">
-        <meta name="turbolinks-cache-control" content="no-cache">
 
         <title>{% block head_title %}{% endblock %} | {{ app_name }}</title>
         <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicon/apple-touch-icon.png' %}">
@@ -26,8 +24,6 @@
         <link rel="stylesheet" href="{% static 'css/app.css'%}" type="text/css">
         {% block style %}{% endblock %}
 
-        <!-- TURBOLINKS -->
-        <script src="{% static 'js/turbolinks.js' %}" defer></script>
         <script src="{% static 'js/js.cookie.min.js' %}" defer></script>
         <script src="{% static 'js/jquery-3.5.1.min.js' %}" defer></script>
         <script src="{% static 'vendors/uikit/js/uikit.min.js' %}" defer></script>
@@ -40,8 +36,6 @@
             var COOKIE_AGE = new Date(new Date().getTime() + 15 * 60 * 1000); // 15 minutes
 
             window.addEventListener('DOMContentLoaded', function() {
-                Turbolinks.start();
-
                 // ...
                 // SIDEBAR
                 // ...
@@ -56,36 +50,6 @@
                         $(this).find('ul.uk-nav').appendTo('#uk-sidebar');
                     }
                 });
-            
-                /*
-                // persist scrolls
-                // pirated from https://github.com/turbolinks/turbolinks-classic/issues/205
-                var elementsWithPersistentScrolls, persistentScrollsPositions;
-
-                elementsWithPersistentScrolls = ['.turbolinks-disable-scroll'];
-                persistentScrollsPositions = {};
-
-                $(document).on('turbolinks:before-visit', function() {
-                    var i, len, results, selector;
-                    persistentScrollsPositions = {};
-                    results = [];
-                    for (i = 0, len = elementsWithPersistentScrolls.length; i < len; i++) {
-                        selector = elementsWithPersistentScrolls[i];
-                        results.push(persistentScrollsPositions[selector] = $(selector).scrollTop());
-                    }
-                    return results;
-                });
-
-                $(document).on('turbolinks:load', function() {
-                    var results, scrollTop, selector;
-                    results = [];
-                    for (selector in persistentScrollsPositions) {
-                        scrollTop = persistentScrollsPositions[selector];
-                        results.push($(selector).scrollTop(scrollTop));
-                    }
-                    return results;
-                });
-                */
             });
         </script>
     </head>

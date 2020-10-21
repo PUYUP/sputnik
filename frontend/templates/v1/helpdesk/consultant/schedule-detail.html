@@ -88,7 +88,7 @@
                                             <p class="uk-margin-small-top uk-text-small">{% trans "Ini penting, pastikan sesuai dengan waktu Anda" noop %}</p>
                                         </div>
 
-                                        <button type="submit" class="uk-button uk-button-primary uk-button-small">{% trans "Berikutnya" noop %}</button>
+                                        <button type="submit" class="uk-button uk-button-primary uk-button-small">{% trans "Simpan kanal" noop %}</button>
                                     </div>
                                 </div>
                             </form>
@@ -196,13 +196,18 @@
                             var expertises = '';
                             var currentExpertises = [];
                             var recurrence = response?.recurrence;
-                            var dtstart = new Date(recurrence?.dtstart).toISOString().split('T')[0];
-                            var dtstart_open_hour = new Date(recurrence?.dtstart).toISOString().split('T')[1],
+                            var cur_dtstart = recurrence?.dtstart ? recurrence?.dtstart : Date.now();
+                            var dtstart = new Date(cur_dtstart).toISOString().split('T')[0];
+                            var dtstart_open_hour = new Date(cur_dtstart).toISOString().split('T')[1],
                                 dtstart_open_hour = dtstart_open_hour.split('.')[0];
 
+                            var byweekday_values = [];
                             var rules = recurrence?.rules;
-                            var byweekday = rules.find(x => x.identifier === 'byweekday');
-                            var byweekday_values = byweekday?.rule_values;
+
+                            if (rules) {
+                                var byweekday = rules.find(x => x.identifier === 'byweekday');
+                                byweekday_values = byweekday?.rule_values;
+                            }
 
                             var form = `<form id="helpdesk-schedule-form" class="uk-form-stacked" method="POST" action="${scheduleURL}">
                                 {% csrf_token %}
@@ -511,7 +516,7 @@
                     xhrFields: {withCredentials: true},
                     cache: false,
                     success: function(response) {
-                        Turbolinks.visit("{% url 'helpdesk_view:consultant:schedule' %}");
+                        window.location.href = "{% url 'helpdesk_view:consultant:schedule' %}";
                     }
                 });
             }
@@ -520,10 +525,6 @@
             // ...
             // ADD SEGMENT
             // ...
-            UIkit.accordion('#segment-accordion', {
-                collapsible: false
-            });
-
             var segmentForm = $('#helpdesk-segment-form').validate({
                 errorClass: 'uk-text-danger uk-margin-small-top uk-margin-small-bottom',
                 errorElement: 'p',
@@ -532,8 +533,14 @@
                 },
                 submitHandler: function(form, e) {
                     var values = $(form).serializeArray();
+                    var params = {'schedule': "{{ uuid }}"}; // uuid is schedule uuid from views.py
 
-                    UIkit.accordion('#segment-accordion').toggle(1);
+                    // filtering value
+                    $.each(values, function(i, v) {
+                        param[v.name] = v.value;
+                    });
+
+                    doSaveSegment(params);
                     e.preventDefault();
                 }
             });
@@ -541,47 +548,23 @@
             $(document).on('click', '#add-segment', function(e) {
                 e.preventDefault();
                 UIkit.modal('#add-segment-modal').show();
-
-                UIkit.accordion('#segment-accordion', {
-                    collapsible: false
-                });
             });
-            
-            UIkit.util.on('#segment-accordion', 'beforehidex beforeshowx', function(e) {
-                e.preventDefault();
-            });
-
+    
 
             // ...
-            // FORM SEGMENT SUBMIT
+            // SAVE SEGMENT
             // ...
-            $(document).on('submit', '#helpdesk-segment-formxx', function(e) {
-                e.stopImmediatePropagation();
-                e.preventDefault();
-
-                var values = $(this).serializeArray();
-                var param = {'schedule': "{{ uuid }}"};
-
-                // filtering value
-                $.each(values, function(i, v) {
-                    param[v.name] = v.value;
-                });
-
-                doCreateSegment(param);
-
-                e.preventDefault();
-            });
-
-            var doCreateSegment = function(data) {
+            var doSaveSegment = function(data) {
                 $.ajax({
                     method: 'POST',
-                    url: API_ENDPOINT + 'helpdesk/consultant/segments/{{ uuid }}/',
+                    url: API_ENDPOINT + 'helpdesk/consultant/segments/',
                     headers: {'X-CSRFToken': Cookies.get('csrftoken')},
                     xhrFields: {withCredentials: true},
                     data: data,
                     cache: false,
                     success: function(response) {
                         console.log(response);
+                        UIkit.accordion('#segment-accordion').toggle(1);
                     }
                 });
             }
