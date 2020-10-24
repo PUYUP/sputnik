@@ -1,196 +1,205 @@
 {% extends 'v1/base/base-consultant.html' %}
-{% load i18n %}
-{% load crispy_forms_tags %}
+{% load i18n static %}
 
 {% block head_title %}{% trans "Profil" noop %}{% endblock %}
 
 {% block main %}
-    <div class="uk-width-1-1">
-        <h6 class="uk-text-uppercase uk-content-title"><strong>{% trans 'Profil' noop %}</strong></h6>
+    <div class="d-block">
+        <h6><strong>{% trans 'Profil' noop %}</strong></h6>
 
-        <div class="uk-center">
-            <div class="uk-width-1-2@s uk-text-center uk-margin-auto">
-                <img id="profile-picture" data-src="" width="" height="" alt="" uk-img>
+        <div class="form-group" id="upload-zone">
+            <figure class="mb-3">
+                <img id="profile-picture" class="h-auto" src="" alt="" width="150">
+            </figure>
+
+            <div class="progress mb-2 d-none">
+                <div class="progress-bar" role="progressbar" style="width: 25%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">25%</div>
             </div>
 
-            <div class="js-upload uk-placeholder uk-text-center">
-                <span uk-icon="icon: cloud-upload"></span>
-                <span class="uk-text-middle">{% trans 'Drag foto disini atau' %}</span>
-                <div uk-form-custom>
-                    <input type="file" multiple>
-                    <span class="uk-link">{% trans 'pilih satu' %}</span>
-                </div>
-            </div>
-        </div>
+            <button type="button" id="select-avatar" class="btn btn-light btn-sm pl-3 pr-3">
+                {% trans "Pilih Foto" noop %}
+            </button>
 
-        <progress id="js-progressbar" class="uk-progress" value="0" max="100" hidden></progress>
+            <input id="upload-avatar" type="file" name="picture" class="d-none" accept="image/x-png,image/jpeg,image/jpg">
+        
+            <p class="text-muted small mb-0 mt-2">Besar file: maksimum 2.5 MB. Ekstensi file yang diperbolehkan: .JPG dan .PNG</p>
+        </div> <!-- /.upload-zone -->
 
         <form id="person-profile-form" class="uk-form-stacked" action="{% url 'person_view:profile' %}" method="POST">
             {% csrf_token %}
 
-            <div class="uk-margin">
-                <label class="uk-form-label" for="first_name">{% trans 'Nama lengkap' %}</label>
-                <div class="uk-form-controls">
-                    <input class="uk-input" type="text" id="first_name" name="first_name" placeholder="Contoh: John Doe" autocomplete="off">
-                </div>
+            <div class="form-group">
+                <label for="first_name">{% trans 'Nama lengkap' %}</label>
+                <input class="form-control" type="text" id="first_name" name="first_name" placeholder="Contoh: John Doe" autocomplete="off">
             </div>
 
-            <div class="uk-margin">
-                <label class="uk-form-label" for="headline">{% trans 'Sorotan' %}</label>
-                <div class="uk-form-controls">
-                    <input class="uk-input" type="text" id="headline" name="headline" placeholder="Contoh: Software Engineer" autocomplete="off">
-                </div>
+            <div class="form-group">
+                <label for="headline">{% trans 'Sorotan' %}</label>
+                <input class="form-control" type="text" id="headline" name="headline" placeholder="Contoh: Software Engineer" autocomplete="off">
             </div>
 
-            <div class="uk-margin">
-                <label class="uk-form-label" for="gender">{% trans 'Jenis Kelamin' %}</label>
-                <div class="uk-form-controls">
-                    <select id="gender" name="gender" class="uk-select">
-                    </select>
-                </div>
+            <div class="form-group">
+                <label for="gender">{% trans 'Jenis Kelamin' %}</label>
+                <select id="gender" name="gender" class="form-control"></select>
             </div>
 
-            <div class="uk-margin">
-                <label class="uk-form-label" for="about">{% trans 'Tentang' %}</label>
-                <div class="uk-form-controls">
-                    <textarea class="uk-textarea" id="about" name="about" placeholder="Saya adalah..." autocomplete="off"></textarea>
-                </div>
+            <div class="form-group">
+                <label for="about">{% trans 'Tentang' %}</label>
+                <textarea class="form-control" id="about" name="about" placeholder="Saya adalah..." autocomplete="off"></textarea>
             </div>
 
-            <div class="uk-text-right uk-margin-top">
-                <button type="submit" class="uk-button uk-button-primary">Simpan</button>
+            <div class="form-group mb-0 text-right">
+                <button type="submit" class="btn btn-info pl-3 pr-3">Simpan</button>
             </div>
         </form>
     </div>
 {% endblock %}
 
 {% block js %}
+    <script src="{% static 'vendors/jquery-file-upload/jquery.iframe-transport.js' %}" defer></script>
+    <script src="{% static 'vendors/jquery-file-upload/vendor/load-image.all.min.js' %}" defer></script>
+    <script src="{% static 'vendors/jquery-file-upload/vendor/jquery.ui.widget.js' %}" defer></script>
+    <script src="{% static 'vendors/jquery-file-upload/jquery.fileupload.js' %}" defer></script>
+    <script src="{% static 'vendors/jquery-file-upload/jquery.fileupload-process.js' %}" defer></script>
+    <script src="{% static 'vendors/jquery-file-upload/jquery.fileupload-image.js' %}" defer></script>
+    <script src="{% static 'vendors/jquery-file-upload/jquery.fileupload-validate.js' %}" defer></script>
+
     <script type="text/javascript">
-        window.addEventListener('DOMContentLoaded', function() {
-            // GENDERS
-            var genderChoices = JSON.parse('{{ gender_choices|safe }}');
-            var genderOption = '';
-            var currentGender = '{{ user.profile.gender }}';
+        (function() {
+            'use strict';
 
-            $.each(genderChoices, function(k, v) {
-                genderOption += `<option value="${k}" ${k == currentGender ? "selected" : ''}>${v}</option>`;
-            });
+            window.addEventListener('DOMContentLoaded', function() {
+                // GENDERS
+                var genderChoices = JSON.parse('{{ gender_choices|safe }}');
+                var genderOption = '';
+                var currentGender = '{{ user.profile.gender }}';
 
-            $('#gender').html(genderOption);
-
-            // ...
-            // LOAD PROFILE
-            // ...
-            var loadProfile = function() {
-                $.ajax({
-                    method: 'GET',
-                    url: API_ENDPOINT + 'person/users/{{ user.uuid }}/profile/',
-                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
-                    xhrFields: {withCredentials: true},
-                    cache: false,
-                    success: function(response) {
-                        var values = $('#person-profile-form').serializeArray();
-                        
-                        $.each(values, function(i, v) {
-                            $('#' + v.name).val(response[v.name]);
-                        });
-
-                        $('#profile-picture').attr('data-src', response?.picture);
-                    }
-                });
-            }
-
-            loadProfile();
-
-            // ...
-            // SUBMIT FORM
-            // ...
-            $(document).on('submit', 'form#person-profile-form', function(e) {
-                e.preventDefault();
-
-                var values = $(this).serializeArray(),
-                    param = {};
-
-                $.each(values, function(i, v) {
-                    param[v.name] = v.value;
+                $.each(genderChoices, function(k, v) {
+                    genderOption += `<option value="${k}" ${k == currentGender ? "selected" : ''}>${v}</option>`;
                 });
 
-                saveProfile(param);
-            });
+                $('#gender').html(genderOption);
 
-            var saveProfile = function(param) {
-                $.ajax({
+                // ...
+                // LOAD PROFILE
+                // ...
+                var loadProfile = function() {
+                    $.ajax({
+                        method: 'GET',
+                        url: API_ENDPOINT + 'person/users/{{ user.uuid }}/profile/',
+                        headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                        xhrFields: {withCredentials: true},
+                        cache: false,
+                        success: function(response) {
+                            var values = $('#person-profile-form').serializeArray();
+                            
+                            $.each(values, function(i, v) {
+                                $('#' + v.name).val(response[v.name]);
+                            });
+
+                            $('#profile-picture').attr('src', response?.picture);
+                        }
+                    });
+                }
+
+                loadProfile();
+
+                // ...
+                // SUBMIT FORM
+                // ...
+                $(document).on('submit', 'form#person-profile-form', function(e) {
+                    e.preventDefault();
+
+                    var values = $(this).serializeArray(),
+                        param = {};
+
+                    $.each(values, function(i, v) {
+                        param[v.name] = v.value;
+                    });
+
+                    saveProfile(param);
+                });
+
+                var saveProfile = function(param) {
+                    $.ajax({
+                        method: 'PATCH',
+                        url: API_ENDPOINT + 'person/users/{{ user.uuid }}/profile/',
+                        dataType: 'json',
+                        contentType: "application/json; charset=utf-8",
+                        headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                        xhrFields: {withCredentials: true},
+                        data: JSON.stringify({...param}),
+                        cache: false,
+                        success: function(response) {
+                            alert("{% trans 'Profil berhasi perbarui' %}");
+                        }
+                    });
+                }
+
+
+                // ...
+                // SELECT AVATAR
+                // ...
+                $(document).on('click', '#select-avatar', function(e) {
+                    e.preventDefault();
+                    $('#upload-avatar').trigger('click');
+                });
+
+
+                // ...
+                // UPLOAD AVATAR
+                // ...
+                $('#upload-avatar').fileupload({
                     method: 'PATCH',
                     url: API_ENDPOINT + 'person/users/{{ user.uuid }}/profile/',
-                    dataType: 'json',
-                    contentType: "application/json; charset=utf-8",
                     headers: {'X-CSRFToken': Cookies.get('csrftoken')},
-                    xhrFields: {withCredentials: true},
-                    data: JSON.stringify({...param}),
-                    cache: false,
-                    success: function(response) {
-                        UIkit.notification({
-                            message: "{% trans 'Profil berhasi perbarui' %}",
-                            status: 'success',
-                            timeout: 2000
-                        });
+                    dataType: 'json',
+                    sequentialUploads: true,
+                    progress: function (e, data) {
+                        var progress = parseInt(data.loaded / data.total * 100, 10);
+                        var strProgress = progress + "%";
+                        var uploadZoneEl = $(e.target).closest('#upload-zone');
+
+                        $(uploadZoneEl).find('.progress').removeClass('d-none');
+                        $(uploadZoneEl).find('.progress-bar').css({ 'width': strProgress });
+                        $(uploadZoneEl).find('.progress-bar').text(strProgress);
+                    },
+                    done: function (e, data) {
+                        var result = data.result;
+                        var uploadZoneEl = $(e.target).closest('#upload-zone');
+
+                        if (result) {
+                            var img = '<img src="' + result.picture + '" class="h-auto" width="150">';
+                            $(uploadZoneEl).find('figure').html(img);
+                        }
+
+                        $(uploadZoneEl).find('.progress').addClass('d-none');
+                    },
+                    stop: function (e) {
+                        var uploadZoneEl = $(e.target).closest('#upload-zone');
+                        $(uploadZoneEl).find('.progress').addClass('d-none');
                     }
                 });
-            }
 
-            // ...
-            // PICTURE UPLOAD
-            // ...
-            var bar = document.getElementById('js-progressbar');
 
-            UIkit.upload('.js-upload', {
-                url: API_ENDPOINT + 'person/users/{{ user.uuid }}/profile/',
-                method: 'PATCH',
-                name: 'picture',
-                mime: 'image/*',
-                multiple: false,
-                beforeSend: function (arguments) {
-                    // console.log('beforeSend', arguments);
-                    arguments.headers = {'X-CSRFToken': Cookies.get('csrftoken')};
-                },
-                beforeAll: function () {
-                    // console.log('beforeAll', arguments);
-                },
-                load: function () {
-                    // console.log('load', arguments);
-                },
-                error: function () {
-                    // console.log('error', arguments);
-                },
-                complete: function () {
-                    // console.log('complete', arguments);
-                },
+                // ...
+                // UPLOAD AVATAR PARAMS
+                // ...
+                $('#upload-avatar').bind('fileuploadsubmit', function (e, data) {
+                    data.formData = {
+                        'abc': 'xyz',
+                    }
+                });
 
-                loadStart: function (e) {
-                    bar.removeAttribute('hidden');
-                    bar.max = e.total;
-                    bar.value = e.loaded;
-                },
 
-                progress: function (e) {
-                    bar.max = e.total;
-                    bar.value = e.loaded;
-                },
-
-                loadEnd: function (e) {
-                    bar.max = e.total;
-                    bar.value = e.loaded;
-                },
-
-                completeAll: function (arguments) {
-                    var response = JSON.parse(arguments.response);
-
-                    setTimeout(function () {
-                        bar.setAttribute('hidden', 'hidden');
-                        $('#profile-picture').attr('data-src', response?.picture);
-                    }, 750);
-                }
+                // ...
+                // UPLOAD FAIL
+                // ...
+                $('#upload-avatar').bind('fileuploadfail', function (error, data) {
+                    var errorMessage = '{% trans "Maksimal ukuran file 2.5 MB." noop %}';
+                    alert(errorMessage);
+                });
             });
-        });
+        })();
     </script>
 {% endblock %}

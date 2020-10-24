@@ -4,31 +4,96 @@
 html, body, main { height: 100%; font-family: sans-serif; }
 
 /***
- * UIkit override
+ * Bootstrap override
  */
-.uk-notification-message { font-size: 1rem; }
-.uk-text-small { font-size: .825rem; }
-.uk-button { padding: 0 20px; }
-.uk-nav-header {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+label { margin-bottom: .15rem; }
+
+.row-small {
+    margin-right: -5px;
+    margin-left: -5px;
+}
+
+.row-small > div[class^="col-"] {
+    padding-right: 5px;
+    padding-left: 5px;
+}
+
+.btn-group-xs>.btn, .btn-xs {
+    padding: .1rem .25rem;
+    font-size: .75rem;
+}
+
+/***
+ * jQuery easy-autocomplete
+ */
+.easy-autocomplete {
+    width: 100% !important;
 }
 
 /***
  * App
  */
-.uk-list-issue-meta>:nth-child(n+2) {
-    margin-top: 5px;
+#sideMenu > li:not(.collapsed) .chevron {
+    box-sizing: border-box;
+    position: relative;
+    display: block;
+    transform: scale(var(--ggs,1));
+    width: 20px;
+    height: 20px;
+    border: 1px solid transparent;
+    border-radius: 100px
 }
 
-.uk-nav-menu {
-    top: 0;
-    left: auto;
+#sideMenu > li:not(.collapsed) .chevron::after {
+    content: "";
+    display: block;
+    box-sizing: border-box;
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-bottom: 1px solid;
+    border-right: 1px solid;
+    transform: rotate(45deg);
+    left: 4px;
+    top: 1px
 }
 
-.uk-nav-menu .uk-navbar-toggle {
-    min-height: auto;
+#sideMenu > li.collapsed .chevron {
+    box-sizing: border-box;
+    position: relative;
+    display: block;
+    transform: scale(var(--ggs,1));
+    width: 20px;
+    height: 20px;
+    border: 1px solid transparent;
+    border-radius: 100px
+}
+
+#sideMenu > li.collapsed .chevron::after {
+    content: "";
+    display: block;
+    box-sizing: border-box;
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-top: 1px solid;
+    border-right: 1px solid;
+    transform: rotate(-45deg);
+    left: 4px;
+    bottom: 1px
+}
+
+#sideMenu > li.collapsed > a {
+    color: #343a40;
+}
+
+.list-margin > li + li {
+    margin-top: 15px;
+}
+
+.main-content {
+    border-left: 1px solid #e9ecef;
+    padding-left: 25px;
 }
 
 /* Large devices (desktops, less than 1200px) */
@@ -38,23 +103,26 @@ html, body, main { height: 100%; font-family: sans-serif; }
 
 /* Medium devices (tablets, less than 992px) */
 @media (max-width: 991.98px) {
-
+    .container { 
+        width: 100%; 
+        max-width: none;
+    }
 }
 
 /* Medium devices (tablets, less than 992px) */
 @media (max-width: 960px) {
-    .uk-content-title {
-        text-align: right;
-    }
 
-    .uk-modal-title {
-        font-size: 1.3rem;
-    }
 }
 
 /* Small devices (landscape phones, less than 768px) */
 @media (max-width: 767px) {
-
+    .main-content {
+        border-top: 2px solid #e9ecef;
+        border-left: 0;
+        padding-left: 0;
+        margin-top: 25px;
+        padding-top: 25px;
+    }
 }
 
 /* Small devices (landscape phones, less than 768px) */

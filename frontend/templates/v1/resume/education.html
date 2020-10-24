@@ -1,103 +1,92 @@
 {% extends 'v1/base/base-consultant.html' %}
-{% load i18n %}
-{% load crispy_forms_tags %}
+{% load i18n static %}
 
 {% block head_title %}{% trans "Pendidikan" noop %}{% endblock %}
 
 {% block main %}
-    <h6 class="uk-text-uppercase uk-content-title uk-margin-remove-top">
+    <h6 class="uk-text-uppercase uk-content-title m-0-top">
         <strong>{% trans 'Pendidikan' noop %}</strong>
     </h6>
 
-    <button type="button" id="add-item" class="uk-button uk-button-primary uk-button-small">
-        {% trans 'Tambah' %}
+    <button type="button" id="add-item" class="btn btn-info pr-3 pl-3 btn-sm mb-3">
+        {% trans 'Tambah' noop %}
     </button>
 
-    <ul id="uk-item-list" class="uk-list uk-list-divider" uk-sortable="handle: .uk-item">
-        <!-- EDUCATIONS LIST HERE -->
+    <ul id="item-list" class="list-unstyled list-margin">
+        <!-- LIST HERE -->
     </ul>
 {% endblock %}
 
 {% block js %}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+    <script src="{% static 'vendors/jquery-ui/jquery-ui.min.js' %}" defer></script>
     
     <script type="text/javascript">
         window.addEventListener('DOMContentLoaded', function() {
-            var $modalEl = `<div id="modal-form" uk-modal data-bg-close="false">
-                <div class="uk-modal-dialog">
-                    <div class="uk-modal-header">
-                        <h4 class="uk-modal-title uk-text-medium uk-margin-remove-bottom">{% trans 'Pendidikan' %}</h4>
-                    </div>
+            var $modalEl = `<div class="modal fade" id="modal-form" data-backdrop="static" data-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="staticBackdropLabel">{% trans 'Pendidikan' noop %}</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
 
-                    <div class="uk-modal-body">
-                        <form id="resume-education-form" class="uk-form-stacked" method="POST" action="{% url 'resume_view:education' %}">
-                            {% csrf_token %}
+                        <div class="modal-body">
+                            <form id="resume-education-form" class="uk-form-stacked" method="POST" action="{% url 'resume_view:education' %}">
+                                {% csrf_token %}
 
-                            <div class="uk-margin uk-margin-remove-top">
-                                <label class="uk-form-label" for="school">{% trans 'Nama lembaga' %}*</label>
-                                <div class="uk-form-controls">
-                                    <input class="uk-input" type="text" id="school" name="school" placeholder="Universitas Tanya Pakar" autocomplete="off" required>
+                                <div class="form-group">
+                                    <label for="school">{% trans 'Nama lembaga' noop %}*</label>
+                                    <input class="form-control" type="text" id="school" name="school" placeholder="Universitas Tanya Pakar" autocomplete="off" required>
                                 </div>
-                            </div>
 
-                            <div class="uk-margin">
-                                <label class="uk-form-label" for="degree">{% trans 'Degree' %}</label>
-                                <div class="uk-form-controls">
-                                    <input class="uk-input" type="text" id="degree" name="degree" placeholder="Strata 1" autocomplete="off">
+                                <div class="form-group">
+                                    <label for="degree">{% trans 'Degree' noop %}</label>
+                                    <input class="form-control" type="text" id="degree" name="degree" placeholder="Strata 1" autocomplete="off">
                                 </div>
-                            </div>
 
-                            <div class="uk-margin">
-                                <label class="uk-form-label" for="degree">{% trans 'Studi' %}</label>
-                                <div class="uk-form-controls">
-                                    <input class="uk-input" type="text" id="study" name="study" placeholder="Geofisika" autocomplete="off">
+                                <div class="form-group">
+                                    <label for="degree">{% trans 'Studi' noop %}</label>
+                                    <input class="form-control" type="text" id="study" name="study" placeholder="Geofisika" autocomplete="off">
                                 </div>
-                            </div>
 
-                            <div class="uk-grid-small uk-child-width-1-2 uk-margin-top" uk-grid>
-                                <div>
-                                    <div class="uk-margin">
-                                        <label class="uk-form-label" for="start_year">{% trans 'Tahun masuk' %}</label>
-                                        <div class="uk-form-controls">
-                                            <input class="uk-input" type="number" id="start_year" name="start_year" placeholder="1997" autocomplete="off">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div class="form-group">
+                                            <label for="start_year">{% trans 'Tahun masuk' noop %}</label>
+                                            <input class="form-control" type="number" id="start_year" name="start_year" placeholder="1997" autocomplete="off">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-6">
+                                        <div class="form-group">
+                                            <label for="end_year">{% trans 'Tahun selesai' noop %}</label>
+                                            <input class="form-control" type="number" id="end_year" name="end_year" placeholder="2001" autocomplete="off">
                                         </div>
                                     </div>
                                 </div>
 
-                                <div>
-                                    <div class="uk-margin">
-                                        <label class="uk-form-label" for="end_year">{% trans 'Tahun selesai' %}</label>
-                                        <div class="uk-form-controls">
-                                            <input class="uk-input" type="number" id="end_year" name="end_year" placeholder="2001" autocomplete="off">
-                                        </div>
+                                <div class="form-group">
+                                    <label for="description">{% trans 'Keterangan' noop %}</label>
+                                    <textarea class="form-control" id="description" name="description" placeholder="Keterangan tambahan jika ada..." autocomplete="off"></textarea>
+                                </div>
+
+                                <div class="form-group">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="status" name="status" value="publish" checked>
+                                        <label class="form-check-label" for="status">
+                                            {% trans 'Terbitkan' noop %}
+                                        </label>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div class="uk-margin">
-                                <label class="uk-form-label" for="description">{% trans 'Keterangan' %}</label>
-                                <div class="uk-form-controls">
-                                    <textarea class="uk-textarea" id="description" name="description" placeholder="Keterangan tambahan jika ada..." autocomplete="off"></textarea>
+                                <div class="text-right">
+                                    <button type="submit" class="btn btn-info pl-3 pr-3">{% trans 'Simpan' noop %}</button>
                                 </div>
-                            </div>
-
-                            <div class="uk-margin">
-                                <label class="uk-form-label" for="status">
-                                    <input type="checkbox" id="status" name="status" value="publish" checked>
-                                    {% trans 'Terbitkan' %}
-                                </label>
-                            </div>
-
-                            <div class="uk-flex">
-                                <div>
-                                    <button class="uk-button uk-button-default uk-modal-close" type="button">{% trans 'Cancel' noop %}</button>
-                                </div>
-
-                                <div class="uk-margin-auto-left">
-                                    <button type="submit" class="uk-button uk-button-primary">{% trans 'Simpan' %}</button>
-                                </div>
-                            </div>
-                        </form>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>`;
@@ -106,29 +95,34 @@
             // EDUCATION ITEM
             // ...
             var objItem = function(obj) {
-                return `<li id="education-${obj.id}" class="uk-item" data-uuid="${obj.uuid}" data-sort-order="${obj.sort_order}" data-json='${JSON.stringify(obj)}'>
-                    <div class="uk-flex">
-                        <div>
-                            <strong>${obj.school}</strong>
-                            ${obj.status != 'publish' ? `<span class="uk-label uk-label-warning uk-text-small"><small>Konsep</small></span>` : ``}
+                return `<li id="education-${obj.id}" class="media" data-uuid="${obj.uuid}" data-sort-order="${obj.sort_order}" data-json='${JSON.stringify(obj)}'>
+                    <div class="media-body">
+                        <div class="d-flex w-100">
+                            <div>
+                                <strong>${obj.school}</strong>
+                                ${obj.status != 'publish' ? `<span class="badge badge-warning">Konsep</span>` : ``}
 
-                            ${obj.degree || obj.study ? `
-                                <p class="uk-margin-remove uk-text-small">
-                                    ${obj.study ? obj.study : ''}${obj.degree ? `, ${obj.degree}` : ``}
-                                </p>`
-                            : ``}
+                                ${obj.degree || obj.study ? `
+                                    <p class="m-0 small text-muted">
+                                        ${obj.study ? obj.study : ''}${obj.degree ? `, ${obj.degree}` : ``}
+                                    </p>`
+                                : ``}
 
-                            ${obj.start_year ? `<p class="uk-margin-remove uk-text-muted uk-text-small">${obj.start_year}${obj.end_year ? ` - ${obj.end_year}` : ``}</p>` : ``}
-                            ${obj.description ? `<p class="uk-margin-remove uk-text-muted uk-text-small">${obj.description}</p>` : ``}
-                        </div>
+                                ${obj.start_year ? `<p class="m-0 text-muted small">${obj.start_year}${obj.end_year ? ` - ${obj.end_year}` : ``}</p>` : ``}
+                                ${obj.description ? `<p class="m-0">${obj.description}</p>` : ``}
+                            </div>
 
-                        <div class="uk-margin-auto-left">
-                            <a href="" uk-icon="icon: more-vertical" class="uk-text-muted"></a>
-                            <div uk-dropdown="mode: click; pos: bottom-right" class="uk-dropdown-item">
-                                <ul class="uk-nav uk-dropdown-nav">
-                                    <li><a href="#" id="edit" class="uk-dropdown-close">Edit</a></li>
-                                    <li><a href="#" id="delete" class="uk-dropdown-close" data-uuid="${obj.uuid}">Hapus</a></li>
-                                </ul>
+                            <div class="ml-auto">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-light btn-sm dropdown-toggle small" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        Opsi
+                                    </button>
+
+                                    <div class="dropdown-menu dropdown-menu-right">
+                                        <button class="dropdown-item" type="button" id="edit">Edit</button>
+                                        <button class="dropdown-item" type="button" id="delete" data-uuid="${obj.uuid}">Hapus</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -142,7 +136,7 @@
                 e.preventDefault();
 
                 $($modalEl).appendTo('body');
-                UIkit.modal('#modal-form').show();
+                $('#modal-form').modal('show');
             });
 
             // ...
@@ -162,18 +156,22 @@
                             items += objItem(v);
                         });
 
-                        $('#uk-item-list').html(items);
+                        $('#item-list').html(items);
+                        $('#item-list').sortable();
                     }
                 });
             }
 
             loadEducation();
+    
 
-            UIkit.sortable('#uk-item-list');
-            UIkit.util.on('#uk-item-list', 'stop', function (event) {
+            // ... 
+            // SORTABLE
+            // ... 
+            $(document).on('sortupdate', '#item-list', function(event, ui) {
                 var sortItems = [];
 
-                $.each(event.target.children, function(i, v) {
+                $.each($(this).find('li.media'), function(i, v) {
                     var item = {
                         'uuid': $(v).attr('data-uuid'),
                         'sort_order': i + 1
@@ -184,10 +182,7 @@
 
                 doSorting(sortItems);
             });
-
-            // ... 
-            // SORTABLE
-            // ... 
+        
             var doSorting = function(param) {
                 $.ajax({
                     method: 'PATCH',
@@ -199,11 +194,7 @@
                     data: JSON.stringify(param),
                     cache: false,
                     success: function(response) {
-                        UIkit.notification({
-                            message: 'Berhasil diperbarui',
-                            status: 'success',
-                            timeout: 2000
-                        });
+                        // pass
                     }
                 });
             }
@@ -251,18 +242,11 @@
                     data: JSON.stringify(param),
                     cache: false,
                     success: function(response) {
-                        UIkit.notification({
-                            message: 'Berhasil ditambahkan',
-                            status: 'success',
-                            timeout: 2000
-                        });
-
-                        UIkit.modal('#modal-form').hide();
-
                         var item = objItem(response);
 
-                        $('#uk-item-list').append(item);
+                        $('#item-list').append(item);
                         $('#resume-education-form')[0].reset();
+                        $('#modal-form').modal('hide');
                     },
                     error: function(error) {
                         var errorJSON = error?.responseJSON;
@@ -278,7 +262,7 @@
                                 }
                                 
                                 var el = $('#' + k);
-                                el.closest('.uk-margin').after('<p class="uk-text-small uk-text-danger uk-alert">' + message + '</p>');
+                                el.closest('.form-group').after('<p class="small uk-text-danger uk-alert">' + message + '</p>');
                             });
                         }
                     }
@@ -299,18 +283,11 @@
                     data: JSON.stringify(param),
                     cache: false,
                     success: function(response) {
-                        UIkit.notification({
-                            message: 'Berhasil diperbarui',
-                            status: 'success',
-                            timeout: 2000
-                        });
-
-                        UIkit.modal('#modal-form').hide();
-
                         var item = objItem(response);
 
                         $('#education-' + response.id).replaceWith(item);
                         $('#resume-education-form')[0].reset();
+                        $('#modal-form').modal('hide');
                     },
                     error: function(error) {
                         var errorJSON = error?.responseJSON;
@@ -326,7 +303,7 @@
                                 }
                                 
                                 var el = $('#' + k);
-                                el.closest('.uk-margin').after('<p class="uk-text-small uk-text-danger uk-alert">' + message + '</p>');
+                                el.closest('.form-group').after('<p class="small uk-text-danger uk-alert">' + message + '</p>');
                             });
                         }
                     }
@@ -370,7 +347,7 @@
                             'success'
                         )
 
-                        $this.closest('li.uk-item').remove();
+                        $this.closest('li.media').remove();
                     }
                 });
             }
@@ -381,13 +358,13 @@
             $(document).on('click', '#edit', function(e) {
                 e.preventDefault();
                 
-                var data = $(this).closest('li.uk-item').attr('data-json'),
+                var data = $(this).closest('li.media').attr('data-json'),
                     json = (data ? JSON.parse(data) : {});
                 
                 $($modalEl).appendTo('body');
-                UIkit.modal('#modal-form').show();
+                $('#modal-form').modal('show');
 
-                UIkit.util.on('#modal-form', 'shown', function() {
+                $(document).on('shown.bs.modal', '#modal-form', function() {
                     var $thisModal = $(this);
 
                     $.each(json, function(n, v) {
@@ -406,10 +383,8 @@
                 $('#modal-form button[type="submit"]').attr('data-uuid', json.uuid);
             });
 
-            UIkit.util.on(document.body, 'hidden', function(e) {
-                if ($(e.target).hasClass('uk-modal')) {
-                    $(e.target).remove();
-                }
+            $(document).on('hidden.bs.modal', '#modal-form', function(e) {
+                $(this).remove();
             });
         });
     </script>

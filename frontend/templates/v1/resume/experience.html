@@ -1,25 +1,25 @@
 {% extends 'v1/base/base-consultant.html' %}
-{% load i18n %}
-{% load crispy_forms_tags %}
+{% load i18n static %}
 
 {% block head_title %}{% trans 'Pengalaman Kerja' noop %}{% endblock %}
 
 {% block main %}
-    <h6 class="uk-text-uppercase uk-content-title uk-margin-remove-top">
+    <h6 class="uk-text-uppercase uk-content-title m-0-top">
         <strong>{% trans 'Pengalaman Kerja' noop %}</strong>
     </h6>
 
-    <button type="button" id="add-item" class="uk-button uk-button-primary uk-button-small">
+    <button type="button" id="add-item" class="btn btn-info pr-3 pl-3 btn-sm mb-3">
         {% trans 'Tambah' %}
     </button>
 
-    <ul id="uk-item-list" class="uk-list uk-list-divider" uk-sortable="handle: .uk-item">
-        <!-- EXPERIENCES LIST HERE -->
+    <ul id="item-list" class="list-unstyled list-margin">
+        <!-- LIST HERE -->
     </ul>
 {% endblock %}
 
 {% block js %}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+    <script src="{% static 'vendors/jquery-ui/jquery-ui.min.js' %}" defer></script>
     
     <script type="text/javascript">
         window.addEventListener('DOMContentLoaded', function() {
@@ -37,123 +37,111 @@
                 monthOptions += `<option value="${k}">${v}</option>`;
             });
 
-            var $modalEl = `<div id="modal-form" uk-modal data-bg-close="false">
-                <div class="uk-modal-dialog">
-                    <div class="uk-modal-header">
-                        <h4 class="uk-modal-title uk-text-medium uk-margin-remove-bottom">{% trans 'Pengalaman Kerja' %}</h4>
-                        <button class="uk-modal-close-default" type="button" uk-close></button>
-                    </div>
+            var $modalEl = `<div class="modal fade" id="modal-form" data-backdrop="static" data-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="staticBackdropLabel">{% trans 'Pengalaman kerja' noop %}</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
 
-                    <div class="uk-modal-body">
-                        <form id="resume-experience-form" class="uk-form-stacked" method="POST" action="{% url 'resume_view:experience' %}">
-                            {% csrf_token %}
+                        <div class="modal-body">
+                            <form id="resume-experience-form" method="POST" action="{% url 'resume_view:experience' %}">
+                                {% csrf_token %}
 
-                            <div class="uk-margin uk-margin-remove-top">
-                                <label class="uk-form-label" for="title">{% trans 'Jabatan' %} *</label>
-                                <div class="uk-form-controls">
-                                    <input class="uk-input" type="text" id="title" name="title" placeholder="CTO Tanya Pakar" autocomplete="off" required>
+                                <div class="form-group">
+                                    <label for="title">{% trans 'Jabatan' %} *</label>
+                                    <input class="form-control" type="text" id="title" name="title" placeholder="CTO Tanya Pakar" autocomplete="off" required>
                                 </div>
-                            </div>
 
-                            <div class="uk-margin">
-                                <label class="uk-form-label" for="employment">{% trans 'Jenis pekerjaan' %} *</label>
-                                <div class="uk-form-controls">
-                                    <select id="employment" class="uk-select" name="employment" required>
+                                <div class="form-group">
+                                    <label for="employment">{% trans 'Jenis pekerjaan' %} *</label>
+                                    <select id="employment" class="form-control" name="employment" required>
                                         <option value="">{% trans 'Pilih salah satu' %}</option>
                                         ${employmentOptions}
                                     </select>
                                 </div>
-                            </div>
 
-                            <div class="uk-margin uk-margin-remove-top">
-                                <label class="uk-form-label" for="company">{% trans 'Perusahaan' %}</label>
-                                <div class="uk-form-controls">
-                                    <input class="uk-input" type="text" id="company" name="company" placeholder="PT Tanya Pakar" autocomplete="off">
+                                <div class="form-group">
+                                    <label for="company">{% trans 'Perusahaan' %}</label>
+                                    <input class="form-control" type="text" id="company" name="company" placeholder="PT Tanya Pakar" autocomplete="off">
                                 </div>
-                            </div>
 
-                            <div class="uk-margin uk-margin-remove-top">
-                                <label class="uk-form-label" for="location">{% trans 'Lokasi' %}</label>
-                                <div class="uk-form-controls">
-                                    <input class="uk-input" type="text" id="location" name="location" placeholder="Kota Jambi" autocomplete="off" required>
+                                <div class="form-group">
+                                    <label for="location">{% trans 'Lokasi' %}</label>
+                                    <input class="form-control" type="text" id="location" name="location" placeholder="Kota Jambi" autocomplete="off" required>
                                 </div>
-                            </div>
 
-                            <div class="uk-margin">
-                                <label class="uk-form-label" for="currently">
-                                    <input type="checkbox" id="currently" name="currently">
-                                    {% trans 'Masih kerja disini' %}
-                                </label>
-                            </div>
+                                <div class="form-group">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="currently" name="currently">
+                                        <label class="form-check-label" for="currently">
+                                            {% trans 'Masih kerja disini' %}
+                                        </label>
+                                    </div>
+                                </div>
 
-                            <div class="uk-grid-small uk-child-width-1-2 uk-margin-top" uk-grid>
-                                <div>
-                                    <div class="uk-margin">
-                                        <label class="uk-form-label">{% trans 'Mulai bekerja' %} *</label>
-                                        
-                                        <div class="uk-form-controls">
-                                            <div class="uk-grid-small uk-child-width-1-2" uk-grid>
-                                                <div>
-                                                    <select id="start_month" name="start_month" class="uk-select" required>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div class="form-group">
+                                            <label>{% trans 'Mulai bekerja' %} *</label>
+                                            
+                                            <div class="row row-small">
+                                                <div class="col-6">
+                                                    <select id="start_month" name="start_month" class="form-control" required>
                                                         <option value="">{% trans 'Bulan' noop %}</option>
                                                         ${monthOptions}
                                                     </select>
                                                 </div>
 
-                                                <div>
-                                                    <input type="number" id="start_year" name="start_year" class="uk-input" placeholder="{% trans 'Tahun' noop %}" required>
+                                                <div class="col-6">
+                                                    <input type="number" id="start_year" name="start_year" class="form-control" placeholder="{% trans 'Tahun' noop %}" required>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div id="end-date" class="col-6">
+                                        <div class="form-group">
+                                            <label>{% trans 'Berhenti pada' %} *</label>
+                                            
+                                            <div class="row row-small">
+                                                <div class="col-6">
+                                                    <select id="end_month" name="end_month" class="form-control">
+                                                        <option value="">{% trans 'Bulan' noop %}</option>
+                                                        ${monthOptions}
+                                                    </select>
+                                                </div>
+
+                                                <div class="col-6">
+                                                    <input type="number" id="end_year" name="end_year" class="form-control" placeholder="{% trans 'Tahun' noop %}">
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div>
-                                    <div id="uk-end-date" class="uk-margin">
-                                        <label class="uk-form-label">{% trans 'Berhenti pada' %} *</label>
-                                        
-                                        <div class="uk-form-controls">
-                                            <div class="uk-grid-small uk-child-width-1-2" uk-grid>
-                                                <div>
-                                                    <select id="end_month" name="end_month" class="uk-select">
-                                                        <option value="">{% trans 'Bulan' noop %}</option>
-                                                        ${monthOptions}
-                                                    </select>
-                                                </div>
+                               <div class="form-group">
+                                    <label for="description">{% trans 'Keterangan' %}</label>
+                                    <textarea class="form-control" id="description" name="description" placeholder="Keterangan tambahan jika ada..." autocomplete="off"></textarea>
+                                </div>
 
-                                                <div>
-                                                    <input type="number" id="end_year" name="end_year" class="uk-input" placeholder="{% trans 'Tahun' noop %}">
-                                                </div>
-                                            </div>
-                                        </div>
+                                <div class="form-group">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="status" name="status" value="publish" checked>
+                                        <label class="form-check-label" for="status">
+                                            {% trans 'Terbitkan' %}
+                                        </label>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div class="uk-margin">
-                                <label class="uk-form-label" for="description">{% trans 'Keterangan' %}</label>
-                                <div class="uk-form-controls">
-                                    <textarea class="uk-textarea" id="description" name="description" placeholder="Keterangan tambahan jika ada..." autocomplete="off"></textarea>
+                                <div class="text-right">
+                                    <button type="submit" class="btn btn-info pl-3 pr-3">{% trans 'Simpan' %}</button>
                                 </div>
-                            </div>
-
-                            <div class="uk-margin">
-                                <label class="uk-form-label" for="status">
-                                    <input type="checkbox" id="status" name="status" value="publish" checked>
-                                    {% trans 'Terbitkan' %}
-                                </label>
-                            </div>
-
-                            <div class="uk-flex">
-                                <div>
-                                    <button class="uk-button uk-button-default uk-modal-close" type="button">{% trans 'Cancel' noop %}</button>
-                                </div>
-
-                                <div class="uk-margin-auto-left">
-                                    <button type="submit" class="uk-button uk-button-primary">{% trans 'Simpan' %}</button>
-                                </div>
-                            </div>
-                        </form>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>`;
@@ -162,31 +150,36 @@
             // EXPERIENCE ITEM
             // ...
             var objItem = function(obj) {
-                return `<li id="experience-${obj.id}" class="uk-item" data-uuid="${obj.uuid}" data-sort-order="${obj.sort_order}" data-json='${JSON.stringify(obj)}'>
-                    <div class="uk-flex">
-                        <div class="uk-width-1-1">
-                            <strong>${obj.title}</strong>
-                            ${obj.status != 'publish' ? `<span class="uk-label uk-label-warning uk-text-small"><small>Konsep</small></span>` : ``}
-                            ${obj.company ? `<p class="uk-margin-remove uk-text-muted uk-text-small">${obj.company} &middot; ${obj.employment_display} &middot; ${obj.location}</p>` : ``}
-                            
-                            ${obj.start_month ? 
-                                `<p class="uk-margin-remove uk-text-muted uk-text-small">
-                                    ${obj.start_month_display} ${obj.start_year}
-                                    &mdash; 
-                                    ${obj.end_month ? obj.end_month_display + ` ` + obj.end_year : ` Sekarang`}
-                                </p>` 
-                            : ``}
-                            
-                            ${obj.description ? `<p class="uk-margin-remove-bottom uk-margin-small-top uk-text-small">${obj.description}</p>` : ``}
-                        </div>
+                return `<li id="experience-${obj.id}" class="media" data-uuid="${obj.uuid}" data-sort-order="${obj.sort_order}" data-json='${JSON.stringify(obj)}'>
+                    <div class="media-body">
+                        <div class="d-flex w-100">
+                            <div>
+                                <strong>${obj.title}</strong>
+                                ${obj.status != 'publish' ? `<span class="badge badge-warning">Konsep</span>` : ``}
+                                ${obj.company ? `<p class="m-0 text-muted small">${obj.company} &middot; ${obj.employment_display} &middot; ${obj.location}</p>` : ``}
+                                
+                                ${obj.start_month ? 
+                                    `<p class="m-0 text-muted small">
+                                        ${obj.start_month_display} ${obj.start_year}
+                                        &mdash; 
+                                        ${obj.end_month ? obj.end_month_display + ` ` + obj.end_year : ` Sekarang`}
+                                    </p>` 
+                                : ``}
+                                
+                                ${obj.description ? `<p class="m-0">${obj.description}</p>` : ``}
+                            </div>
 
-                        <div class="uk-margin-auto-left" style="width: 20px;">
-                            <a href="" uk-icon="icon: more-vertical" class="uk-text-muted"></a>
-                            <div uk-dropdown="mode: click; pos: bottom-right" class="uk-dropdown-item">
-                                <ul class="uk-nav uk-dropdown-nav">
-                                    <li><a href="#" id="edit" class="uk-dropdown-close">Edit</a></li>
-                                    <li><a href="#" id="delete" class="uk-dropdown-close" data-uuid="${obj.uuid}">Hapus</a></li>
-                                </ul>
+                            <div class="ml-auto">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-light btn-sm dropdown-toggle small" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        Opsi
+                                    </button>
+
+                                    <div class="dropdown-menu dropdown-menu-right">
+                                        <button class="dropdown-item" type="button" id="edit">Edit</button>
+                                        <button class="dropdown-item" type="button" id="delete" data-uuid="${obj.uuid}">Hapus</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -200,7 +193,7 @@
                 e.preventDefault();
 
                 $($modalEl).appendTo('body');
-                UIkit.modal('#modal-form').show();
+                $('#modal-form').modal('show');
             });
 
             // ...
@@ -220,18 +213,22 @@
                             items += objItem(v);
                         });
 
-                        $('#uk-item-list').html(items);
+                        $('#item-list').html(items);
+                        $('#item-list').sortable();
                     }
                 });
             }
 
             loadExperience();
 
-            UIkit.sortable('#uk-item-list');
-            UIkit.util.on('#uk-item-list', 'stop', function (event) {
+
+            // ... 
+            // SORTABLE
+            // ... 
+            $(document).on('sortupdate', '#item-list', function(event, ui) {
                 var sortItems = [];
 
-                $.each(event.target.children, function(i, v) {
+                $.each($(this).find('li.media'), function(i, v) {
                     var item = {
                         'uuid': $(v).attr('data-uuid'),
                         'sort_order': i + 1
@@ -243,9 +240,6 @@
                 doSorting(sortItems);
             });
 
-            // ... 
-            // SORTABLE
-            // ... 
             var doSorting = function(param) {
                 $.ajax({
                     method: 'PATCH',
@@ -257,11 +251,7 @@
                     data: JSON.stringify(param),
                     cache: false,
                     success: function(response) {
-                        UIkit.notification({
-                            message: 'Berhasil diperbarui',
-                            status: 'success',
-                            timeout: 2000
-                        });
+                        // pass
                     }
                 });
             }
@@ -305,11 +295,11 @@
             $(document).on('change', 'input#currently', function(e) {
                 if ($(this).is(':checked')) {
                     $('select#end_month, input#end_year').prop('required', false);
-                    $('#uk-end-date').find('input, select').val('');
-                    $('#uk-end-date').hide();
+                    $('#end-date').find('input, select').val('');
+                    $('#end-date').hide();
                 } else {
                     $('select#end_month, input#end_year').prop('required', true);
-                    $('#uk-end-date').show();
+                    $('#end-date').show();
                 }
             });
 
@@ -327,18 +317,11 @@
                     data: JSON.stringify(param),
                     cache: false,
                     success: function(response) {
-                        UIkit.notification({
-                            message: 'Berhasil ditambahkan',
-                            status: 'success',
-                            timeout: 2000
-                        });
-
-                        UIkit.modal('#modal-form').hide();
-
                         var item = objItem(response);
 
-                        $('#uk-item-list').append(item);
+                        $('#item-list').append(item);
                         $('#resume-experience-form')[0].reset();
+                        $('#modal-form').modal('hide');
                     },
                     error: function(error) {
                         var errorJSON = error?.responseJSON;
@@ -354,7 +337,7 @@
                                 }
                                 
                                 var el = $('#' + k);
-                                el.closest('.uk-margin').after('<p class="uk-text-small uk-text-danger uk-alert">' + message + '</p>');
+                                el.closest('.form-group').after('<p class="small text-danger">' + message + '</p>');
                             });
                         }
                     }
@@ -375,18 +358,11 @@
                     data: JSON.stringify(param),
                     cache: false,
                     success: function(response) {
-                        UIkit.notification({
-                            message: 'Berhasil diperbarui',
-                            status: 'success',
-                            timeout: 2000
-                        });
-
-                        UIkit.modal('#modal-form').hide();
-
                         var item = objItem(response);
 
                         $('#experience-' + response.id).replaceWith(item);
                         $('#resume-experience-form')[0].reset();
+                        $('#modal-form').modal('hide');
                     },
                     error: function(error) {
                         var errorJSON = error?.responseJSON;
@@ -402,7 +378,7 @@
                                 }
                                 
                                 var el = $('#' + k);
-                                el.closest('.uk-margin').after('<p class="uk-text-small uk-text-danger uk-alert">' + message + '</p>');
+                                el.closest('.form-group').after('<p class="small uk-text-danger uk-alert">' + message + '</p>');
                             });
                         }
                     }
@@ -446,7 +422,7 @@
                             'success'
                         )
 
-                        $this.closest('li.uk-item').remove();
+                        $this.closest('li.media').remove();
                     }
                 });
             }
@@ -457,20 +433,20 @@
             $(document).on('click', '#edit', function(e) {
                 e.preventDefault();
                 
-                var data = $(this).closest('li.uk-item').attr('data-json'),
+                var data = $(this).closest('li.media').attr('data-json'),
                     json = (data ? JSON.parse(data) : {});
                 
                 $($modalEl).appendTo('body');
-                UIkit.modal('#modal-form').show();
+                $('#modal-form').modal('show');
 
-                UIkit.util.on('#modal-form', 'shown', function() {
+                $(document).on('shown.bs.modal', '#modal-form', function() {
                     var $thisModal = $(this);
 
                     $.each(json, function(n, v) {
                         if (n === 'currently') {
                             if (v === true) {
                                 $thisModal.find('form #' + n).prop('checked', true);
-                                $('#uk-end-date').hide();
+                                $('#end-date').hide();
                             }
                         } else if (n === 'status') {
                             if (v === 'publish') {
@@ -485,12 +461,6 @@
                 });
 
                 $('#modal-form button[type="submit"]').attr('data-uuid', json.uuid);
-            });
-
-            UIkit.util.on(document.body, 'hidden', function(e) {
-                if ($(e.target).hasClass('uk-modal')) {
-                    $(e.target).remove();
-                }
             });
         });
     </script>

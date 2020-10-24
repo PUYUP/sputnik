@@ -1,25 +1,25 @@
 {% extends 'v1/base/base-consultant.html' %}
-{% load i18n %}
-{% load crispy_forms_tags %}
+{% load i18n static %}
 
 {% block head_title %}{% trans 'Sertifikasi' noop %}{% endblock %}
 
 {% block main %}
-    <h6 class="uk-text-uppercase uk-content-title uk-margin-remove-top">
+    <h6 class="uk-text-uppercase uk-content-title m-0-top">
         <strong>{% trans 'Sertifikasi' noop %}</strong>
     </h6>
 
-    <button type="button" id="add-item" class="uk-button uk-button-primary uk-button-small">
+    <button type="button" id="add-item" class="btn btn-info pr-3 pl-3 btn-sm mb-3">
         {% trans 'Tambah' %}
     </button>
 
-    <ul id="uk-item-list" class="uk-list uk-list-divider" uk-sortable="handle: .uk-item">
+    <ul id="item-list" class="list-unstyled list-margin">
         <!-- LIST HERE -->
     </ul>
 {% endblock %}
 
 {% block js %}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+    <script src="{% static 'vendors/jquery-ui/jquery-ui.min.js' %}" defer></script>
     
     <script type="text/javascript">
         window.addEventListener('DOMContentLoaded', function() {
@@ -30,98 +30,84 @@
                 monthOptions += `<option value="${k}">${v}</option>`;
             });
 
-            var $modalEl = `<div id="modal-form" uk-modal data-bg-close="false">
-                <div class="uk-modal-dialog">
-                    <div class="uk-modal-header">
-                        <h4 class="uk-modal-title uk-text-medium uk-margin-remove-bottom">{% trans 'Sertifikasi' %}</h4>
-                        <button class="uk-modal-close-default" type="button" uk-close></button>
-                    </div>
+            var $modalEl = `<div class="modal fade" id="modal-form" data-backdrop="static" data-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="staticBackdropLabel">{% trans 'Sertifikasi' noop %}</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
 
-                    <div class="uk-modal-body">
-                        <form id="resume-certificate-form" class="uk-form-stacked" method="POST" action="{% url 'resume_view:certificate' %}">
-                            {% csrf_token %}
+                        <div class="modal-body">
+                            <form id="resume-certificate-form" class="uk-form-stacked" method="POST" action="{% url 'resume_view:certificate' %}">
+                                {% csrf_token %}
 
-                            <div class="uk-margin uk-margin-remove-top">
-                                <label class="uk-form-label" for="name">{% trans 'Nama sertifikasi' %} *</label>
-                                <div class="uk-form-controls">
-                                    <input class="uk-input" type="text" id="name" name="name" placeholder="Ex: Cisco Certified Network Associate Security (CCNA)" autocomplete="off" required>
+                                <div class="form-group">
+                                    <label for="name">{% trans 'Nama sertifikasi' noop %} *</label>
+                                    <input class="form-control" type="text" id="name" name="name" placeholder="Ex: Cisco Certified Network Associate Security (CCNA)" autocomplete="off" required>
                                 </div>
-                            </div>
 
-                            <div class="uk-margin">
-                                <label class="uk-form-label" for="organization">{% trans 'Organisasi pemberi' %} *</label>
-                                <div class="uk-form-controls">
-                                    <input class="uk-input" type="text" id="organization" name="organization" placeholder="Ex: Amazon Web Service" autocomplete="off" required>
+                                <div class="form-group">
+                                    <label for="organization">{% trans 'Organisasi pemberi' noop %} *</label>
+                                    <input class="form-control" type="text" id="organization" name="organization" placeholder="Ex: Amazon Web Service" autocomplete="off" required>
                                 </div>
-                            </div>
 
-                            <div class="uk-margin">
-                                <label class="uk-form-label" for="has_expiration">
-                                    <input type="checkbox" id="has_expiration" name="has_expiration">
-                                    {% trans 'Memiliki kadarluasa' %}
-                                </label>
-                            </div>
+                                <div class="form-group">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="has_expiration" name="has_expiration">
+                                        <label class="form-check-label" for="has_expiration">
+                                            {% trans 'Memiliki kadarluasa' noop %}
+                                        </label>
+                                    </div>
+                                </div>
 
-                            <div class="uk-grid-small uk-child-width-1-2 uk-margin-top" uk-grid>
-                                <div>
-                                    <div class="uk-margin">
-                                        <label class="uk-form-label">{% trans 'Berlaku sejak' %} *</label>
-                                        
-                                        <div class="uk-form-controls">
-                                            <input type="date" id="issued" name="issued" class="uk-input" placeholder="{% trans 'dd/mm/yyyy' noop %}" required>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div class="form-group">
+                                            <label for="issued">{% trans 'Berlaku sejak' noop %} *</label>
+                                            <input type="date" id="issued" name="issued" class="form-control" placeholder="{% trans 'dd/mm/yyyy' noop %}" required>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-6">
+                                        <div id="expired" class="form-group" style="display: none;">
+                                            <label for="expired">{% trans 'Sampai' noop %} *</label>
+                                            <input type="date" id="expired" name="expired" class="form-control" placeholder="{% trans 'dd/mm/yyyy' noop %}">
                                         </div>
                                     </div>
                                 </div>
 
-                                <div>
-                                    <div id="uk-expired" class="uk-margin" style="display: none;">
-                                        <label class="uk-form-label">{% trans 'Sampai' %} *</label>
-                                        
-                                        <div class="uk-form-controls">
-                                            <input type="date" id="expired" name="expired" class="uk-input" placeholder="{% trans 'dd/mm/yyyy' noop %}">
-                                        </div>
+                                <div class="form-group">
+                                    <label for="credential_id">{% trans 'ID Sertifikat' noop %}</label>
+                                    <input class="form-control" type="text" id="credential_id" name="credential_id" placeholder="KD2952KF" autocomplete="off">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="credential_url">{% trans 'URL Sertifikat' noop %}</label>
+                                    <input class="form-control" type="text" id="credential_url" name="credential_url" placeholder="http://..." autocomplete="off">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="description">{% trans 'Keterangan' noop %}</label>
+                                    <textarea class="form-control" id="description" name="description" placeholder="Keterangan tambahan jika ada..." autocomplete="off"></textarea>
+                                </div>
+
+                                <div class="form-group">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="status" name="status" value="publish" checked>
+                                        <label class="form-check-label" for="status">
+                                            {% trans 'Terbitkan' %}
+                                        </label>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div class="uk-margin">
-                                <label class="uk-form-label" for="credential_id">{% trans 'ID Sertifikat' %}</label>
-                                <div class="uk-form-controls">
-                                    <input class="uk-input" type="text" id="credential_id" name="credential_id" placeholder="KD2952KF" autocomplete="off">
+                                <div class="text-right">
+                                    <button type="submit" class="btn btn-info pr-3 pl-3">{% trans 'Simpan' noop %}</button>
                                 </div>
-                            </div>
-
-                            <div class="uk-margin">
-                                <label class="uk-form-label" for="credential_url">{% trans 'URL Sertifikat' %}</label>
-                                <div class="uk-form-controls">
-                                    <input class="uk-input" type="text" id="credential_url" name="credential_url" placeholder="http://..." autocomplete="off">
-                                </div>
-                            </div>
-
-                            <div class="uk-margin">
-                                <label class="uk-form-label" for="description">{% trans 'Keterangan' %}</label>
-                                <div class="uk-form-controls">
-                                    <textarea class="uk-textarea" id="description" name="description" placeholder="Keterangan tambahan jika ada..." autocomplete="off"></textarea>
-                                </div>
-                            </div>
-
-                            <div class="uk-margin">
-                                <label class="uk-form-label" for="status">
-                                    <input type="checkbox" id="status" name="status" value="publish" checked>
-                                    {% trans 'Terbitkan' %}
-                                </label>
-                            </div>
-
-                            <div class="uk-flex">
-                                <div>
-                                    <button class="uk-button uk-button-default uk-modal-close" type="button">{% trans 'Cancel' noop %}</button>
-                                </div>
-
-                                <div class="uk-margin-auto-left">
-                                    <button type="submit" class="uk-button uk-button-primary">{% trans 'Simpan' %}</button>
-                                </div>
-                            </div>
-                        </form>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>`;
@@ -130,42 +116,47 @@
             // ITEM
             // ...
             var objItem = function(obj) {
-                return `<li id="certificate-${obj.id}" class="uk-item" data-uuid="${obj.uuid}" data-sort-order="${obj.sort_order}" data-json='${JSON.stringify(obj)}'>
-                    <div class="uk-flex">
-                        <div class="uk-width-1-1">
-                            <strong>${obj.name}</strong>
-                            ${obj.status != 'publish' ? `<span class="uk-label uk-label-warning uk-text-small"><small>Konsep</small></span>` : ``}
-                            ${obj.organization ? `
-                                <p class="uk-margin-remove uk-text-muted uk-text-small">
-                                    ${obj.organization} / ${obj.issued_formated} ${obj.expired ? '&mdash; ' + obj.expired_formated : ''}
-                                </p>
-                            ` : ``}
-                            
-                            ${obj.start_month ? 
-                                `<p class="uk-margin-remove uk-text-muted uk-text-small">
-                                    ${obj.start_month_display} ${obj.start_year}
-                                    &mdash; 
-                                    ${obj.end_month ? obj.end_month_display + ` ` + obj.end_year : ` Sekarang`}
-                                </p>` 
-                            : ``}
+                return `<li id="certificate-${obj.id}" class="media" data-uuid="${obj.uuid}" data-sort-order="${obj.sort_order}" data-json='${JSON.stringify(obj)}'>
+                    <div class="media-body">
+                        <div class="d-flex w-100">
+                            <div>
+                                <strong>${obj.name}</strong>
+                                ${obj.status != 'publish' ? `<span class="badge badge-warning">Konsep</span>` : ``}
+                                ${obj.organization ? `
+                                    <p class="m-0 text-muted small">
+                                        ${obj.organization} / ${obj.issued_formated} ${obj.expired ? '&mdash; ' + obj.expired_formated : ''}
+                                    </p>
+                                ` : ``}
+                                
+                                ${obj.start_month ? 
+                                    `<p class="m-0 text-muted small">
+                                        ${obj.start_month_display} ${obj.start_year}
+                                        &mdash; 
+                                        ${obj.end_month ? obj.end_month_display + ` ` + obj.end_year : ` Sekarang`}
+                                    </p>` 
+                                : ``}
 
-                            ${obj.credential_id ? 
-                                `<p class="uk-margin-remove uk-text-muted uk-text-small">
-                                    ${obj.credential_id ? 'ID: ' + obj.credential_id : ''}
-                                    ${obj.credential_url ? ' &middot; URL: ' + obj.credential_url : ''}
-                                </p>` 
-                            : ``}
-                            
-                            ${obj.description ? `<p class="uk-margin-remove-bottom uk-margin-small-top uk-text-small">${obj.description}</p>` : ``}
-                        </div>
+                                ${obj.credential_id ? 
+                                    `<p class="m-0 text-muted small">
+                                        ${obj.credential_id ? 'ID: ' + obj.credential_id : ''}
+                                        ${obj.credential_url ? ' &middot; URL: ' + obj.credential_url : ''}
+                                    </p>` 
+                                : ``}
+                                
+                                ${obj.description ? `<p class="m-0">${obj.description}</p>` : ``}
+                            </div>
 
-                        <div class="uk-margin-auto-left" style="width: 20px;">
-                            <a href="" uk-icon="icon: more-vertical" class="uk-text-muted"></a>
-                            <div uk-dropdown="mode: click; pos: bottom-right" class="uk-dropdown-item">
-                                <ul class="uk-nav uk-dropdown-nav">
-                                    <li><a href="#" id="edit" class="uk-dropdown-close">Edit</a></li>
-                                    <li><a href="#" id="delete" class="uk-dropdown-close" data-uuid="${obj.uuid}">Hapus</a></li>
-                                </ul>
+                            <div class="ml-auto">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-light btn-sm dropdown-toggle small" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        Opsi
+                                    </button>
+
+                                    <div class="dropdown-menu dropdown-menu-right">
+                                        <button class="dropdown-item" type="button" id="edit">Edit</button>
+                                        <button class="dropdown-item" type="button" id="delete" data-uuid="${obj.uuid}">Hapus</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -179,7 +170,7 @@
                 e.preventDefault();
 
                 $($modalEl).appendTo('body');
-                UIkit.modal('#modal-form').show();
+                $('#modal-form').modal('show');
             });
 
             // ...
@@ -199,18 +190,22 @@
                             items += objItem(v);
                         });
 
-                        $('#uk-item-list').html(items);
+                        $('#item-list').html(items);
+                        $('#item-list').sortable();
                     }
                 });
             }
 
             loadCertificate();
 
-            UIkit.sortable('#uk-item-list');
-            UIkit.util.on('#uk-item-list', 'stop', function (event) {
+
+            // ... 
+            // SORTABLE
+            // ... 
+            $(document).on('sortupdate', '#item-list', function(event, ui) {
                 var sortItems = [];
 
-                $.each(event.target.children, function(i, v) {
+                $.each($(this).find('li.media'), function(i, v) {
                     var item = {
                         'uuid': $(v).attr('data-uuid'),
                         'sort_order': i + 1
@@ -222,9 +217,6 @@
                 doSorting(sortItems);
             });
 
-            // ... 
-            // SORTABLE
-            // ... 
             var doSorting = function(param) {
                 $.ajax({
                     method: 'PATCH',
@@ -236,11 +228,7 @@
                     data: JSON.stringify(param),
                     cache: false,
                     success: function(response) {
-                        UIkit.notification({
-                            message: 'Berhasil diperbarui',
-                            status: 'success',
-                            timeout: 2000
-                        });
+                        // pass
                     }
                 });
             }
@@ -287,11 +275,11 @@
             $(document).on('change', 'input#has_expiration', function(e) {
                 if ($(this).is(':checked')) {
                     $('input#expired').prop('required', true);
-                    $('#uk-expired').show();
+                    $('#expired').show();
                 } else {
                     $('input#expired').prop('required', false);
-                    $('#uk-expired').find('input').val('');
-                    $('#uk-expired').hide();
+                    $('#expired').find('input').val('');
+                    $('#expired').hide();
                 }
             });
 
@@ -309,18 +297,11 @@
                     data: JSON.stringify(param),
                     cache: false,
                     success: function(response) {
-                        UIkit.notification({
-                            message: 'Berhasil ditambahkan',
-                            status: 'success',
-                            timeout: 2000
-                        });
-
-                        UIkit.modal('#modal-form').hide();
-
                         var item = objItem(response);
 
-                        $('#uk-item-list').append(item);
+                        $('#item-list').append(item);
                         $('#resume-certificate-form')[0].reset();
+                        $('#modal-form').modal('hide');
                     },
                     error: function(error) {
                         var errorJSON = error?.responseJSON;
@@ -336,7 +317,7 @@
                                 }
                                 
                                 var el = $('#' + k);
-                                el.closest('.uk-form-controls').after('<p class="uk-text-small uk-text-danger uk-alert">' + message + '</p>');
+                                el.closest('.form-group').after('<p class="small uk-text-danger uk-alert">' + message + '</p>');
                             });
                         }
                     }
@@ -357,18 +338,11 @@
                     data: JSON.stringify(param),
                     cache: false,
                     success: function(response) {
-                        UIkit.notification({
-                            message: 'Berhasil diperbarui',
-                            status: 'success',
-                            timeout: 2000
-                        });
-
-                        UIkit.modal('#modal-form').hide();
-
                         var item = objItem(response);
 
                         $('#certificate-' + response.id).replaceWith(item);
                         $('#resume-certificate-form')[0].reset();
+                        $('#modal-form').modal('hide');
                     },
                     error: function(error) {
                         var errorJSON = error?.responseJSON;
@@ -384,7 +358,7 @@
                                 }
                                 
                                 var el = $('#' + k);
-                                el.closest('.uk-form-controls').after('<p class="uk-text-small uk-text-danger uk-alert">' + message + '</p>');
+                                el.closest('.form-group').after('<p class="small text-danger">' + message + '</p>');
                             });
                         }
                     }
@@ -428,7 +402,7 @@
                             'success'
                         )
 
-                        $this.closest('li.uk-item').remove();
+                        $this.closest('li.media').remove();
                     }
                 });
             }
@@ -439,20 +413,20 @@
             $(document).on('click', '#edit', function(e) {
                 e.preventDefault();
                 
-                var data = $(this).closest('li.uk-item').attr('data-json'),
+                var data = $(this).closest('li.media').attr('data-json'),
                     json = (data ? JSON.parse(data) : {});
                 
                 $($modalEl).appendTo('body');
-                UIkit.modal('#modal-form').show();
+                $('#modal-form').modal('show');
 
-                UIkit.util.on('#modal-form', 'shown', function() {
+                $(document).on('shown.bs.modal', '#modal-form', function() {
                     var $thisModal = $(this);
 
                     $.each(json, function(n, v) {
                         if (n === 'has_expiration') {
                             if (v === true) {
                                 $thisModal.find('form #' + n).prop('checked', true);
-                                $('#uk-expired').show();
+                                $('#expired').show();
                             }
                         } else if (n === 'status') {
                             if (v === 'publish') {
@@ -467,12 +441,6 @@
                 });
 
                 $('#modal-form button[type="submit"]').attr('data-uuid', json.uuid);
-            });
-
-            UIkit.util.on(document.body, 'hidden', function(e) {
-                if ($(e.target).hasClass('uk-modal')) {
-                    $(e.target).remove();
-                }
             });
         });
     </script>

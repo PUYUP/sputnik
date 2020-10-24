@@ -1,60 +1,154 @@
+{% load i18n %}
+
+<ul id="sideMenu" class="nav flex-column accordion">
+    <li class="nav-item" style="line-height: 1;">
+        <span class="nav-link pr-0 pl-0 pt-0 pb-2 position-relative">
+            <strong class="text-uppercase">{{ app_name }}</strong>
+            &mdash; {{ user.username }}
+        </span>
+    </li>
+    
+    <li class="nav-item">
+        <a class="nav-link pr-0 pl-0 position-relative {% if url_name == 'dashboard' %}active text-dark{% endif %}" href="{% url 'person_view:consultant:dashboard' %}">
+            <div class="d-flex w-100 align-items-center">
+                <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-house-fill" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M8 3.293l6 6V13.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5V9.293l6-6zm5-.793V6l-2-2V2.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5z"/>
+                    <path fill-rule="evenodd" d="M7.293 1.5a1 1 0 0 1 1.414 0l6.647 6.646a.5.5 0 0 1-.708.708L8 2.207 1.354 8.854a.5.5 0 1 1-.708-.708L7.293 1.5z"/>
+                </svg>
+
+                <span class="ml-2">{% trans "Dasbor" noop %}</span>
+            </div>
+        </a>
+    </li>
+
+    <li class="nav-item {% if url_name == 'profile' or url_name == 'security' %}collapsed{% endif %}">
+        <a class="nav-link pr-0 pl-0 position-relative" href="#" data-toggle="collapse" data-target="#collapseAccount">
+            <div class="d-flex w-100 align-items-center">
+                <div class="mr-auto">
+                    <div class="d-flex w-100 align-items-center">
+                        <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-person-fill" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+                        </svg>
+
+                        <span class="ml-2">{% trans "Akun" noop %}</span>
+                    </div>
+                </div>
+
+                <span class="chevron"></span>
+            </div>
+        </a>
+
+        <div id="collapseAccount" class="collapse {% if url_name == 'profile' or url_name == 'security' %}show{% endif %}" data-parent="#sideMenu">
+            <ul class="list-unstyled pl-4">
+                <li>
+                    <a href="{% url 'person_view:profile' %}" class="d-block pt-1 pb-1 {% if url_name == 'profile' %}text-dark{% endif %}">Profil</a>
+                </li>
+
+                <li>
+                    <a href="{% url 'person_view:security' %}" class="d-block pt-1 pb-1 {% if url_name == 'security' %}text-dark{% endif %}">Keamanan</a>
+                </li>
+            </ul>
+        </div>
+    </li>
+
+    <li class="nav-item {% if url_name == 'education' or url_name == 'experience' or url_name == 'certificate' or url_name == 'expertise' %}collapsed{% endif %}">
+        <a class="nav-link pr-0 pl-0 position-relative" href="#" data-toggle="collapse" data-target="#collapseResume">
+            <div class="d-flex w-100 align-items-center">
+                <div class="mr-auto">
+                    <div class="d-flex w-100 align-items-center">
+                        <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-receipt-cutoff" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M1.92.506a.5.5 0 0 1 .434.14L3 1.293l.646-.647a.5.5 0 0 1 .708 0L5 1.293l.646-.647a.5.5 0 0 1 .708 0L7 1.293l.646-.647a.5.5 0 0 1 .708 0L9 1.293l.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .801.13l.5 1A.5.5 0 0 1 15 2v13h-1V2.118l-.137-.274-.51.51a.5.5 0 0 1-.707 0L12 1.707l-.646.647a.5.5 0 0 1-.708 0L10 1.707l-.646.647a.5.5 0 0 1-.708 0L8 1.707l-.646.647a.5.5 0 0 1-.708 0L6 1.707l-.646.647a.5.5 0 0 1-.708 0L4 1.707l-.646.647a.5.5 0 0 1-.708 0l-.509-.51L2 2.118V15H1V2a.5.5 0 0 1 .053-.224l.5-1a.5.5 0 0 1 .367-.27zM0 15.5a.5.5 0 0 1 .5-.5h15a.5.5 0 0 1 0 1H.5a.5.5 0 0 1-.5-.5z"/>
+                            <path fill-rule="evenodd" d="M3 4.5a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5zm8-8a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5z"/>
+                        </svg>
+
+                        <span class="ml-2">{% trans "Resume" noop %}</span>
+                    </div>
+                </div>
+
+                <span class="chevron"></span>
+            </div>
+        </a>
+
+        <div id="collapseResume" class="collapse {% if url_name == 'education' or url_name == 'experience' or url_name == 'certificate' or url_name == 'expertise' %}show{% endif %}" data-parent="#sideMenu">
+            <ul class="list-unstyled pl-4">
+                <li>
+                    <a href="{% url 'resume_view:education' %}" class="d-block pt-1 pb-1 {% if url_name == 'education' %}text-dark{% endif %}">Pendidikan</a>
+                </li>
+
+                <li>
+                    <a href="{% url 'resume_view:experience' %}" class="d-block pt-1 pb-1 {% if url_name == 'experience' %}text-dark{% endif %}">Pengalaman Kerja</a>
+                </li>
+
+                <li>
+                    <a href="{% url 'resume_view:certificate' %}" class="d-block pt-1 pb-1 {% if url_name == 'certificate' %}text-dark{% endif %}">Sertifikasi</a>
+                </li>
+    
+                <li>
+                    <a href="{% url 'resume_view:expertise' %}" class="d-block pt-1 pb-1 {% if url_name == 'expertise' %}text-dark{% endif %}">Keahlian</a>
+                </li>
+            </ul>
+        </div>
+    </li>
+
+    <li class="nav-item {% if url_name == 'schedule' or url_name == 'schedule_detail' %}collapsed{% endif %}">
+        <a class="nav-link pr-0 pl-0 position-relative" href="#" data-toggle="collapse" data-target="#collapseCalendar">
+            <div class="d-flex w-100 align-items-center">
+                <div class="mr-auto">
+                    <div class="d-flex w-100 align-items-center">
+                        <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-calendar-week" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
+                            <path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm-3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm-5 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z"/>
+                        </svg>
+
+                        <span class="ml-2">{% trans "Kalender" noop %}</span>
+                    </div>
+                </div>
+
+                <span class="chevron"></span>
+            </div>
+        </a>
+
+        <div id="collapseCalendar" class="collapse {% if url_name == 'schedule' or url_name == 'schedule_detail' %}show{% endif %}" data-parent="#sideMenu">
+            <ul class="list-unstyled pl-4">
+                <li>
+                    <a href="{% url 'helpdesk_view:consultant:schedule' %}" class="d-block pt-1 pb-1 {% if url_name == 'schedule' or url_name == 'schedule_detail' %}text-dark{% endif %}">{% trans "Jadwal" noop %}</a>
+                </li>
+
+                <li><a href="#">Libur</a></li>
+            </ul>
+        </div>
+    </li>
+
+    <li class="dropdown-divider"></li>
+
+    <li class="nav-item">
+        <a class="nav-link pr-0 pl-0 position-relative" href="{% url 'person_view:consultant:dashboard' %}">
+            <div class="d-flex w-100 align-items-center">
+                <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-question-circle-fill" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.496 6.033a.237.237 0 0 1-.24-.247C5.35 4.091 6.737 3.5 8.005 3.5c1.396 0 2.672.73 2.672 2.24 0 1.08-.635 1.594-1.244 2.057-.737.559-1.01.768-1.01 1.486v.105a.25.25 0 0 1-.25.25h-.81a.25.25 0 0 1-.25-.246l-.004-.217c-.038-.927.495-1.498 1.168-1.987.59-.444.965-.736.965-1.371 0-.825-.628-1.168-1.314-1.168-.803 0-1.253.478-1.342 1.134-.018.137-.128.25-.266.25h-.825zm2.325 6.443c-.584 0-1.009-.394-1.009-.927 0-.552.425-.94 1.01-.94.609 0 1.028.388 1.028.94 0 .533-.42.927-1.029.927z"/>
+                </svg>
+
+                <span class="ml-2">{% trans "Petunjuk" noop %}</span>
+            </div>
+        </a>
+    </li>
+
+    <li class="nav-item">
+        <a class="nav-link pr-0 pl-0 position-relative" href="{% url 'person_view:logout' %}">
+            <div class="d-flex w-100 align-items-center">
+                <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-box-arrow-right" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+                    <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                </svg>
+
+                <span class="ml-2">{% trans "Keluar" noop %}</span>
+            </div>
+        </a>
+    </li>
+</ul>
+
+<!--
 <ul class="uk-nav-default uk-nav-parent-icon" uk-nav>
-    <li class="uk-nav-header uk-padding-remove-top">
-        <strong>{{ app_name }}</strong>
-        &mdash; {{ user.username }}
-    </li>
-
-    <li class="{% if url_name == 'dashboard' %}uk-active{% endif %}">
-        <a href="{% url 'person_view:consultant:dashboard' %}"><span class="uk-margin-small-right" uk-icon="icon: home"></span> Dasbor</a>
-    </li>
-
-    <li class="uk-parent {% if url_name == 'profile' or url_name == 'security' %}uk-open{% endif %}">
-        <a href="#"><span class="uk-margin-small-right" uk-icon="icon: user"></span> Akun</a>
-
-        <ul class="uk-nav-sub">
-            <li class="{% if url_name == 'profile' %}uk-active{% endif %}">
-                <a href="{% url 'person_view:profile' %}">Profil</a>
-            </li>
-
-            <li class="{% if url_name == 'security' %}uk-active{% endif %}">
-                <a href="{% url 'person_view:security' %}">Keamanan</a>
-            </li>
-        </ul>
-    </li>
-
-    <li class="uk-parent {% if url_name == 'education' or url_name == 'experience' or url_name == 'certificate' or url_name == 'expertise' %}uk-open{% endif %}">
-        <a href="#"><span class="uk-margin-small-right" uk-icon="icon: file-text"></span> Resume</a>
-
-        <ul class="uk-nav-sub">
-            <li class="{% if url_name == 'education' %}uk-active{% endif %}">
-                <a href="{% url 'resume_view:education' %}">Pendidikan</a>
-            </li>
-
-            <li class="{% if url_name == 'experience' %}uk-active{% endif %}">
-                <a href="{% url 'resume_view:experience' %}">Pengalaman Kerja</a>
-            </li>
-
-            <li class="{% if url_name == 'certificate' %}uk-active{% endif %}">
-                <a href="{% url 'resume_view:certificate' %}">Sertifikasi</a>
-            </li>
- 
-            <li class="{% if url_name == 'expertise' %}uk-active{% endif %}">
-                <a href="{% url 'resume_view:expertise' %}">Keahlian</a>
-            </li>
-        </ul>
-    </li>
-
-    <li class="uk-parent {% if url_name == 'schedule' or url_name == 'schedule_detail' %}uk-open{% endif %}">
-        <a href="#"><span class="uk-margin-small-right" uk-icon="icon: calendar"></span> Kalender</a>
-
-        <ul class="uk-nav-sub">
-            <li class="{% if url_name == 'schedule' or url_name == 'schedule_detail' %}uk-active{% endif %}">
-                <a href="{% url 'helpdesk_view:consultant:schedule' %}">Jadwal</a>
-            </li>
-
-            <li><a href="#">Libur</a></li>
-        </ul>
-    </li>
 
     <li class="uk-parent">
         <a href="#"><span class="uk-margin-small-right" uk-icon="icon: comment"></span> Konsultasi</a>
@@ -70,5 +164,6 @@
     <li class="uk-nav-header">Lain-lain</li>
     <li><a href="#"><span class="uk-margin-small-right" uk-icon="icon: question"></span> Petunjuk</a></li>
     <li class="uk-nav-divider"></li>
-    <li><a href="{% url 'person_view:logout' %}"><span class="uk-margin-small-right" uk-icon="icon: sign-out"></span> Keluar</a></li>
+    <li><a href=""><span class="uk-margin-small-right" uk-icon="icon: sign-out"></span> Keluar</a></li>
 </ul>
+-->

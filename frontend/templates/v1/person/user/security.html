@@ -1,6 +1,5 @@
 {% extends 'v1/base/base-consultant.html' %}
 {% load i18n %}
-{% load crispy_forms_tags %}
 
 {% block head_title %}{% trans "Keamanan" noop %}{% endblock %}
 
@@ -8,105 +7,92 @@
     <div class="uk-width-1-1">
         <h6 class="uk-text-uppercase uk-content-title"><strong>{% trans 'Keamanan' noop %}</strong></h6>
 
-        <div>
-            <ul class="uk-child-width-expand uk-tab-bottom" uk-tab>
-                <li class="uk-active"><a href="#">Utama</a></li>
-                <li><a href="#">MSISDN</a></li>
-                <li><a href="#">Sandi</a></li>
-            </ul>
+        <ul class="nav nav-tabs small" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" id="primary-tab" data-toggle="tab" href="#primary" role="tab" aria-controls="primary" aria-selected="true">
+                    {% trans "Utama" noop %}
+                </a>
+            </li>
 
-            <ul id="uk-security-tab" class="uk-switcher uk-margin">
-                <li id="tab-base">
-                    <form id="person-base-form" action="{% url 'person_view:security' %}" method="POST" class="uk-margin-top">
-                        {% csrf_token %}
-                        
-                        <div class="uk-margin uk-flex" uk-margin>
-                            <div class="uk-inline uk-width-1-1" style="padding-right: 15px;">
-                                <span class="uk-form-icon" uk-icon="icon: user"></span>
-                                <input class="uk-input" type="text" id="username" name="username" placeholder="Nama pengguna" autocomplete="off">
-                            </div>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" id="msisdn-tab" data-toggle="tab" href="#msisdn" role="tab" aria-controls="msisdn" aria-selected="false">
+                    {% trans "MSISDN" noop %}
+                </a>
+            </li>
+            
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" id="password-tab" data-toggle="tab" href="#password" role="tab" aria-controls="password" aria-selected="false">
+                    {% trans "Sandi" noop %}
+                </a>
+            </li>
+        </ul>
 
-                            <button type="button" class="uk-button uk-button-default uk-update-security">{% trans 'Update' noop %}</button>
+        <div class="tab-content pt-4" id="myTabContent">
+            <div class="tab-pane fade show active" id="primary" role="tabpanel" aria-labelledby="primary-tab">
+                <form id="person-base-form" action="{% url 'person_view:security' %}" method="POST" class="form-group-top">
+                    {% csrf_token %}
+                    
+                    <div class="form-group">
+                        <label for="username">{% trans "Nama pengguna" noop %}</label>
+
+                        <div class="d-flex w-100 align-items-center">
+                            <input class="form-control" type="text" id="username" name="username" placeholder="Nama pengguna" autocomplete="off">
+                            <button type="button" class="btn btn-light ml-2 update-security">{% trans 'Update' noop %}</button>
                         </div>
+                    </div>
 
-                        <div class="uk-margin uk-flex" uk-margin>
-                            <div class="uk-inline uk-width-1-1" style="padding-right: 15px;">
-                                <span class="uk-form-icon" uk-icon="icon: mail"></span>
-                                <input class="uk-input" type="email" id="email" name="email" placeholder="Alamat email" autocomplete="off">
-                            </div>
+                    <div class="form-group">
+                        <label for="email">{% trans "Alamat email" noop %}</label>
 
-                            <button type="button" class="uk-button uk-button-default uk-update-security">{% trans 'Update' noop %}</button>
+                        <div class="d-flex w-100 align-items-center">
+                            <input class="form-control" type="email" id="email" name="email" placeholder="Alamat email" autocomplete="off">
+                            <button type="button" class="btn btn-light ml-2 update-security">{% trans 'Update' noop %}</button>
                         </div>
-                    </form>
-                </li>
+                    </div>
+                </form>
+            </div>
 
-                <li id="tab-account">
-                    <form id="person-account-form" action="{% url 'person_view:security' %}" method="POST" class="uk-margin-top">
-                        {% csrf_token %}
+            <div class="tab-pane fade" id="msisdn" role="tabpanel" aria-labelledby="msisdn-tab">
+                <form id="person-account-form" action="{% url 'person_view:security' %}" method="POST" class="form-group-top">
+                    {% csrf_token %}
 
-                        <p>{% trans 'Memerlukan validasi nomor ponsel melalui SMS. Pastikan nomor aktif.' noop %}</p>
-                        
-                        <div class="uk-margin uk-flex" uk-margin>
-                            <div class="uk-inline uk-width-1-1" style="padding-right: 15px;">
-                                <span class="uk-form-icon" uk-icon="icon: phone"></span>
-                                <input class="uk-input" type="text" id="msisdn" name="msisdn" placeholder="Nomor ponsel 08xxx" autocomplete="off">
-                            </div>
-
-                            <button type="button" id="save-account" class="uk-button uk-button-default uk-update-security">
-                                <div class="uk-flex uk-flex-middle">
-                                    <div class="uk-loading" style="display: none;"><span uk-spinner="ratio: 1" style="width: 15px;height: 15px;margin-right: 10px;position: relative;top: -2px;"></span></div>
-                                    <div>{% trans 'Update' noop %}</div>
-                                </div>
-                            </button>
+                    <p>{% trans 'Memerlukan validasi nomor ponsel melalui SMS. Pastikan nomor aktif.' noop %}</p>
+                    
+                    <div class="form-group">
+                        <div class="d-flex w-100 align-items-center">
+                            <input class="form-control" type="tel" id="msisdn" name="msisdn" placeholder="Nomor ponsel 08xxx" autocomplete="off">
+                            <button type="button" class="btn btn-light ml-2 update-security">{% trans 'Update' noop %}</button>
                         </div>
-                    </form>
+                    </div>
+                </form>
 
-                    <div id="recaptcha-container" class="recaptcha-container"></div>
-                </li>
+                <div id="recaptcha-container" class="recaptcha-container"></div>
+            </div>
 
-                <li id="tab-password">
-                    <form id="person-password-form" class="uk-form-stacked" action="{% url 'person_view:security' %}" method="POST" class="uk-margin-top">
-                        {% csrf_token %}
-                        
-                        <div class="uk-margin">
-                            <label class="uk-form-label" for="password">{% trans 'Kata sandi lama' %}</label>
+            <div class="tab-pane fade" id="password" role="tabpanel" aria-labelledby="password-tab">
+                <form id="person-password-form" class="uk-form-stacked" action="{% url 'person_view:security' %}" method="POST" class="form-group-top">
+                    {% csrf_token %}
+                    
+                    <div class="form-group">
+                        <label for="password">{% trans 'Kata sandi lama' %}</label>
+                        <input class="form-control" type="password" id="password" name="password" placeholder="Sandi akun saat ini" autocomplete="off">
+                    </div>
 
-                            <div class="uk-form-controls uk-margin-remove-top">
-                                <div class="uk-inline uk-width-1-1">
-                                    <span class="uk-form-icon" uk-icon="icon: unlock"></span>
-                                    <input class="uk-input" type="password" id="password" name="password" placeholder="Sandi akun saat ini" autocomplete="off">
-                                </div>
-                            </div>
-                        </div>
+                    <div class="form-group">
+                        <label for="password1">{% trans 'Kata sandi baru' %}</label>
+                        <input class="form-control" type="password" id="password1" name="password1" placeholder="Kata sandi baru" autocomplete="off">
+                    </div>
 
-                        <div class="uk-margin">
-                            <label class="uk-form-label" for="password1">{% trans 'Kata sandi baru' %}</label>
+                    <div class="form-group">
+                        <label for="password12">{% trans 'Ulangi kata sandi baru' %}</label>
+                        <input class="form-control" type="password" id="password2" name="password2" placeholder="Ulangi Kata sandi baru" autocomplete="off">
+                    </div>
 
-                            <div class="uk-form-controls uk-margin-remove-top">
-                                <div class="uk-inline uk-width-1-1">
-                                    <span class="uk-form-icon" uk-icon="icon: lock"></span>
-                                    <input class="uk-input" type="password" id="password1" name="password1" placeholder="Kata sandi baru" autocomplete="off">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="uk-margin">
-                            <label class="uk-form-label" for="password12">{% trans 'Ulangi kata sandi baru' %}</label>
-
-                            <div class="uk-form-controls uk-margin-remove-top">
-                                <div class="uk-inline uk-width-1-1">
-                                    <span class="uk-form-icon" uk-icon="icon: refresh"></span>
-                                    <input class="uk-input" type="password" id="password2" name="password2" placeholder="Ulangi Kata sandi baru" autocomplete="off">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="uk-text-right uk-margin-top">
-                            <button type="submit" class="uk-button uk-button-primary">Simpan</button>
-                        </div>
-                    </form>
-                </li>
-            </ul>
+                    <div class="text-right">
+                        <button type="submit" class="btn btn-info pl-3 pr-3">Simpan</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 {% endblock %}
@@ -177,11 +163,11 @@
                 )
             }
 
-            $(document).on('click', '.uk-update-security', function(e) {
+            $(document).on('click', '.update-security', function(e) {
                 e.preventDefault();
 
                 var $this = $(this),
-                    $wrap = $this.closest('.uk-margin'),
+                    $wrap = $this.closest('.form-group'),
                     value = $wrap.find('input').val(),
                     name = $wrap.find('input').attr('name'),
                     hasChanged = false;
@@ -381,16 +367,14 @@
                                     $('input#email').val(param?.old_value);
                                     window.email = param?.old_value;
                                 }
+
+                                $('.update-security').prop('disabled', false);
                             }
                         });
                     },
                     error: function(error) {
                         if (error && error?.responseJSON) {
-                            UIkit.notification({
-                                message: error?.responseJSON?.detail,
-                                status: 'danger',
-                                timeout: 2000
-                            });
+                            alert(error?.responseJSON?.detail);
                         }
                     }
                 });
@@ -408,17 +392,13 @@
                     data: {...param},
                     cache: false,
                     success: function(response) {
-                        UIkit.notification({
-                            message: 'Update berhasil',
-                            status: 'success',
-                            timeout: 2000
-                        });
-
-                        $('.uk-update-security').prop('disabled', false);
-                        $('.uk-update-security .uk-loading').hide();
+                        $('.update-security').prop('disabled', false);
+                        $('.update-security .uk-loading').hide();
 
                         window.username = response?.username;
                         window.msisdn = response?.msisdn;
+
+                        alert('Update berhasil');
                     },
                     error: function(error) {
                         var errorJSON = error?.responseJSON;
@@ -439,7 +419,7 @@
                                     ${message}
                                 </div>`;
 
-                                el.closest('.uk-margin').after(alert);
+                                el.closest('.form-group').after(alert);
                             });
                         }
                     }
@@ -502,12 +482,7 @@
                     data: {...param},
                     cache: false,
                     success: function(response) {
-                        UIkit.notification({
-                            message: 'Kata sandi berhasil diperbarui',
-                            status: 'success',
-                            timeout: 2000
-                        });
-
+                        alert('Kata sandi berhasil diperbarui');
                         window.location.href = "{% url 'person_view:login' %}";
                     },
                     error: function(error) {
@@ -530,18 +505,12 @@
                                 </div>`;
 
                                 if (k === 'password') el = $('#password2');
-                                el.closest('.uk-margin').after(alert);
+                                el.closest('.form-group').after(alert);
                             });
                         }
                     }
                 });
             }
-
-            UIkit.util.on('#uk-security-tab', 'shown', function(e) {
-                if ($(e.target).is('#tab-account')) {
-                    
-                }
-            });
         });
     </script>
 {% endblock %}

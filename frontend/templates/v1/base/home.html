@@ -4,25 +4,30 @@
 {% block head_title %}{% trans "Beranda" noop %}{% endblock %}
 
 {% block main %}
-    <section class="uk-container uk-container-xsmall uk-height-1-1 uk-flex uk-flex-middle uk-flex-center">
-        <div class="uk-width-2-3@m uk-text-center">
-            {% if user.is_authenticated %}
-                <a href="{% url 'person_view:logout' %}" class="uk-button uk-button-danger">{% trans "Keluar" noop %}</a>
-            {% else %}
-                <h1 class="uk-width-1-1 uk-text-center uk-margin-medium-bottom">{{ app_name }}</h1>
-                <hr class="uk-divider-icon"></hr>
-                <h5 class="uk-text-medium">{% trans "Membantu Anda mendapatkan jawaban terbaik dari pakar profesional dengan mudah dan cepat." %}</h5>
-                
-                <div class="uk-margin-large-top" uk-grid>
-                    <div class="uk-width-1-2@s">
-                        <a href="{% url 'person_view:login' %}" class="uk-button uk-button-primary uk-width-1-1">{% trans "Akses Akun" noop %}</a>
-                    </div>
+    <section class="container h-100">
+        <div class="row justify-content-center h-100 align-items-center">
+            <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'person_view:logout' %}" class="btn btn-danger pl-3 pr-3">{% trans "Keluar" noop %}</a>
+                {% else %}
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h3 class="card-title font-weight-bold">{{ app_name }}</h3>
+                            <p class="text-muted">{% trans "Membantu Anda mendapatkan jawaban terbaik dari pakar profesional dengan mudah dan cepat." %}</p>
+                    
+                            <div class="row">
+                                <div class="col-6">
+                                    <a href="{% url 'person_view:login' %}" class="btn btn-info btn-block">{% trans "Akses Akun" noop %}</a>
+                                </div>
 
-                    <div class="uk-width-1-2@s">
-                        <a href="{% url 'person_view:register' %}" class="uk-button uk-button-secondary uk-width-1-1">{% trans "Buat Akun" noop %}</a>
+                                <div class="col-6">
+                                    <a href="{% url 'person_view:register' %}" class="btn btn-dark btn-block">{% trans "Buat Akun" noop %}</a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            {% endif %}
+                {% endif %}
+            </div>
         </div>
     </section>
 {% endblock %}

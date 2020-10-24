@@ -1,21 +1,20 @@
 {% extends 'v1/base/base-consultant.html' %}
 {% load i18n static %}
-{% load crispy_forms_tags %}
 
 {% block head_title %}{% trans 'Keahlian' noop %}{% endblock %}
 
 {% block main %}
-    <h6 class="uk-text-uppercase uk-content-title uk-margin-remove-top">
+    <h6 class="text-uppercase">
         <strong>{% trans 'Keahlian' noop %}</strong>
     </h6>
 
-    <button type="button" id="add-item" class="uk-button uk-button-primary uk-button-small">
+    <button type="button" id="add-item" class="btn btn-info pr-3 pl-3 btn-sm mb-3">
         {% trans 'Tambah' %}
     </button>
 
-    <p class="uk-text-small">{% trans 'Maksimal 10 keahlian' noop %}</p>
+    <p class="small">{% trans 'Maksimal 10 keahlian' noop %}</p>
 
-    <ul id="uk-item-list" class="uk-list uk-list-divider" uk-sortable="handle: .uk-item">
+    <ul id="item-list" class="list-unstyled list-margin">
         <!-- LIST HERE -->
     </ul>
 {% endblock %}
@@ -26,6 +25,7 @@
 
 {% block js %}
     <script src="{% static 'vendors/autocomplete/jquery.easy-autocomplete.min.js' %}" defer></script>
+    <script src="{% static 'vendors/jquery-ui/jquery-ui.min.js' %}" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
     
     <script type="text/javascript">
@@ -37,52 +37,44 @@
                 expertiseOptions += `<option value="${k}">${v}</option>`;
             });
 
-            var $modalEl = `<div id="modal-form" uk-modal data-bg-close="false">
-                <div class="uk-modal-dialog">
-                    <div class="uk-modal-header">
-                        <h4 class="uk-modal-title uk-text-medium uk-margin-remove-bottom">{% trans 'Keahlian' %}</h4>
-                        <button class="uk-modal-close-default" type="button" uk-close></button>
-                    </div>
+            var $modalEl = `<div class="modal fade" id="modal-form" data-backdrop="static" data-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="staticBackdropLabel">{% trans 'Keahlian' noop %}</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
 
-                    <div class="uk-modal-body">
-                        <form id="resume-expertise-form" class="uk-form-stacked" method="POST" action="{% url 'resume_view:expertise' %}">
-                            {% csrf_token %}
+                        <div class="modal-body">
+                            <form id="resume-expertise-form" method="POST" action="{% url 'resume_view:expertise' %}">
+                                {% csrf_token %}
 
-                            <div class="uk-margin uk-margin-remove-top">
-                                <label class="uk-form-label" for="topic_label">{% trans 'Nama Keahlian' %} *</label>
-                                <div class="uk-form-controls">
-                                    <input class="uk-input uk-width-1-1" type="text" id="topic_label" name="topic_label" placeholder="Ex: Java" autocomplete="off" required>
+                                <div class="form-group">
+                                    <label for="topic_label">{% trans 'Nama Keahlian' noop %} *</label>
+                                    <input class="form-control w-100" type="text" id="topic_label" name="topic_label" placeholder="Ex: Java" autocomplete="off" required>
                                     <input type="hidden" id="topic" name="topic">
                                 </div>
-                            </div>
 
-                            <div class="uk-margin">
-                                <label class="uk-form-label" for="level">{% trans 'Tingkatan' %} *</label>
-                                <div class="uk-form-controls">
-                                    <select id="level" name="level" class="uk-select">
+                                <div class="form-group">
+                                    <label for="level">{% trans 'Level' noop %} *</label>
+                                    <select id="level" name="level" class="form-control">
                                         <option value="">{% trans 'Pilih satu' noop %}</option>
                                         ${expertiseOptions}
                                     </select>
                                 </div>
-                            </div>
 
-                            <div class="uk-margin">
-                                <label class="uk-form-label" for="description">{% trans 'Keterangan' %}</label>
-                                <div class="uk-form-controls">
-                                    <textarea class="uk-textarea" id="description" name="description" placeholder="Keterangan tambahan jika ada..." autocomplete="off"></textarea>
-                                </div>
-                            </div>
-
-                            <div class="uk-flex">
-                                <div>
-                                    <button class="uk-button uk-button-default uk-modal-close" type="button">{% trans 'Cancel' noop %}</button>
+                                <div class="form-group">
+                                    <label for="description">{% trans 'Keterangan' noop %}</label>
+                                    <textarea class="form-control" id="description" name="description" placeholder="Keterangan tambahan jika ada..." autocomplete="off"></textarea>
                                 </div>
 
-                                <div class="uk-margin-auto-left">
-                                    <button type="submit" class="uk-button uk-button-primary">{% trans 'Simpan' %}</button>
+                                <div class="text-right">
+                                    <button type="submit" class="btn btn-info pl-3 pr-3">{% trans 'Simpan' noop %}</button>
                                 </div>
-                            </div>
-                        </form>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>`;
@@ -91,21 +83,26 @@
             // ITEM
             // ...
             var objItem = function(obj) {
-                return `<li id="expertise-${obj.id}" class="uk-item" data-uuid="${obj.uuid}" data-sort-order="${obj.sort_order}" data-json='${JSON.stringify(obj)}'>
-                    <div class="uk-flex">
-                        <div class="uk-width-1-1">
-                            <strong>${obj.topic_label}</strong>
-                            <p class="uk-margin-remove uk-text-muted uk-text-small">${obj.level_display}</p>
-                            ${obj.description ? `<p class="uk-margin-remove-bottom uk-margin-remove-top uk-text-small">${obj.description}</p>` : ``}
-                        </div>
+                return `<li id="expertise-${obj.id}" class="media" data-uuid="${obj.uuid}" data-sort-order="${obj.sort_order}" data-json='${JSON.stringify(obj)}'>
+                    <div class="media-body">
+                        <div class="d-flex w-100">
+                            <div>
+                                <strong>${obj.topic_label}</strong>
+                                <p class="m-0 text-muted small">${obj.level_display}</p>
+                                ${obj.description ? `<p class="m-0 small">${obj.description}</p>` : ``}
+                            </div>
 
-                        <div class="uk-margin-auto-left" style="width: 20px;">
-                            <a href="" uk-icon="icon: more-vertical" class="uk-text-muted"></a>
-                            <div uk-dropdown="mode: click; pos: bottom-right" class="uk-dropdown-item">
-                                <ul class="uk-nav uk-dropdown-nav">
-                                    <li><a href="#" id="edit" class="uk-dropdown-close">Edit</a></li>
-                                    <li><a href="#" id="delete" class="uk-dropdown-close" data-uuid="${obj.uuid}">Hapus</a></li>
-                                </ul>
+                            <div class="ml-auto">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-light btn-sm dropdown-toggle small" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        Opsi
+                                    </button>
+
+                                    <div class="dropdown-menu dropdown-menu-right">
+                                        <button class="dropdown-item" type="button" id="edit">Edit</button>
+                                        <button class="dropdown-item" type="button" id="delete" data-uuid="${obj.uuid}">Hapus</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -119,7 +116,7 @@
                 e.preventDefault();
 
                 $($modalEl).appendTo('body');
-                UIkit.modal('#modal-form').show();
+                $('#modal-form').modal('show');
 
                 // Search topic...
                 var options = {
@@ -172,18 +169,22 @@
                             items += objItem(v);
                         });
 
-                        $('#uk-item-list').html(items);
+                        $('#item-list').html(items);
+                        $('#item-list').sortable();
                     }
                 });
             }
 
             loadExpertise();
 
-            UIkit.sortable('#uk-item-list');
-            UIkit.util.on('#uk-item-list', 'stop', function (event) {
+
+            // ... 
+            // SORTABLE
+            // ... 
+            $(document).on('sortupdate', '#item-list', function(event, ui) {
                 var sortItems = [];
 
-                $.each(event.target.children, function(i, v) {
+                $.each($(this).find('li.media'), function(i, v) {
                     var item = {
                         'uuid': $(v).attr('data-uuid'),
                         'sort_order': i + 1
@@ -195,9 +196,6 @@
                 doSorting(sortItems);
             });
 
-            // ... 
-            // SORTABLE
-            // ... 
             var doSorting = function(param) {
                 $.ajax({
                     method: 'PATCH',
@@ -209,11 +207,32 @@
                     data: JSON.stringify(param),
                     cache: false,
                     success: function(response) {
-                        UIkit.notification({
-                            message: 'Berhasil diperbarui',
-                            status: 'success',
-                            timeout: 2000
-                        });
+                        // pass
+                    }
+                });
+            }
+
+            // ...
+            // CREATE TOPIC
+            // ...
+            var createTopic = function(label, param, isCreated = false, uuid = '') {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'master/topics/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify({'label': label}),
+                    cache: false,
+                    success: function(response) {
+                        param['topic'] = response.uuid;
+
+                        if (isCreated) {
+                            doSave(param);
+                        } else {
+                            doUpdate(param, uuid);
+                        }
                     }
                 });
             }
@@ -231,16 +250,30 @@
                     uuid = $(this).find('button[type="submit"]').attr('data-uuid');
                     param = {},
                     hasExpiration = false,
-                    hasStatus = false;
+                    hasStatus = false,
+                    hasTopic = false,
+                    topicLabel = '';
                 
                 $.each(values, function(i, v) {
                     param[v.name] = v.value;
+
+                    if (v.name === 'topic' && v.value) hasTopic = true;
+                    if (v.name === 'topic_label') topicLabel = v.value;
                 });
 
                 if (uuid) {
-                    doUpdate(param, uuid);
+                    if (!hasTopic && topicLabel) {
+                        createTopic(topicLabel, param, true, uuid);
+                    } else {
+                        doUpdate(param, uuid);
+                    }
+
                 } else {
-                    doSave(param);
+                    if (!hasTopic && topicLabel) {
+                        createTopic(topicLabel, param, true);
+                    } else {
+                        doSave(param);
+                    }
                 }
             });
 
@@ -258,18 +291,11 @@
                     data: JSON.stringify(param),
                     cache: false,
                     success: function(response) {
-                        UIkit.notification({
-                            message: 'Berhasil ditambahkan',
-                            status: 'success',
-                            timeout: 2000
-                        });
-
-                        UIkit.modal('#modal-form').hide();
-
                         var item = objItem(response);
 
-                        $('#uk-item-list').append(item);
+                        $('#item-list').append(item);
                         $('#resume-expertise-form')[0].reset();
+                        $('#modal-form').modal('hide');
                     },
                     error: function(error) {
                         var errorJSON = error?.responseJSON;
@@ -286,7 +312,7 @@
                                 
                                 var el = $('#' + k);
                                 if (k === 'detail') el = $('#topic');
-                                el.closest('.uk-form-controls').after('<p class="uk-text-small uk-text-danger uk-alert">' + message + '</p>');
+                                el.closest('.form-group').after('<p class="small">' + message + '</p>');
                             });
                         }
                     }
@@ -307,18 +333,11 @@
                     data: JSON.stringify(param),
                     cache: false,
                     success: function(response) {
-                        UIkit.notification({
-                            message: 'Berhasil diperbarui',
-                            status: 'success',
-                            timeout: 2000
-                        });
-
-                        UIkit.modal('#modal-form').hide();
-
                         var item = objItem(response);
 
                         $('#expertise-' + response.id).replaceWith(item);
                         $('#resume-expertise-form')[0].reset();
+                        $('#modal-form').modal('hide');
                     },
                     error: function(error) {
                         var errorJSON = error?.responseJSON;
@@ -334,7 +353,7 @@
                                 }
                                 
                                 var el = $('#' + k);
-                                el.closest('.uk-form-controls').after('<p class="uk-text-small uk-text-danger uk-alert">' + message + '</p>');
+                                el.closest('.form-group').after('<p class="small">' + message + '</p>');
                             });
                         }
                     }
@@ -378,7 +397,7 @@
                             'success'
                         )
 
-                        $this.closest('li.uk-item').remove();
+                        $this.closest('li.media').remove();
                     }
                 });
             }
@@ -389,13 +408,13 @@
             $(document).on('click', '#edit', function(e) {
                 e.preventDefault();
                 
-                var data = $(this).closest('li.uk-item').attr('data-json'),
+                var data = $(this).closest('li.media').attr('data-json'),
                     json = (data ? JSON.parse(data) : {});
 
                 $($modalEl).appendTo('body');
-                UIkit.modal('#modal-form').show();
+                $('#modal-form').modal('show');
 
-                UIkit.util.on('#modal-form', 'shown', function() {
+                $(document).on('shown.bs.modal', '#modal-form', function() {
                     var $thisModal = $(this);
 
                     $.each(json, function(n, v) {
@@ -404,12 +423,6 @@
                 });
 
                 $('#modal-form button[type="submit"]').attr('data-uuid', json.uuid);
-            });
-
-            UIkit.util.on(document.body, 'hidden', function(e) {
-                if ($(e.target).hasClass('uk-modal')) {
-                    $(e.target).remove();
-                }
             });
         });
     </script>

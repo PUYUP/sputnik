@@ -5,29 +5,30 @@
 {% block head_title %}{% trans "Buat Akun Baru" noop %}{% endblock %}
 
 {% block main %}
-    <section class="uk-container uk-container-xsmall uk-height-1-1 uk-flex uk-flex-middle uk-flex-center">
-        <div class="uk-width-2-3@m">
-            <h1 class="uk-width-1-1 uk-text-center uk-margin-medium-bottom">
-                <a href="{% url 'home' %}" class="uk-text-emphasis">{{ app_name }}</a>
-            </h1>
+    <section class="container h-100">
+        <div class="row justify-content-center h-100 align-items-center">
+            <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5">
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h3 class="card-title font-weight-bold">
+                            <a href="{% url 'home' %}" class="text-dark">{{ app_name }}</a>
+                        </h3>
 
-            <hr class="uk-divider-icon"></hr>
-            <h4 class="uk-text-medium">{% trans "Buat akun baru" noop %}</h4>
+                        <form id="person-check-email-form" action="{% url 'person_view:register' %}" method="POST">
+                            {% csrf_token %}
 
-            <form id="person-check-email-form" action="{% url 'person_view:register' %}" method="POST">
-                {% csrf_token %}
-
-                <div class="uk-margin">
-                    <div class="uk-inline uk-width-1-1">
-                        <span class="uk-form-icon" uk-icon="icon: mail"></span>
-                        <input class="uk-input" type="email" id="email" name="email" placeholder="{% trans 'Alamat email aktif' noop %}" autocomplete="off">
+                            <div class="form-group">
+                                <label for="email">{% trans "Buat akun baru" noop %}</label>
+                                <input class="form-control" type="email" id="email" name="email" placeholder="{% trans 'Alamat email aktif' noop %}" autocomplete="off">
+                            </div>
+                            
+                            <div class="form-group text-right mb-0">
+                                <button type="submit" class="btn btn-info pl-3 pr-3">{% trans 'Berikutnya' noop %}</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
-                
-                <div class="uk-text-right uk-margin-large-top">
-                    <button type="submit" class="uk-button uk-button-primary">Berikutnya</button>
-                </div>
-            </form>
+            </div>
         </div>
     </section>
 {% endblock %}
@@ -62,11 +63,7 @@
                     },
                     error: function(error) {
                         if (error && error?.responseJSON) {
-                            UIkit.notification({
-                                message: error?.responseJSON?.detail,
-                                status: 'danger',
-                                timeout: 2000
-                            });
+                            alert(error?.responseJSON?.detail);
                         }
                     }
                 });
@@ -100,11 +97,7 @@
                     },
                     error: function(error) {
                         if (error && error?.responseJSON) {
-                            UIkit.notification({
-                                message: error?.responseJSON?.detail,
-                                status: 'danger',
-                                timeout: 2000
-                            });
+                            alert(error?.responseJSON?.detail);
                         }
                     }
                 });

@@ -1,104 +1,115 @@
 {% extends 'v1/base/base-consultant.html' %}
 {% load i18n %}
-{% load crispy_forms_tags %}
 
 {% block head_title %}{% trans "Dasbor" noop %}{% endblock %}
 
 {% block main %}
-    <h6 class="uk-text-uppercase uk-content-title uk-margin-remove-top">
+    <h6 class="mb-3">
         <strong>{% trans 'Ringkasan' noop %}</strong>
     </h6>
 
-    <div class="uk-child-width-1-3@m uk-child-width-1-2@s uk-text-center uk-grid-small" uk-grid>
-        <div>
-            <div class="uk-card uk-card-default uk-card-small uk-card-body uk-box-shadow-small">
-                <h3 class="uk-card-title uk-margin-remove-bottom">130</h3>
-                <p class="uk-margin-small-top">Baru</p>
+    <div class="row">
+        <div class="col-12 col-sm-4 col-md-4 col-lg-3 mb-4">
+            <div class="card bg-light">
+                <div class="card-body p-3">
+                    <h4 class="mb-1">130</h4>
+                    <p class="mb-0">Baru</p>
+                </div>
             </div>
         </div>
 
-        <div>
-            <div class="uk-card uk-card-default uk-card-small uk-card-body uk-box-shadow-small">
-                <h3 class="uk-card-title uk-margin-remove-bottom">5</h3>
-                <p class="uk-margin-small-top">Saat Ini</p>
+        <div class="col-12 col-sm-4 col-md-4 col-lg-3 mb-4">
+            <div class="card bg-light">
+                <div class="card-body p-3">
+                    <h4 class="mb-1">5</h4>
+                    <p class="mb-0">Saat Ini</p>
+                </div>
             </div>
         </div>
 
-        <div>
-            <div class="uk-card uk-card-default uk-card-small uk-card-body uk-box-shadow-small">
-                <h3 class="uk-card-title uk-margin-remove-bottom">7</h3>
-                <p class="uk-margin-small-top">Tertunda</p>
+        <div class="col-12 col-sm-4 col-md-4 col-lg-3 mb-4">
+            <div class="card bg-light">
+                <div class="card-body p-3">
+                    <h4 class="mb-1">7</h4>
+                    <p class="mb-0">Tertunda</p>
+                </div>
             </div>
         </div>
 
-        <div>
-            <div class="uk-card uk-card-default uk-card-small uk-card-body uk-box-shadow-small">
-                <h3 class="uk-card-title uk-margin-remove-bottom">3.459</h3>
-                <p class="uk-margin-small-top">Selesai</p>
+        <div class="col-12 col-sm-4 col-md-4 col-lg-3 mb-4">
+            <div class="card bg-light">
+                <div class="card-body p-3">
+                    <h4 class="mb-1">3.459</h4>
+                    <p class="mb-0">Selesai</p>
+                </div>
             </div>
         </div>
 
-        <div>
-            <div class="uk-card uk-card-default uk-card-small uk-card-body uk-box-shadow-small">
-                <h3 class="uk-card-title uk-margin-remove-bottom">431</h3>
-                <p class="uk-margin-small-top">Menolak</p>
+        <div class="col-12 col-sm-4 col-md-4 col-lg-3 mb-4">
+            <div class="card bg-light">
+                <div class="card-body p-3">
+                    <h4 class="mb-1">431</h4>
+                    <p class="mb-0">Menolak</p>
+                </div>
             </div>
         </div>
 
-        <div>
-            <div class="uk-card uk-card-default uk-card-small uk-card-body uk-box-shadow-small">
-                <h3 class="uk-card-title uk-margin-remove-bottom">7.452</h3>
-                <p class="uk-margin-small-top">Total</p>
+        <div class="col-12 col-sm-4 col-md-4 col-lg-3 mb-4">
+            <div class="card bg-light">
+                <div class="card-body p-3">
+                    <h4 class="mb-1">7.452</h4>
+                    <p class="mb-0">Total</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <h6 class="uk-text-uppercase"><strong>Segera Layani</strong></h6>
+    <h6 class="uk-text-uppercase mb-2"><strong>Segera Layani</strong></h6>
 
-    <ul class="uk-list uk-list-divider uk-list-issue">
-        <li>
-            <a href="#">
-                <span class="uk-text-muted">#B5XX51 :</span>
-                <strong>Jelaskan manajemen bisnis</strong>
-            </a>
+    <ul class="list-unstyled list-margin">
+        <li class="media">
+            <div class="media-body">
+                <a href="#">
+                    <span class="uk-text-muted">#B5XX51 :</span>
+                    <strong>Jelaskan manajemen bisnis</strong>
+                </a>
 
-            <ul class="uk-list uk-list-hyphen uk-text-small uk-list-issue-meta">
-                <li>SLA 20 menit lagi</li>
-                <li>Prioritas High</li>
-                <li>Saluran Video Call</li>
-            </ul>
+                <ul class="uk-list uk-list-hyphen uk-text-small uk-list-issue-meta">
+                    <li>SLA 20 menit lagi</li>
+                    <li>Prioritas High</li>
+                    <li>Saluran Video Call</li>
+                </ul>
+            </div>
         </li>
 
-        <li>
-            <a href="#">
-                <span class="uk-text-muted">#J8735KI :</span>
-                <strong>Konsultasi tentang AWS dan skalabilitasnya</strong>
-            </a>
+        <li class="media">
+            <div class="media-body">
+                <a href="#">
+                    <span class="uk-text-muted">#J8735KI :</span>
+                    <strong>Konsultasi tentang AWS dan skalabilitasnya</strong>
+                </a>
 
-            <ul class="uk-list uk-list-hyphen uk-text-small uk-list-issue-meta">
-                <li>SLA 25 menit lagi</li>
-                <li>Prioritas Medium</li>
-                <li>Saluran Teks</li>
-            </ul>
+                <ul class="uk-list uk-list-hyphen uk-text-small uk-list-issue-meta">
+                    <li>SLA 25 menit lagi</li>
+                    <li>Prioritas Medium</li>
+                    <li>Saluran Teks</li>
+                </ul>
+            </div>
         </li>
 
-        <li>
-            <a href="#">
-                <span class="uk-text-muted">#Z7828D :</span>
-                <strong>Metode periklanan yang baik dan benar</strong>
-            </a>
+        <li class="media">
+            <div class="media-body">
+                <a href="#">
+                    <span class="uk-text-muted">#Z7828D :</span>
+                    <strong>Metode periklanan yang baik dan benar</strong>
+                </a>
 
-            <ul class="uk-list uk-list-hyphen uk-text-small uk-list-issue-meta">
-                <li>SLA 1 jam lagi</li>
-                <li>Prioritas Low</li>
-                <li>Saluran Call</li>
-            </ul>
+                <ul class="uk-list uk-list-hyphen uk-text-small uk-list-issue-meta">
+                    <li>SLA 1 jam lagi</li>
+                    <li>Prioritas Low</li>
+                    <li>Saluran Call</li>
+                </ul>
+            </div>
         </li>
     </ul>
-{% endblock %}
-
-{% block js %}
-    <script type="text/javascript">
-        
-    </script>
 {% endblock %}

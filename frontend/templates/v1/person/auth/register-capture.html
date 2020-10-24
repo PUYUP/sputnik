@@ -5,89 +5,72 @@
 {% block head_title %}{% trans "Lengkapi akun" noop %}{% endblock %}
 
 {% block main %}
-    <section class="uk-container uk-container-xsmall uk-flex uk-flex-middle uk-flex-center uk-margin-bottom">
-        <div class="uk-width-2-3@m">
-            <form id="person-register-capture-form" action="{% url 'person_view:register_capture' %}" method="POST">
-                {% csrf_token %}
+    <section class="container h-100">
+        <div class="row justify-content-center h-100 align-items-center">
+            <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5">
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h3 class="card-title font-weight-bold">
+                            <a href="{% url 'home' %}" class="text-dark">{{ app_name }}</a>
+                        </h3>
 
-                <h1 class="uk-width-1-1 uk-text-center uk-margin-medium-bottom">
-                    <a href="{% url 'home' %}" class="uk-text-emphasis">{{ app_name }}</a>
-                </h1>
-                
-                <hr class="uk-divider-icon"></hr>
-                <h4 class="uk-text-medium">Lengkapi param sebenar-benarnya</h4>
-
-                <div class="uk-margin">
-                    <div class="uk-form-label uk-margin-small-bottom"><strong>Mendaftar sebagai?</strong></div>
-
-                    <div class="uk-form-controls">
-                        <div class="uk-margin">
-                            <label>
-                                <input class="uk-radio" type="radio" name="roles" value="client" required> 
-                                Klien
-                            </label>
-
-                            <p class="uk-text-small uk-margin-remove uk-text-italic uk-text-muted" style="margin-top: 4px !important;">
-                                Mulai berkonsultasi dengan para konsultan propesional.
-                            </p>
-                        </div>
+                        <form id="person-register-capture-form" action="{% url 'person_view:register_capture' %}" method="POST">
+                            {% csrf_token %}
                             
-                        <div class="uk-margin">
-                            <label>
-                                <input class="uk-radio" type="radio" name="roles" value="consultant" required> 
-                                Konsultan
-                            </label>
+                            <p class="mb-0">{% trans "Mendaftar sebagai?" noop %}</p>
 
-                            <p class="uk-text-small uk-margin-remove uk-text-italic uk-text-muted" style="margin-top: 4px !important;">
-                                Anda adalah seorang pakar / konsultan.
-                            </p>
-                        </div>
+                            <div class="form-group">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="roles" id="client" value="client" required>
+                                    <label class="form-check-label" for="client">
+                                        {% trans "Klien" noop %}
+                                    </label>
+                                </div>
+
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="roles" id="consultant" value="consultant" required>
+                                    <label class="form-check-label" for="consultant">
+                                        {% trans "Konsultan" noop %}
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="username">{% trans "Nama pengguna" noop %}</label>
+                                <input class="form-control" type="text" id="username" name="username" placeholder="Contoh: johndoe" autocomplete="off" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="email">{% trans "Alamat email aktif" noop %}</label>
+                                <input class="form-control" type="email" id="email" name="email" placeholder="saya@email.com" autocomplete="off" readonly required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="username">{% trans "Nama lengkap" noop %}</label>
+                                <input class="form-control" type="text" id="first_name" name="first_name" placeholder="John Doe Boy" autocomplete="off" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="username">{% trans "Kata sandi" noop %}</label>
+                                <input class="form-control" type="password" id="password1" name="password1" placeholder="Min 6 karakter" autocomplete="off" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="username">{% trans "Ulangi kata sandi" noop %}</label>
+                                <input class="form-control" type="password" id="password2" name="password2" placeholder="Konfirmasikan kata sandi" autocomplete="off" required>
+                            </div>
+
+                            <div class="form-group">
+                                <p class="text-muted">{% trans "Sudah punya akun?" noop %} <a href="{% url 'person_view:login' %}">Masuk</a></p>
+                            </div>
+
+                            <div class="form-group mb-0 text-right">
+                                <button type="submit" class="btn btn-info pl-3 pr-3">{% trans "Daftar" noop %}</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
-
-                <div class="uk-margin">
-                    <div class="uk-inline uk-width-1-1">
-                        <span class="uk-form-icon" uk-icon="icon: user"></span>
-                        <input class="uk-input" type="text" id="username" name="username" placeholder="Nama pengguna" autocomplete="off" required>
-                    </div>
-                </div>
-
-                <div class="uk-margin">
-                    <div class="uk-inline uk-width-1-1">
-                        <span class="uk-form-icon" uk-icon="icon: mail"></span>
-                        <input class="uk-input" type="email" id="email" name="email" placeholder="Alamat email aktif" autocomplete="off" readonly required>
-                    </div>
-                </div>
-
-                <div class="uk-margin">
-                    <div class="uk-inline uk-width-1-1">
-                        <span class="uk-form-icon" uk-icon="icon: file-text"></span>
-                        <input class="uk-input" type="text" id="first_name" name="first_name" placeholder="Nama lengkap" autocomplete="off" required>
-                    </div>
-                </div>
-
-                <div class="uk-margin">
-                    <div class="uk-inline uk-width-1-1">
-                        <span class="uk-form-icon" uk-icon="icon: lock"></span>
-                        <input class="uk-input" type="password" id="password1" name="password1" placeholder="Kata sandi" autocomplete="off" required>
-                    </div>
-                </div>
-
-                <div class="uk-margin">
-                    <div class="uk-inline uk-width-1-1">
-                        <span class="uk-form-icon" uk-icon="icon: refresh"></span>
-                        <input class="uk-input" type="password" id="password2" name="password2" placeholder="Ulangi kata sandi" autocomplete="off" required>
-                    </div>
-                </div>
-
-                <div class="uk-margin">
-                    <p class="uk-margin-remove">Sudah punya akun? <a href="{% url 'person_view:login' %}">Masuk</a></p>
-                </div>
-
-                <div class="uk-text-right uk-margin-top">
-                    <button type="submit" class="uk-button uk-button-primary">Daftar</button>
-                </div>
-            </form>
+            </div>
         </div>
     </section>
 {% endblock %}
@@ -126,12 +109,7 @@
                     password2 = param?.password2
     
                 if (password1 !== password2) {
-                    UIkit.notification({
-                        message: "{% trans 'Kata sandi tidak sama' %}",
-                        status: 'danger',
-                        timeout: 2000
-                    });
-
+                    alert("{% trans 'Kata sandi tidak sama' %}");
                     return false;
                 }
 
@@ -154,12 +132,6 @@
                     data: JSON.stringify({...param}),
                     cache: false,
                     success: function(response) {
-                        UIkit.notification({
-                            message: 'Pendaftaran berhasil. Mengalihkan...',
-                            status: 'success',
-                            timeout: 2000
-                        });
-
                         Cookies.remove('person_verifycode_result', {path: '/'});
 
                         // Login
@@ -201,11 +173,7 @@
                     },
                     error: function(error) {
                         if (error && error?.responseJSON) {
-                            UIkit.notification({
-                                message: error?.responseJSON?.detail,
-                                status: 'danger',
-                                timeout: 2000
-                            });
+                            alert(error?.responseJSON?.detail);
                         }
                     }
                 });
