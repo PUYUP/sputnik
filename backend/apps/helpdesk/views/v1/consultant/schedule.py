@@ -1,12 +1,10 @@
-from django.db.models import Prefetch, F
 from django.views import View
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
-from django.core.serializers import serialize
 
 from apps.person.decorators import consultant_required
-from apps.helpdesk.utils.constants import RRULE_FREQ_CHOICES, RRULE_WKST_CHOICES
+from apps.helpdesk.utils.constants import RRULE_FREQ_CHOICES, RRULE_WKST_CHOICES, PRIORITY_CHOICES
 from utils.generals import choices_to_json, get_model
 
 Expertise = get_model('resume', 'Expertise')
@@ -31,4 +29,5 @@ class Consultant_ScheduleDetailView(View):
     def get(self, request, uuid=None):
         self.context['uuid'] = uuid
         self.context['wkst_choices'] = choices_to_json(RRULE_WKST_CHOICES)
+        self.context['priority_choices'] = choices_to_json(PRIORITY_CHOICES)
         return render(request, self.template_name, self.context)

@@ -105,11 +105,11 @@ class PriorityApiView(viewsets.ViewSet):
     def create(self, request, format=None):
         context = {'request': request}
         serializer = PrioritySerializer(data=request.data, context=context)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             try:
                 serializer.save()
             except (IntegrityError, ValidationError, Exception) as e:
-                raise NotAcceptable({'detail': repr(e)})
+                raise NotAcceptable(detail=repr(e))
             return Response(serializer.data, status=response_status.HTTP_201_CREATED)
         return Response(serializer.errors, status=response_status.HTTP_403_FORBIDDEN)
 
@@ -119,11 +119,11 @@ class PriorityApiView(viewsets.ViewSet):
         context = {'request': request}
         queryset = self.get_object(uuid=uuid, is_update=True)
         serializer = PrioritySerializer(queryset, data=request.data, partial=True, context=context)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             try:
                 serializer.save()
             except (IntegrityError, ValidationError, Exception) as e:
-                raise NotAcceptable({'detail': repr(e)})
+                raise NotAcceptable(detail=repr(e))
             return Response(serializer.data, status=response_status.HTTP_200_OK)
         return Response(serializer.errors, status=response_status.HTTP_403_FORBIDDEN)
 

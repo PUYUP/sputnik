@@ -6,7 +6,7 @@ from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
 from utils.validators import IDENTIFIER_VALIDATOR, non_python_keyword
-from ..utils.constants import EXPERTISE_LEVELS, SKILLED
+from apps.resume.utils.constants import EXPERTISE_LEVELS, SKILLED
 
 MAX_ALLOWED_EXPERTISE = 11
 
@@ -41,8 +41,8 @@ class AbstractExpertise(models.Model):
     def __str__(self):
         return '{0}'.format(self.topic.label)
 
-    def clean(self) -> None:
-        if self.topic:
+    def clean(self):
+        if self.topic and not self.uuid:
             c = self.__class__.objects.filter(user_id=self.user.id).count()
             if c > MAX_ALLOWED_EXPERTISE:
                 raise ValidationError({'topic': _(u"Max %s topics" % MAX_ALLOWED_EXPERTISE)})

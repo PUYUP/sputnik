@@ -10,6 +10,16 @@ CANAL_CHOICES = (
     (VIDEO, _("Video")),
 )
 
+HIGH = 'high'
+MEDIUM = 'medium'
+LOW = 'low'
+PRIORITY_CHOICES = (
+    (HIGH, _("High")),
+    (MEDIUM, _("Medium")),
+    (LOW, _("Low")),
+)
+
+
 OPEN = 'open'
 CLOSED = 'closed'
 HOLD = 'hold'

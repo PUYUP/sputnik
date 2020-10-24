@@ -90,7 +90,7 @@ class CertificateApiView(viewsets.ViewSet):
             else:
                 queryset = queryset.get(uuid=self.uuid)
         except (ObjectDoesNotExist, ValidationError) as e:
-            raise NotAcceptable({'detail': repr(e)})
+            raise NotAcceptable(detail=repr(e))
         return queryset
 
     def get_objects(self):
@@ -127,8 +127,8 @@ class CertificateApiView(viewsets.ViewSet):
         if serializer.is_valid(raise_exception=True):
             try:
                 serializer.save()
-            except ValidationError as e:
-                return Response({'detail': _(u" ".join(e.messages))}, status=response_status.HTTP_406_NOT_ACCEPTABLE)
+            except (ValidationError, Exception) as e:
+                return Response({'detail': repr(e)}, status=response_status.HTTP_406_NOT_ACCEPTABLE)
             return Response(serializer.data, status=response_status.HTTP_200_OK)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 

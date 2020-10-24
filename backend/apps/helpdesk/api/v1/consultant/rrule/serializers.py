@@ -55,7 +55,7 @@ class RuleSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
                 try:
                     RuleValue.objects.bulk_create(bulk_create_values, ignore_conflicts=False)
                 except (IntegrityError, Exception) as e:
-                    raise NotAcceptable({'detail': repr(e)})
+                    raise NotAcceptable(detail=repr(e))
 
         return instance
 
@@ -79,7 +79,7 @@ class RuleSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
                 try:
                     RuleValue.objects.bulk_update(bulk_update_values, fields=[value_type])
                 except (IntegrityError, Exception) as e:
-                    raise NotAcceptable({'detail': repr(e)})
+                    raise NotAcceptable(detail=repr(e))
 
         instance.refresh_from_db()
         return instance

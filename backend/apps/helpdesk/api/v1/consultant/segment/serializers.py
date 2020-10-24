@@ -4,7 +4,6 @@ from rest_framework import serializers
 
 from utils.generals import get_model
 from apps.helpdesk.api.fields import DynamicFieldsModelSerializer
-
 from apps.helpdesk.api.v1.consultant.sla.serializers import SLASerializer
 
 Segment = get_model('helpdesk', 'Segment')
@@ -31,4 +30,7 @@ class SegmentSerializer(DynamicFieldsModelSerializer, serializers.ModelSerialize
     def to_representation(self, value):
         ret = super().to_representation(value)
         ret['canal_display'] = value.get_canal_display()
+        ret['open_hour_formated'] = value.open_hour.strftime("%I:%M")
+        ret['close_hour_formated'] = value.close_hour.strftime("%I:%M")
+
         return ret

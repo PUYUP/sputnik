@@ -89,7 +89,7 @@ class RuleApiView(viewsets.ViewSet):
                 .select_related('recurrence') \
                 .get(uuid=uuid)
         except (ObjectDoesNotExist, ValidationError) as e:
-            raise NotAcceptable({'detail': repr(e)})
+            raise NotAcceptable(detail=repr(e))
 
         serializer = RuleSerializer(queryset, many=False, context=context)
         return Response(serializer.data, status=response_status.HTTP_200_OK)
@@ -103,7 +103,7 @@ class RuleApiView(viewsets.ViewSet):
             try:
                 serializer.save()
             except (IntegrityError, ValidationError, Exception) as e:
-                raise NotAcceptable({'detail': repr(e)})
+                raise NotAcceptable(detail=repr(e))
             return Response(serializer.data, status=response_status.HTTP_201_CREATED)
         return Response(serializer.errors, status=response_status.HTTP_406_NOT_ACCEPTABLE)
 
@@ -118,14 +118,14 @@ class RuleApiView(viewsets.ViewSet):
                 .select_for_update() \
                 .get(uuid=uuid)
         except (ObjectDoesNotExist, ValidationError) as e:
-            raise NotAcceptable({'detail': repr(e)})
+            raise NotAcceptable(detail=repr(e))
 
         serializer = RuleSerializer(queryset, data=request.data, partial=True, context=context)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             try:
                 serializer.save()
             except (IntegrityError, ValidationError, Exception) as e:
-                raise NotAcceptable({'detail': repr(e)})
+                raise NotAcceptable(detail=repr(e))
             return Response(serializer.data, status=response_status.HTTP_200_OK)
         return Response(serializer.errors, status=response_status.HTTP_406_NOT_ACCEPTABLE)
 

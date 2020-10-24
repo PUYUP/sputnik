@@ -1,12 +1,11 @@
 from django.db import transaction, IntegrityError
-from django.db.models import Prefetch, Q
+from django.db.models import Prefetch
 from django.utils.translation import ugettext_lazy as _
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from django.core.exceptions import ObjectDoesNotExist
 
 from rest_framework import status as response_status, viewsets
-from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -14,7 +13,6 @@ from rest_framework.exceptions import NotAcceptable, NotFound, ValidationError
 
 from utils.generals import get_model
 from .serializers import ExpertiseSerializer
-from ....utils.permissions import IsExpertiseCreator
 
 Expertise = get_model('resume', 'Expertise')
 
@@ -40,27 +38,27 @@ class ExpertiseApiView(viewsets.ViewSet):
         }
     """
     lookup_field = 'uuid'
-    permission_classes = (AllowAny, IsExpertiseCreator,)
+    permission_classes = (IsAuthenticated,)
+
+    def initialize_request(self, request, *args, **kwargs):
+        self.uuid = kwargs.get('uuid', None)
+        self.user = request.user
+        self.user_uuid = request.GET.get('user_uuid', None)
+
+        if not self.user_uuid:
+            if self.user.is_authenticated:
+                self.user_uuid = self.user.uuid
+
+        return super().initialize_request(request, *args, **kwargs)
 
     def list(self, request, format=None):
-        params_missed = dict()
         context = {'request': request}
-        user = request.user
-        user_uuid = request.query_params.get('user_uuid') # :user uuid
-
-        if not user_uuid and not user.is_authenticated:
-            params_missed.update({'user_uuid': _("Required")})
-        else:
-            user_uuid = user.uuid
-
-        # print error if params not provided
-        if params_missed:
-            raise NotAcceptable(detail=params_missed)
-
         queryset = Expertise.objects \
             .prefetch_related(Prefetch('topic'), Prefetch('user')) \
             .select_related('topic', 'user') \
-            .filter(user__uuid=user_uuid)
+            .filter(user__uuid=self.user_uuid) \
+            .order_by('sort_order')
+
         serializer = ExpertiseSerializer(queryset, many=True, context=context)
         return Response(serializer.data, status=response_status.HTTP_200_OK)
 
@@ -72,12 +70,8 @@ class ExpertiseApiView(viewsets.ViewSet):
         if serializer.is_valid(raise_exception=True):
             try:
                 serializer.save()
-            except ValidationError as e:
-                return Response({'detail': _(u" ".join(e.messages))},
-                                status=response_status.HTTP_406_NOT_ACCEPTABLE)
-            except IntegrityError:
-                return Response({'detail': _(u"Keahlian ini telah ditambahkan")},
-                                status=response_status.HTTP_406_NOT_ACCEPTABLE)
+            except (ValidationError, Exception) as e:
+                raise NotAcceptable(detail=repr(e))
             return Response(serializer.data, status=response_status.HTTP_200_OK)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
@@ -88,34 +82,30 @@ class ExpertiseApiView(viewsets.ViewSet):
 
         # single object
         try:
-            queryset = Expertise.objects.get(uuid=uuid)
-        except ValidationError as e:
-            return Response(
-                {'detail': _(u" ".join(e.messages))}, 
-                status=response_status.HTTP_406_NOT_ACCEPTABLE
-            )
-        except ObjectDoesNotExist:
-            raise NotFound()
+            queryset = Expertise.objects.get(uuid=uuid, user_id=self.user.id)
+        except (ValidationError, ObjectDoesNotExist, Exception) as e:
+            raise NotAcceptable(detail=repr(e))
 
         # check permission
         self.check_object_permissions(request, queryset)
 
         serializer = ExpertiseSerializer(queryset, data=request.data, partial=True, context=context)
         if serializer.is_valid(raise_exception=True):
-            serializer.save()
+            try:
+                serializer.save()
+            except (ValidationError, Exception) as e:
+                raise NotAcceptable(detail=repr(e))
             return Response(serializer.data, status=response_status.HTTP_200_OK)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
     @method_decorator(never_cache)
     @transaction.atomic
     def destroy(self, request, uuid=None, format=None):
-        context = {'request': request}
-
         # single object
         try:
-            queryset = Expertise.objects.get(uuid=uuid)
-        except ObjectDoesNotExist:
-            raise NotFound()
+            queryset = Expertise.objects.get(uuid=uuid, user_id=self.user.id)
+        except (ValidationError, ObjectDoesNotExist, Exception) as e:
+            raise NotAcceptable(detail=repr(e))
 
         # check permission
         self.check_object_permissions(request, queryset)
@@ -143,8 +133,7 @@ class ExpertiseApiView(viewsets.ViewSet):
             ]
         """
         method = request.method
-        user = request.user
-        
+ 
         if not request.data:
             raise NotAcceptable()
 
@@ -155,7 +144,7 @@ class ExpertiseApiView(viewsets.ViewSet):
                 uuid = v.get('uuid')
  
                 try:
-                    obj = Expertise.objects.get(user_id=user.id, uuid=uuid)
+                    obj = Expertise.objects.get(user_id=self.user.id, uuid=uuid)
                     setattr(obj, 'sort_order', i + 1) # auto set with sort index
 
                     update_objs.append(obj)

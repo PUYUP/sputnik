@@ -131,7 +131,7 @@ class VerifyCodeApiView(viewsets.ViewSet):
                 .get_unverified_unused(email=email, msisdn=msisdn, token=token,
                                        challenge=challenge, passcode=passcode)
         except ObjectDoesNotExist:
-            raise NotAcceptable({'detail': _(u"Kode verifikasi salah atau kadaluarsa")})
+            raise NotAcceptable(detail=_(u"Kode verifikasi salah atau kadaluarsa"))
 
         try:
             verifycode_obj.validate()

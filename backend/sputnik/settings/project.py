@@ -36,7 +36,6 @@ LOGIN_URL = '/person/login/'
 PROJECT_APPS = [
     'corsheaders',
     'rest_framework',
-    'crispy_forms',
     'apps.master.apps.MasterConfig',
     'apps.person.apps.PersonConfig',
     'apps.resume.apps.ResumeConfig',

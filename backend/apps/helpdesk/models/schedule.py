@@ -10,7 +10,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from utils.validators import non_python_keyword, IDENTIFIER_VALIDATOR
 from apps.helpdesk.utils.constants import (
-    CANAL_CHOICES, TEXT, OPEN
+    CANAL_CHOICES, TEXT, OPEN, PRIORITY_CHOICES, MEDIUM
 )
 
 MAX_ALLOWED_SCHEDULE = 6
@@ -155,7 +155,7 @@ class AbstractSLA(models.Model):
     segment = models.ForeignKey('helpdesk.Segment', on_delete=models.CASCADE,
                                 related_name='slas', null=True)
 
-    label = models.CharField(max_length=255)
+    label = models.CharField(max_length=255, null=True, blank=True)
     summary = models.TextField(max_length=500, null=True, blank=True)
     promise = models.TextField(help_text=_("What the user gets"))
     secret_content = models.TextField(help_text=_("Information only show to User has scheduled"),
@@ -182,10 +182,18 @@ class AbstractSLA(models.Model):
     def save(self, *args, **kwargs):
         self.user = self.segment.user
         self.schedule = self.segment.schedule
+
+        # fill label
+        if not self.label:
+            self.label = '{0} hours cost {1}'.format(self.grace_periode, self.cost)
+
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return '{0} ({1} hours) cost {2}'.format(self.label, self.grace_periode, self.cost)
+        label = self.label
+        if not label:
+            label = '{0} ({1} hours) cost {2}'.format(self.label, self.grace_periode, self.cost)
+        return label
 
 
 class AbstractPriority(models.Model):
@@ -194,10 +202,12 @@ class AbstractPriority(models.Model):
     update_date = models.DateTimeField(auto_now=True, null=True)
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                             related_name='priorities')
+                             related_name='priorities', editable=False)
     sla = models.ForeignKey('helpdesk.SLA', on_delete=models.CASCADE,
                             related_name='priorities')
 
+    identifier = models.CharField(choices=PRIORITY_CHOICES, max_length=15, default=MEDIUM,
+                                  validators=[non_python_keyword, IDENTIFIER_VALIDATOR])
     label = models.CharField(max_length=255)
     summary = models.TextField(max_length=500, null=True, blank=True)
     cost = models.BigIntegerField()
@@ -209,6 +219,10 @@ class AbstractPriority(models.Model):
         ordering = ['-cost']
         verbose_name = _("Priority")
         verbose_name_plural = _("Priorities")
+
+    def save(self, *args, **kwargs):
+        self.user = self.sla.user
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return '{0} cost {1}'.format(self.label, self.cost)

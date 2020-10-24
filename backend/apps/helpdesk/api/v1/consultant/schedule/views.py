@@ -83,7 +83,7 @@ class ScheduleApiView(viewsets.ViewSet):
             else:
                 queryset = queryset.get(uuid=uuid)
         except ValidationError as e:
-            raise NotAcceptable({'detail': repr(e)})
+            raise NotAcceptable(detail=repr(e))
         except ObjectDoesNotExist:
             raise NotFound()
 
@@ -131,7 +131,7 @@ class ScheduleApiView(viewsets.ViewSet):
             try:
                 serializer.save()
             except (ValidationError, IntegrityError) as e:
-                raise NotAcceptable({'detail': repr(e)})
+                raise NotAcceptable(detail=repr(e))
             return Response(serializer.data, status=response_status.HTTP_201_CREATED)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
@@ -301,13 +301,13 @@ class RecurrenceApiView(viewsets.ViewSet):
         try:
             queryset = self.query.get(schedule__uuid=self.schedule_uuid)
         except (ValidationError, Exception) as e:
-            raise NotAcceptable({'detail': repr(e)})
+            raise NotAcceptable(detail=repr(e))
         return queryset
 
     def list(self, request, format=None):
         context = {'request': request}
         if self.schedule_uuid is None:
-            raise NotAcceptable({'detail': _("Param schedule_uuid required")})
+            raise NotAcceptable(detail=_("Param schedule_uuid required"))
 
         queryset = self.get_objects()
         serializer = RecurrenceSerializer(queryset, many=False, context=context)
@@ -328,7 +328,7 @@ class RecurrenceApiView(viewsets.ViewSet):
             try:
                 serializer.save()
             except (ValidationError, IntegrityError) as e:
-                raise NotAcceptable({'detail': repr(e)})
+                raise NotAcceptable(detail=repr(e))
             return Response(serializer.data, status=response_status.HTTP_201_CREATED)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
@@ -343,7 +343,7 @@ class RecurrenceApiView(viewsets.ViewSet):
             try:
                 serializer.save()
             except (ValidationError, IntegrityError) as e:
-                raise NotAcceptable({'detail': repr(e)})
+                raise NotAcceptable(detail=repr(e))
             return Response(serializer.data, status=response_status.HTTP_200_OK)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
@@ -404,13 +404,13 @@ class ScheduleExpertiseApiView(viewsets.ViewSet):
         try:
             queryset = self.query.filter(schedule__uuid=self.schedule_uuid)
         except (ValidationError, Exception) as e:
-            raise NotAcceptable({'detail': repr(e)})
+            raise NotAcceptable(detail=repr(e))
         return queryset
 
     def list(self, request, format=None):
         context = {'request': request}
         if self.schedule_uuid is None:
-            raise NotAcceptable({'detail': _("Param schedule_uuid required")})
+            raise NotAcceptable(detail=_("Param schedule_uuid required"))
 
         queryset = self.get_objects()
         serializer = ScheduleExpertiseSerializer(queryset, many=True, context=context)
@@ -431,7 +431,7 @@ class ScheduleExpertiseApiView(viewsets.ViewSet):
             try:
                 serializer.save()
             except (ValidationError, IntegrityError) as e:
-                raise NotAcceptable({'detail': repr(e)})
+                raise NotAcceptable(detail=repr(e))
             return Response(serializer.data, status=response_status.HTTP_201_CREATED)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
@@ -446,7 +446,7 @@ class ScheduleExpertiseApiView(viewsets.ViewSet):
             try:
                 serializer.save()
             except (ValidationError, IntegrityError) as e:
-                raise NotAcceptable({'detail': repr(e)})
+                raise NotAcceptable(detail=repr(e))
             return Response(serializer.data, status=response_status.HTTP_200_OK)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 

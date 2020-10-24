@@ -16,3 +16,8 @@ class PrioritySerializer(DynamicFieldsModelSerializer, serializers.ModelSerializ
     class Meta:
         model = Priority
         fields = '__all__'
+
+    def to_representation(self, value):
+        ret = super().to_representation(value)
+        ret['identifier_display'] = value.get_identifier_display()
+        return ret

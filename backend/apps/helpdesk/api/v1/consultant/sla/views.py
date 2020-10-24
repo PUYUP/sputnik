@@ -43,7 +43,10 @@ class SLAApiView(viewsets.ViewSet):
             "secret_content": null,
             "grace_periode": 10,
             "cost": 10000,
-            "is_active": true
+            "is_active": true,
+            "priorities": [
+                {"identifier": "high", "label": "Penting", "cost": 1000}
+            ]
         }
 
     PATCH
@@ -58,29 +61,35 @@ class SLAApiView(viewsets.ViewSet):
             "secret_content": null,
             "grace_periode": 10,
             "cost": 10000,
-            "is_active": true
+            "is_active": true,
+            "priorities": [
+                {"uuid": "uuid.v4", "identifier": "high", "label": "Penting", "cost": 1000}
+            ]
         }
     """
     lookup_field = 'uuid'
     permission_classes = (IsAuthenticated, IsConsultantOnly,)
 
-    def get_object(self, uuid=None, is_update=False):
+    def initialize_request(self, request, *args, **kwargs):
+        self.user = request.user
+        self.uuid = kwargs.get('uuid', None)
+        return super().initialize_request(request, *args, **kwargs)
+
+    def get_object(self, is_update=False):
         queryset = SLA.objects \
             .prefetch_related(Prefetch('user'), Prefetch('segment'), Prefetch('schedule')) \
             .select_related('user', 'segment', 'schedule')
 
         try:
             if is_update:
-                queryset = queryset.select_for_update().get(uuid=uuid)
+                queryset = queryset.select_for_update().get(uuid=self.uuid, user__uuid=self.user.uuid)
             else:
-                queryset = queryset.get(uuid=uuid)
-        except Exception as e:
+                queryset = queryset.get(uuid=self.uuid, user__uuid=self.user.uuid)
+        except (ValidationError, Exception) as e:
             raise NotAcceptable(detail=str(e))
-
         return queryset
 
     def get_objects(self, segment_uuid=None):
-        user = self.request.user
         queryset = SLA.objects
 
         # If current user not creator show only PUBLISH status
@@ -88,10 +97,9 @@ class SLAApiView(viewsets.ViewSet):
             queryset = queryset.prefetch_related(Prefetch('schedule'), Prefetch('priorities'),
                                                  Prefetch('user'), Prefetch('segment')) \
                 .select_related('schedule', 'segment', 'user') \
-                .filter(user__uuid=user.uuid, segment__uuid=segment_uuid)
-        except Exception as e:
+                .filter(user__uuid=self.user.uuid, segment__uuid=segment_uuid)
+        except (ValidationError, Exception) as e:
             raise NotAcceptable(detail=str(e))
-
         return queryset
 
     def list(self, request, format=None):
@@ -105,7 +113,7 @@ class SLAApiView(viewsets.ViewSet):
 
     def retrieve(self, request, uuid=None, format=None):
         context = {'request': request}
-        queryset = self.get_object(uuid=uuid)
+        queryset = self.get_object()
         serializer = SLASerializer(queryset, many=False, context=context)
         return Response(serializer.data, status=response_status.HTTP_200_OK)
 
@@ -114,11 +122,11 @@ class SLAApiView(viewsets.ViewSet):
     def create(self, request, format=None):
         context = {'request': request}
         serializer = SLASerializer(data=request.data, context=context)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             try:
                 serializer.save()
             except (IntegrityError, ValidationError, Exception) as e:
-                raise NotAcceptable({'detail': repr(e)})
+                raise NotAcceptable(detail=repr(e))
             return Response(serializer.data, status=response_status.HTTP_201_CREATED)
         return Response(serializer.errors, status=response_status.HTTP_403_FORBIDDEN)
 
@@ -126,23 +134,20 @@ class SLAApiView(viewsets.ViewSet):
     @method_decorator(never_cache)
     def partial_update(self, request, uuid=None, format=None):
         context = {'request': request}
-        queryset = self.get_object(uuid=uuid, is_update=True)
+        queryset = self.get_object(is_update=True)
         serializer = SLASerializer(queryset, data=request.data, partial=True, context=context)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             try:
                 serializer.save()
             except (IntegrityError, ValidationError, Exception) as e:
-                raise NotAcceptable({'detail': repr(e)})
+                raise NotAcceptable(detail=repr(e))
             return Response(serializer.data, status=response_status.HTTP_200_OK)
         return Response(serializer.errors, status=response_status.HTTP_403_FORBIDDEN)
 
     @transaction.atomic
     @method_decorator(never_cache)
     def destroy(self, request, uuid=None, format=None):
-        # single object
-        queryset = self.get_object(uuid=uuid)
-        if queryset.user.uuid != request.user.uuid:
-            raise NotAcceptable()
+        queryset = self.get_object()
 
         # execute delete
         queryset.delete()

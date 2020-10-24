@@ -11,8 +11,7 @@ from utils.generals import get_model
 from apps.helpdesk.models.models import Recurrence
 from apps.helpdesk.api.fields import DynamicFieldsModelSerializer
 from apps.helpdesk.api.v1.consultant.segment.serializers import SegmentSerializer
-
-from ..rrule.serializers import RuleSerializer
+from apps.helpdesk.api.v1.consultant.rrule.serializers import RuleSerializer
 
 Expertise = get_model('resume', 'Expertise')
 Schedule = get_model('helpdesk', 'Schedule')
@@ -63,7 +62,7 @@ class RecurrenceSerializer(DynamicFieldsModelSerializer, serializers.ModelSerial
         try:
             instance = Recurrence.objects.create(**validated_data)
         except (ValidationError, Exception) as e:
-            raise NotAcceptable({'detail': repr(e)})
+            raise NotAcceptable(detail=repr(e))
         return instance
 
     @transaction.atomic
@@ -97,7 +96,7 @@ class ScheduleSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializ
     expertises = serializers.SlugRelatedField(slug_field='expertise_label', read_only=True,
                                               many=True, source='schedule_expertises')
     segments = SegmentSerializer(many=True, read_only=True,
-                                 fields=('uuid', 'slas', 'canal', 'canal_display', 'url',
+                                 fields=('uuid', 'slas', 'canal', 'canal_display', 'url', 'quota',
                                          'open_hour', 'close_hour', 'max_opened', 'is_active',))
  
     class Meta:
@@ -128,7 +127,7 @@ class ScheduleSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializ
             try:
                 ScheduleExpertise.objects.bulk_create(schedule_expertises, ignore_conflicts=False)
             except (Exception, IntegrityError) as e:
-                raise NotAcceptable({'detail': repr(e)})
+                raise NotAcceptable(detail=repr(e))
         return instance
 
     @transaction.atomic

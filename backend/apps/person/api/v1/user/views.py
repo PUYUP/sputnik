@@ -218,7 +218,7 @@ class UserApiView(viewsets.ViewSet):
         try:
             validate_email(email)
         except ValidationError as e:
-            raise NotAcceptable({'detail': _(u" ".join(e.messages))})
+            raise NotAcceptable(detail=_(u" ".join(e.messages)))
 
         try:
             Account.objects.get(Q(user__account__email=Case(When(user__account__email__isnull=False, then=Value(email))))
@@ -346,11 +346,11 @@ class UserApiView(viewsets.ViewSet):
         try:
             validate_username(username)
         except ValidationError as e:
-            raise NotAcceptable({'detail': _(" ".join(e.messages))})
+            raise NotAcceptable(detail=_(" ".join(e.messages)))
 
         if User.objects.filter(username=username).exists():
-            raise NotAcceptable({'detail': _(u"Nama pengguna `{username}` "
-                                             "sudah digunakan.".format(username=username))})
+            raise NotAcceptable(detail=_(u"Nama pengguna `{username}` "
+                                         "sudah digunakan.".format(username=username)))
         return Response({'detail': _(u"Nama pengguna tersedia!")},
                         status=response_status.HTTP_200_OK)
 
@@ -439,20 +439,20 @@ class UserApiView(viewsets.ViewSet):
         recovery_token = request.data.get('recovery_token')
 
         if not password1 or not password2 or not recovery_uidb64 or not recovery_token:
-            raise NotAcceptable({'detail': _(u"Parameter tidak lengkap")})
+            raise NotAcceptable(detail=_(u"Parameter tidak lengkap"))
 
         # check password confirmation
         if password1 and password2:
             if password1 != password2:
-                raise NotAcceptable({'detail': _(u"Kata sandi tidak sama")})
+                raise NotAcceptable(detail=_(u"Kata sandi tidak sama"))
         else:
-            raise NotAcceptable({'detail': _(u"Kata sandi tidak boleh kosong")})
+            raise NotAcceptable(detail=_(u"Kata sandi tidak boleh kosong"))
 
         # validate password
         try:
             validate_password(password2)
         except ValidationError as e:
-            raise NotAcceptable({'detail': ' '.join(e.messages)})
+            raise NotAcceptable(detail=' '.join(e.messages))
 
         # check password recovery valid or not
         uid = urlsafe_base64_decode(recovery_uidb64).decode()
@@ -461,11 +461,11 @@ class UserApiView(viewsets.ViewSet):
             self.verifycode_email = user.email
             self.verifycode_msisdn = user.account.msisdn
         except ObjectDoesNotExist:
-            raise NotAcceptable({'detail': _(u"Akun tidak ditemukan")})
+            raise NotAcceptable(detail=_(u"Akun tidak ditemukan"))
 
         isvalid = default_token_generator.check_token(user, recovery_token)
         if not isvalid:
-            raise NotAcceptable({'detail': _(u"Token invalid")})
+            raise NotAcceptable(detail=_(u"Token invalid"))
 
         # Get verifycode
         self.verifycode_obj = self.get_verifycode(challenge=PASSWORD_RECOVERY)

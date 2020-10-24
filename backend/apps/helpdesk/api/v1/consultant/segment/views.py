@@ -99,7 +99,7 @@ class SegmentApiView(viewsets.ViewSet):
         queryset = self.get_objects(schedule_uuid=schedule_uuid)
         serializer = SegmentSerializer(queryset, many=True, context=context,
                                        fields=('url', 'canal', 'open_hour', 'close_hour',
-                                               'max_opened', 'is_active', 'uuid',))
+                                               'max_opened', 'is_active', 'uuid', 'quota',))
         return Response(serializer.data, status=response_status.HTTP_200_OK)
 
     def retrieve(self, request, uuid=None, format=None):
@@ -113,11 +113,11 @@ class SegmentApiView(viewsets.ViewSet):
     def create(self, request, format=None):
         context = {'request': request}
         serializer = SegmentSerializer(data=request.data, context=context)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             try:
                 serializer.save()
             except (IntegrityError, ValidationError, Exception) as e:
-                raise NotAcceptable({'detail': repr(e)})
+                raise NotAcceptable(detail=repr(e))
             return Response(serializer.data, status=response_status.HTTP_201_CREATED)
         return Response(serializer.errors, status=response_status.HTTP_403_FORBIDDEN)
 
@@ -127,11 +127,11 @@ class SegmentApiView(viewsets.ViewSet):
         context = {'request': request}
         queryset = self.get_object(uuid=uuid, is_update=True)
         serializer = SegmentSerializer(queryset, data=request.data, partial=True, context=context)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             try:
                 serializer.save()
             except (IntegrityError, ValidationError, Exception) as e:
-                raise NotAcceptable({'detail': repr(e)})
+                raise NotAcceptable(detail=repr(e))
             return Response(serializer.data, status=response_status.HTTP_200_OK)
         return Response(serializer.errors, status=response_status.HTTP_403_FORBIDDEN)
 
