@@ -27,7 +27,7 @@ urlpatterns += static(settings.STATIC_URL,
 # https://docs.djangoproject.com/en/3.1/ref/contrib/admin/#django.contrib.admin.AdminSite.enable_nav_sidebar
 admin.site.enable_nav_sidebar = False
 
-if settings.DEBUG:
+if settings.DEBUG and not settings.IS_UNIX:
     import debug_toolbar
     urlpatterns = [
         path('__debug__/', include(debug_toolbar.urls)),

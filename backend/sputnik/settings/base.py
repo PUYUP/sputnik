@@ -30,9 +30,10 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 ROOT_URLCONF = 'sputnik.urls'
 WSGI_APPLICATION = 'sputnik.wsgi.application'
+IS_UNIX = os.name != 'nt'
 
 HOST = '127.0.0.1' # windows
-if os.name != 'nt':
+if IS_UNIX:
     HOST = '10.0.2.2' # ubuntu
 
 

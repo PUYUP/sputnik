@@ -23,6 +23,11 @@ class SLAListSerializer(serializers.ListSerializer):
 
 
 class SLASerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
+    """
+    Priority:
+    ------------
+    Under update action if Priority does not exist created it
+    """
     url = serializers.HyperlinkedIdentityField(view_name='helpdesk_api:consultant:sla-detail',
                                                lookup_field='uuid', read_only=True)
     segment = serializers.SlugRelatedField(slug_field='uuid', queryset=Segment.objects.all())
@@ -37,7 +42,7 @@ class SLASerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
 
     def to_internal_value(self, data):
         priorities = data.get('priorities', None)
-        priorities_uuid = [item.get('uuid', None) for item in priorities]
+        priorities_uuid = [item.get('uuid', None) for item in priorities] # used for update only
 
         ret = super().to_internal_value(data)
         ret['priorities_uuid'] = priorities_uuid
@@ -47,7 +52,7 @@ class SLASerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
     def create(self, validated_data):
         priorities = validated_data.pop('priorities', None)
         _priorities_uuid = validated_data.pop('priorities_uuid', None)
-        
+
         instance = SLA.objects.create(**validated_data)
 
         # bulk create priority

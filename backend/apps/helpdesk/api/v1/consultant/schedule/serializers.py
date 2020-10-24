@@ -134,39 +134,38 @@ class ScheduleSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializ
     def update(self, instance, validated_data):
         expertises_uuid = list()
         submited_expertises = list()
-        expertises = validated_data.pop('schedule_expertises', None)
+        expertises = validated_data.pop('schedule_expertises', list())
 
-        if expertises:
-            # extract Expertise only, not ScheduleExpertise
-            # this submited by user in frontend
-            for item in expertises:
-                expertise = item.get('expertise', '')
-                if expertise:
-                    submited_expertises.append(expertise)
-                    expertises_uuid.append(expertise.uuid)
+        # extract Expertise only, not ScheduleExpertise
+        # this submited by user in frontend
+        for item in expertises:
+            expertise = item.get('expertise', '')
+            if expertise:
+                submited_expertises.append(expertise)
+                expertises_uuid.append(expertise.uuid)
 
-            # current user expertises
-            x = list()
-            current_expertises = instance.schedule_expertises.filter(Q(expertise__uuid__in=expertises_uuid))
-            for item in current_expertises:
-                x.append(item.expertise)
+        # current user expertises
+        x = list()
+        current_expertises = instance.schedule_expertises.filter(Q(expertise__uuid__in=expertises_uuid))
+        for item in current_expertises:
+            x.append(item.expertise)
 
-            # collect removed ScheduleExpertise
-            removed_expertises = instance.schedule_expertises.exclude(Q(expertise__uuid__in=expertises_uuid))
-            if removed_expertises.exists():
-                removed_expertises.delete()
+        # collect removed ScheduleExpertise
+        removed_expertises = instance.schedule_expertises.exclude(Q(expertise__uuid__in=expertises_uuid))
+        if removed_expertises.exists():
+            removed_expertises.delete()
 
-            # collect new expertises, fresh not exists in database
-            create_expertises = list()
-            new_expertises = list(set(submited_expertises) - set(x))
-            if new_expertises:
-                for item in new_expertises:
-                    obj = ScheduleExpertise(schedule=instance, expertise=item)
-                    create_expertises.append(obj)
+        # collect new expertises, fresh not exists in database
+        create_expertises = list()
+        new_expertises = list(set(submited_expertises) - set(x))
+        if new_expertises:
+            for item in new_expertises:
+                obj = ScheduleExpertise(schedule=instance, expertise=item)
+                create_expertises.append(obj)
 
-            # bulk created
-            if create_expertises:
-                ScheduleExpertise.objects.bulk_create(create_expertises)
+        # bulk created
+        if create_expertises:
+            ScheduleExpertise.objects.bulk_create(create_expertises)
 
         # update instance
         for key, value in validated_data.items():
