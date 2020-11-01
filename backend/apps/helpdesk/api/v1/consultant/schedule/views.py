@@ -130,7 +130,7 @@ class ScheduleApiView(viewsets.ViewSet):
         context = {'request': request}
         serializer = ScheduleSerializer(data=request.data, context=context,
                                         fields_used=('user', 'uuid', 'label', 'is_active',
-                                                     'description',))
+                                                     'description', 'permalink',))
         if serializer.is_valid(raise_exception=True):
             try:
                 serializer.save()
