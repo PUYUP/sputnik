@@ -1,15 +1,14 @@
 from django import forms
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
-from django.contrib.auth.validators import UnicodeUsernameValidator
 
 from utils.generals import get_model
 from apps.person.utils.constants import ROLE_IDENTIFIERS, REGISTERED
-from apps.person.utils.auth import update_roles
+from apps.person.utils.auth import update_role
 
 User = get_model('person', 'User')
 Role = get_model('person', 'Role')
-RoleCapabilities = get_model('person', 'RoleCapabilities')
+RoleCapability = get_model('person', 'RoleCapability')
 
 try:
     _ROLE_IDENTIFIERS = ROLE_IDENTIFIERS
@@ -25,16 +24,16 @@ except NameError:
 class UserChangeFormExtend(UserChangeForm):
     """ Override user Edit form """
     email = forms.EmailField(max_length=254, help_text=_("Required. Inform a valid email address"))
-    roles = forms.MultipleChoiceField(
+    role = forms.MultipleChoiceField(
         choices=_ROLE_IDENTIFIERS,
         widget=forms.CheckboxSelectMultiple(),
         required=False,
-        help_text=_(u"Select roles for user")
+        help_text=_(u"Select role for user")
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['roles'].initial =  list(self.instance.roles.all().values_list('identifier', flat=True))
+        self.fields['role'].initial =  list(self.instance.role.all().values_list('identifier', flat=True))
 
     def clean_email(self):
         email = self.cleaned_data.get('email', None)
@@ -48,33 +47,33 @@ class UserChangeFormExtend(UserChangeForm):
         return email
 
     def clean_role(self):
-        roles = self.cleaned_data.get('roles', None)
-        return roles
+        role = self.cleaned_data.get('role', None)
+        return role
 
     def save(self, commit=True):
         user = super().save(commit=False)
         if commit:
             user.save()
         
-        roles = self.cleaned_data.get('roles', None)
-        if roles:
-            update_roles(user=user, roles=roles)
+        role = self.cleaned_data.get('role', None)
+        if role:
+            update_role(user=user, role=role)
         return user
 
 
 class UserCreationFormExtend(UserCreationForm):
     """ Override user Add form """
     email = forms.EmailField(max_length=254, help_text=_("Required. Inform a valid email address"))
-    roles = forms.MultipleChoiceField(
+    role = forms.MultipleChoiceField(
         choices=_ROLE_IDENTIFIERS,
         widget=forms.CheckboxSelectMultiple(),
         required=False,
-        help_text=_(u"Select roles for user")
+        help_text=_(u"Select role for user")
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['roles'].initial = _REGISTERED
+        self.fields['role'].initial = _REGISTERED
 
     def clean_email(self):
         email = self.cleaned_data.get('email', None)
@@ -96,8 +95,8 @@ class UserCreationFormExtend(UserCreationForm):
         if commit:
             user.save()
 
-         # APPEND ROLES
-        roles = self.cleaned_data.get('roles', None)
-        if roles:
-            setattr(user, 'roles_value', roles)
+        # APPEND ROLE
+        role = self.cleaned_data.get('role', None)
+        if role:
+            setattr(user, 'role_input', role)
         return user

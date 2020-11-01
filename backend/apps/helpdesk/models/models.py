@@ -2,7 +2,8 @@ from utils.generals import is_model_registered
 
 from .schedule import *
 from .issue import *
-from .rrule import *
+from .rule import *
+from .attachment import *
 
 __all__ = []
 
@@ -26,19 +27,19 @@ if not is_model_registered('helpdesk', 'ScheduleExpertise'):
 
 
 # 3
-if not is_model_registered('helpdesk', 'Recurrence'):
-    class Recurrence(AbstractRecurrence):
-        class Meta(AbstractRecurrence.Meta):
-            db_table = 'helpdesk_recurrence'
+if not is_model_registered('helpdesk', 'ScheduleTerm'):
+    class ScheduleTerm(AbstractScheduleTerm):
+        class Meta(AbstractScheduleTerm.Meta):
+            db_table = 'helpdesk_schedule_term'
 
-    __all__.append('Recurrence')
+    __all__.append('ScheduleTerm')
 
 
 # 4
 if not is_model_registered('helpdesk', 'Rule'):
     class Rule(AbstractRule):
         class Meta(AbstractRule.Meta):
-            db_table = 'helpdesk_recurrence_rule'
+            db_table = 'helpdesk_schedule_term_rule'
 
     __all__.append('Rule')
 
@@ -47,7 +48,7 @@ if not is_model_registered('helpdesk', 'Rule'):
 if not is_model_registered('helpdesk', 'RuleValue'):
     class RuleValue(AbstractRuleValue):
         class Meta(AbstractRuleValue.Meta):
-            db_table = 'helpdesk_recurrence_rule_value'
+            db_table = 'helpdesk_schedule_term_rule_value'
 
     __all__.append('RuleValue')
 
@@ -98,15 +99,51 @@ if not is_model_registered('helpdesk', 'Respond'):
 
 
 # 11
-if not is_model_registered('helpdesk', 'RespondLog'):
-    class RespondLog(AbstractRespondLog):
-        class Meta(AbstractRespondLog.Meta):
-            db_table = 'helpdesk_respond_log'
+if not is_model_registered('helpdesk', 'Reply'):
+    class Reply(AbstractReply):
+        class Meta(AbstractReply.Meta):
+            db_table = 'helpdesk_reply'
 
-    __all__.append('RespondLog')
+    __all__.append('Reply')
 
 
 # 12
+if not is_model_registered('helpdesk', 'Replied'):
+    class Replied(AbstractReplied):
+        class Meta(AbstractReplied.Meta):
+            db_table = 'helpdesk_replied'
+
+    __all__.append('Replied')
+
+
+# 13
+if not is_model_registered('helpdesk', 'Consultation'):
+    class Consultation(AbstractConsultation):
+        class Meta(AbstractConsultation.Meta):
+            db_table = 'helpdesk_consultation'
+
+    __all__.append('Consultation')
+
+
+# 14
+if not is_model_registered('helpdesk', 'ConsultationLog'):
+    class ConsultationLog(AbstractConsultationLog):
+        class Meta(AbstractConsultationLog.Meta):
+            db_table = 'helpdesk_consultation_log'
+
+    __all__.append('ConsultationLog')
+
+
+# 15
+if not is_model_registered('helpdesk', 'Reservation'):
+    class Reservation(AbstractReservation):
+        class Meta(AbstractReservation.Meta):
+            db_table = 'helpdesk_reservation'
+
+    __all__.append('Reservation')
+
+
+# 16
 if not is_model_registered('helpdesk', 'Entry'):
     class Entry(AbstractEntry):
         class Meta(AbstractEntry.Meta):
@@ -115,7 +152,7 @@ if not is_model_registered('helpdesk', 'Entry'):
     __all__.append('Entry')
 
 
-# 13
+# 17
 if not is_model_registered('helpdesk', 'Assign'):
     class Assign(AbstractAssign):
         class Meta(AbstractAssign.Meta):
@@ -124,7 +161,7 @@ if not is_model_registered('helpdesk', 'Assign'):
     __all__.append('Assign')
 
 
-# 14
+# 18
 if not is_model_registered('helpdesk', 'Assigned'):
     class Assigned(AbstractAssigned):
         class Meta(AbstractAssigned.Meta):
@@ -133,10 +170,19 @@ if not is_model_registered('helpdesk', 'Assigned'):
     __all__.append('Assigned')
 
 
-# 15
+# 19
 if not is_model_registered('helpdesk', 'Gift'):
     class Gift(AbstractGift):
         class Meta(AbstractGift.Meta):
             db_table = 'helpdesk_gift'
 
     __all__.append('Gift')
+
+
+# 20
+if not is_model_registered('helpdesk', 'Attachment'):
+    class Attachment(AbstractAttachment):
+        class Meta(AbstractAttachment.Meta):
+            db_table = 'helpdesk_attachment'
+
+    __all__.append('Attachment')

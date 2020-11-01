@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction, IntegrityError
 from django.db.models import Prefetch, Q
@@ -10,15 +11,24 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.exceptions import NotAcceptable, NotFound
 from rest_framework.decorators import action
+from rest_framework.pagination import LimitOffsetPagination
 
-from apps.helpdesk.utils.permissions import IsConsultantOnly
+from apps.helpdesk.utils.permissions import (
+    IsConsultantOnly, 
+    IsObjectOwnerOrReject, IsResumeCompleteOrReject, 
+    IsScheduleTermOwnerOrReject
+)
 from utils.generals import get_model
-from .serializers import RecurrenceSerializer, ScheduleExpertiseSerializer, ScheduleSerializer
+from utils.pagination import build_result_pagination
+from .serializers import ScheduleExpertiseSerializer, ScheduleSerializer, ScheduleTermSerializer
 
 Schedule = get_model('helpdesk', 'Schedule')
-Recurrence = get_model('helpdesk', 'Recurrence')
+ScheduleTerm = get_model('helpdesk', 'ScheduleTerm')
 Rule = get_model('helpdesk', 'Rule')
 ScheduleExpertise = get_model('helpdesk', 'ScheduleExpertise')
+
+# Define to avoid used ...().paginate__
+_PAGINATOR = LimitOffsetPagination()
 
 
 class ScheduleApiView(viewsets.ViewSet):
@@ -26,32 +36,18 @@ class ScheduleApiView(viewsets.ViewSet):
     POST
     ------------------
 
-    If 'rules' type set as 'integer' then 'rules_value' list set as 'value_integer'
+    Format;
 
         {
-            "schedule_expertises": [
-                {"expertise": '7905433c-966f-4f3a-b1da-66e88c83ecc0'},
-                {"expertise": '7905433c-966f-4f3a-b1da-66e88c83ecc1'},
-            ],
-            "label": "string"
-        }
-    
-    Example:
-
-        {
-            "schedule_expertises": [
-                {"expertise": "7905433c-966f-4f3a-b1da-66e88c83ecc0"}
-            ],
-            "label": "Jadwal 5"
+            "label": "string",
+            "is_active": "boolean"
         }
     """
     lookup_field = 'uuid'
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsConsultantOnly, IsResumeCompleteOrReject,)
     permission_action = {
-        'list': [IsAuthenticated, IsConsultantOnly],
-        'create': [IsAuthenticated, IsConsultantOnly],
-        'retrieve': [IsAuthenticated, IsConsultantOnly],
-        'partial_update': [IsAuthenticated, IsConsultantOnly]
+        'retrieve': [IsAuthenticated, IsObjectOwnerOrReject],
+        'partial_update': [IsAuthenticated, IsObjectOwnerOrReject]
     }
 
     def get_permissions(self):
@@ -67,71 +63,79 @@ class ScheduleApiView(viewsets.ViewSet):
             # action is not set return default permission_classes
             return [permission() for permission in self.permission_classes]
 
+    def initialize_request(self, request, *args, **kwargs):
+        self.user = request.user
+        return super().initialize_request(request, *args, **kwargs)
+
+    @property
+    def queryset(self):
+        q = Schedule.objects.prefetch_related(
+            Prefetch('user'),
+            Prefetch('schedule_expertise'),
+            Prefetch('schedule_expertise__expertise'),
+            Prefetch('schedule_expertise__expertise__topic'),
+            Prefetch('schedule_term'),
+            Prefetch('segment'),
+            Prefetch('segment__user'), 
+            Prefetch('segment__sla'),
+            Prefetch('segment__sla__user')
+        ) \
+            .select_related('user', 'schedule_term')
+        return q
+
+    @property
+    def queryset_list(self):
+        q = Schedule.objects.prefetch_related(
+            Prefetch('schedule_expertise'),
+            Prefetch('schedule_expertise__expertise'),
+            Prefetch('schedule_expertise__expertise__topic')
+        )
+        
+        return q
+
     """ SCHEDULE: OBJECT """
     def get_object(self, uuid=None, is_update=False):
-        queryset = Schedule.objects.prefetch_related(
-            Prefetch('schedule_expertises'),
-            Prefetch('schedule_expertises__expertise'),
-            Prefetch('schedule_expertises__expertise__topic'),
-            Prefetch('recurrence')
-        ) \
-        .select_related('recurrence')
-
         try:
             if is_update:
-                queryset = queryset.select_for_update().get(uuid=uuid)
+                queryset = self.queryset.select_for_update().get(uuid=uuid)
             else:
-                queryset = queryset.get(uuid=uuid)
-        except ValidationError as e:
-            raise NotAcceptable(detail=repr(e))
-        except ObjectDoesNotExist:
-            raise NotFound()
+                queryset = self.queryset.get(uuid=uuid)
+        except (ValidationError, ObjectDoesNotExist) as e:
+            raise NotAcceptable(detail=str(e))
 
         return queryset
 
     """ SCHEDULE: LIST """
     def list(self, request, format=None):
         context = {'request': request}
-        user_uuid = request.query_params.get('user_uuid') # :user uuid
+        user_uuid = request.query_params.get('user_uuid', None)
+        if user_uuid is None:
+            user_uuid = self.user.uuid
 
-        queryset = Schedule.objects \
-            .prefetch_related(Prefetch('user'), Prefetch('schedule_expertises'),
-                              Prefetch('schedule_expertises__expertise'),
-                              Prefetch('schedule_expertises__expertise__topic'),
-                              Prefetch('recurrence'), Prefetch('segments'),
-                              Prefetch('segments__user'), Prefetch('segments__slas'),
-                              Prefetch('segments__slas__user')) \
-            .select_related('user', 'recurrence') \
+        queryset = self.queryset_list.filter(user__uuid=user_uuid) \
+            .exclude(~Q(user__uuid=self.user.uuid) & ~Q(is_active=True)) \
             .order_by('sort_order')
 
-        # check permission
-        self.check_permissions(request)
-
-        # access as public only show active schedules
-        if (user_uuid):
-            queryset = queryset.filter(user__uuid=user_uuid) \
-                .exclude(~Q(user__uuid=request.user.uuid) & ~Q(is_active=True))
-        else:
-            queryset = queryset.filter(user_id=request.user.id)
-
-        serializer = ScheduleSerializer(queryset, many=True, context=context,
-                                        fields=('url', 'uuid', 'label', 'expertises',))
-        return Response(serializer.data, status=response_status.HTTP_200_OK)
+        queryset_paginator = _PAGINATOR.paginate_queryset(queryset, request)
+        serializer = ScheduleSerializer(queryset_paginator, many=True, context=context,
+                                        fields_used=('url', 'uuid', 'label', 'expertise',
+                                                     'is_active', 'permalink',))
+        pagination_result = build_result_pagination(self, _PAGINATOR, serializer)
+        return Response(pagination_result, status=response_status.HTTP_200_OK)
 
     """ SCHEDULE: CREATE """
     @method_decorator(never_cache)
     @transaction.atomic
     def create(self, request, format=None):
         context = {'request': request}
-
         serializer = ScheduleSerializer(data=request.data, context=context,
-                                        fields=('schedule_expertises', 'uuid', 'label', 'is_active',
-                                                'user',))
+                                        fields_used=('user', 'uuid', 'label', 'is_active',
+                                                     'description',))
         if serializer.is_valid(raise_exception=True):
             try:
                 serializer.save()
             except (ValidationError, IntegrityError) as e:
-                raise NotAcceptable(detail=repr(e))
+                raise NotAcceptable(detail=str(e))
             return Response(serializer.data, status=response_status.HTTP_201_CREATED)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
@@ -140,8 +144,9 @@ class ScheduleApiView(viewsets.ViewSet):
         context = {'request': request, 'uuid': uuid}
         queryset = self.get_object(uuid=uuid)
         serializer = ScheduleSerializer(queryset, many=False, context=context,
-                                        fields=('schedule_expertises', 'uuid', 'label', 'is_active',
-                                                'create_date', 'recurrence', 'segments',))
+                                        fields_used=('schedule_expertise', 'uuid', 'label', 'is_active',
+                                                     'create_date', 'schedule_term', 'segment', 
+                                                     'description',))
         return Response(serializer.data, status=response_status.HTTP_200_OK)
 
     """ SCHEDULE: UPDATE """
@@ -149,17 +154,17 @@ class ScheduleApiView(viewsets.ViewSet):
     @transaction.atomic
     def partial_update(self, request, uuid=None, format=None):
         context = {'request': request}
-
-        # single object
         queryset = self.get_object(uuid=uuid, is_update=True)
 
-        # check permission
         self.check_object_permissions(request, queryset)
 
         serializer = ScheduleSerializer(queryset, data=request.data, partial=True, context=context,
-                                        fields=('schedule_expertises', 'uuid', 'label', 'is_active',))
+                                        fields_used=('uuid', 'label', 'is_active', 'description',))
         if serializer.is_valid(raise_exception=True):
-            serializer.save()
+            try:
+                serializer.save()
+            except (ValidationError, IntegrityError) as e:
+                raise NotAcceptable(detail=str(e))
             return Response(serializer.data, status=response_status.HTTP_200_OK)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
@@ -167,190 +172,137 @@ class ScheduleApiView(viewsets.ViewSet):
     @method_decorator(never_cache)
     @transaction.atomic
     def destroy(self, request, uuid=None, format=None):
-        # retrieve object
         queryset = self.get_object(uuid=uuid)
 
-        # check permission
         self.check_object_permissions(request, queryset)
 
         # execute delete
         queryset.delete()
-        return Response(
-            {'detail': _("Delete success!")},
-            status=response_status.HTTP_204_NO_CONTENT)
+        return Response({'detail': _("Delete success!")},
+                        status=response_status.HTTP_204_NO_CONTENT)
 
-    """ SCHEDULE: BULK UPDATE """
     @method_decorator(never_cache)
     @transaction.atomic
-    @action(methods=['patch'], detail=False,
-            permission_classes=[IsAuthenticated, IsConsultantOnly],
-            url_path='bulk-updates', url_name='bulk-updates')
-    def bulk_updates(self, request, uuid=None):
-        """
-        Params:
-            [
-                {"uuid": "adadafa"},
-                {"uuid": "adadafa"}
-            ]
-        """
-        method = request.method
-        user = request.user
+    def put(self, request, format=None):
+        context = {'request': request}
+        update_fields = ['user'] # related field to select_related in queryset
+        update_uuids = [item.get('uuid') for item in request.data]
 
-        if not request.data:
-            raise NotAcceptable()
-
-        if method == 'PATCH':
-            update_objs = list()
-
-            for i, v in enumerate(request.data):
-                uuid = v.get('uuid')
- 
-                try:
-                    obj = Schedule.objects.get(user_id=user.id, uuid=uuid)
-                    setattr(obj, 'sort_order', i + 1) # auto set with sort index
-
-                    update_objs.append(obj)
-                except (ValidationError, ObjectDoesNotExist) as e:
-                    pass
-
-            if not update_objs:
-                raise NotAcceptable()
-
-            if update_objs:
-                try:
-                    Schedule.objects.bulk_update(update_objs, ['sort_order'])
-                except IntegrityError:
-                    return Response({'detail': _(u"Fatal error")},
-                                    status=response_status.HTTP_406_NOT_ACCEPTABLE)
-
-                return Response({'detail': _(u"Update success")},
-                                status=response_status.HTTP_200_OK)
+        # Collect fields affect for updated
+        for item in request.data:
+            update_fields.extend(list(item.keys()))
+        update_fields = list(dict.fromkeys(update_fields))
+    
+        queryset = self.queryset_list.filter(uuid__in=update_uuids).only(*update_fields)
+        serializer = ScheduleSerializer(queryset, data=request.data, many=True, context=context,
+                                        fields_used=update_fields)
+        if serializer.is_valid(raise_exception=True):
+            try:
+                serializer.save()
+            except (ValidationError, Exception) as e:
+                raise NotAcceptable(detail=str(e))
+            return Response(serializer.data, status=response_status.HTTP_200_OK)
+        return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
 
-"""
-RECURRENCES
-"""
-class RecurrenceApiView(viewsets.ViewSet):
+""" TERMS """
+class ScheduleTermApiView(viewsets.ViewSet):
     """
     GET
-    -----------
+    ------------
 
-    Params;
-
-        {
-            "schedule_uuid": "b2c76dda-bcd4-44e3-92a8-9a9bbb7edad9"
-        }
-
-    POST
-    -----------
-
-    Params;
+    Format;
 
         {
-            "schedule": "b2c76dda-bcd4-44e3-92a8-9a9bbb7edad9",
-            "dtstart": "2020-10-13T20:22:37.489102+07:00",
-            "dtuntil": "",
-            "freq": 1,
-            "count": 30,
-            "interval": 1,
-            "wkst": "MO"
-        }
-
-    PATCH
-    -----------
-
-    Params;
-
-        {
-            "dtstart": "2020-10-13T20:22:37.489102+07:00",
-            "dtuntil": "",
-            "freq": 1,
-            "count": 30,
-            "interval": 1,
-            "wkst": "MO"
+            "schedule_uuid": "uuid v4"
         }
     """
     lookup_field = 'uuid'
-    permission_classes = (IsAuthenticated, IsConsultantOnly,)
+    permission_classes = (IsAuthenticated, IsConsultantOnly, IsResumeCompleteOrReject,)
+    permission_action = {
+        'partial_update': [IsAuthenticated, IsScheduleTermOwnerOrReject],
+        'destroy': [IsAuthenticated, IsScheduleTermOwnerOrReject],
+    }
 
-    def initialize_request(self, request, *args, **kwargs):
-        self.user = request.user
-        self.schedule_uuid = request.GET.get('schedule_uuid', None)
-        self.uuid = kwargs.get('uuid', None)
-        return super().initialize_request(request, *args, **kwargs)
+    def get_permissions(self):
+        """
+        Instantiates and returns
+        the list of permissions that this view requires.
+        """
+        try:
+            # return permission_classes depending on `action`
+            return [permission() for permission in self.permission_action
+                    [self.action]]
+        except KeyError:
+            # action is not set return default permission_classes
+            return [permission() for permission in self.permission_classes]
 
     @property
-    def query(self):
-        query = Recurrence.objects \
-            .prefetch_related(Prefetch('schedule')) \
+    def queryset(self):
+        q = ScheduleTerm.objects.prefetch_related(Prefetch('schedule')) \
             .select_related('schedule')
-        return query
+        return q
 
-    def get_object(self, is_update=False):
+    # single object
+    def get_object(self, uuid=None, is_update=False):
         try:
             if is_update:
-                queryset = self.query.select_for_update() \
-                    .get(uuid=self.uuid, schedule__user__uuid=self.user.uuid)
+                queryset = self.queryset.select_for_update().get(uuid=uuid)
             else:
-                queryset = self.query.get(uuid=self.uuid, schedule__user__uuid=self.user.uuid)
-        except Exception as e:
+                queryset = self.queryset.get(uuid=uuid)
+        except (ValidationError, ObjectDoesNotExist) as e:
             raise NotAcceptable(detail=str(e))
-        return queryset
-
-    def get_objects(self):
-        try:
-            queryset = self.query.get(schedule__uuid=self.schedule_uuid)
-        except (ValidationError, Exception) as e:
-            raise NotAcceptable(detail=repr(e))
         return queryset
 
     def list(self, request, format=None):
         context = {'request': request}
-        if self.schedule_uuid is None:
-            raise NotAcceptable(detail=_("Param schedule_uuid required"))
+        schedule_uuid = request.query_params.get('schedule_uuid', None)
+        if schedule_uuid is None:
+            raise NotAcceptable(detail=_("Param schedule_uuid required!"))
 
-        queryset = self.get_objects()
-        serializer = RecurrenceSerializer(queryset, many=False, context=context)
-        return Response(serializer.data, status=response_status.HTTP_200_OK)
-
-    def retrieve(self, request, uuid=None, format=None):
-        context = {'request': request}
-        queryset = self.get_objects()
-        serializer = RecurrenceSerializer(queryset, many=False, context=context)
+        queryset = self.queryset.filter(schedule__uuid=schedule_uuid)
+        serializer = ScheduleTermSerializer(queryset, many=True, context=context)
         return Response(serializer.data, status=response_status.HTTP_200_OK)
 
     @method_decorator(never_cache)
     @transaction.atomic
     def create(self, request, format=None):
         context = {'request': request}
-        serializer = RecurrenceSerializer(data=request.data, context=context)
+        serializer = ScheduleTermSerializer(data=request.data, context=context)
         if serializer.is_valid(raise_exception=True):
             try:
                 serializer.save()
             except (ValidationError, IntegrityError) as e:
-                raise NotAcceptable(detail=repr(e))
+                raise NotAcceptable(detail=str(e))
             return Response(serializer.data, status=response_status.HTTP_201_CREATED)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
+
+    def retrieve(self, request, uuid=None):
+        context = {'request': request, 'uuid': uuid}
+        queryset = self.get_object(uuid=uuid)
+        serializer = ScheduleTermSerializer(queryset, many=False, context=context)
+        return Response(serializer.data, status=response_status.HTTP_200_OK)
 
     @method_decorator(never_cache)
     @transaction.atomic
     def partial_update(self, request, uuid=None, format=None):
         context = {'request': request}
-        queryset = self.get_object(is_update=True)
-        serializer = RecurrenceSerializer(queryset, data=request.data, partial=True,
-                                          context=context)
+        queryset = self.get_object(uuid=uuid, is_update=True)
+
+        self.check_object_permissions(request, queryset)
+
+        serializer = ScheduleTermSerializer(queryset, data=request.data, partial=True,
+                                            context=context)
         if serializer.is_valid(raise_exception=True):
             try:
                 serializer.save()
             except (ValidationError, IntegrityError) as e:
-                raise NotAcceptable(detail=repr(e))
+                raise NotAcceptable(detail=str(e))
             return Response(serializer.data, status=response_status.HTTP_200_OK)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
 
-"""
-EXPERTISES
-"""
+""" EXPERTISES """
 class ScheduleExpertiseApiView(viewsets.ViewSet):
     """
     GET
@@ -373,52 +325,70 @@ class ScheduleExpertiseApiView(viewsets.ViewSet):
         }
     """
     lookup_field = 'uuid'
-    permission_classes = (IsAuthenticated, IsConsultantOnly,)
+    permission_classes = (IsAuthenticated, IsConsultantOnly, IsResumeCompleteOrReject,)
+    permission_action = {
+        'partial_update': [IsAuthenticated, IsObjectOwnerOrReject],
+        'destroy': [IsAuthenticated, IsObjectOwnerOrReject],
+    }
+
+    def get_permissions(self):
+        """
+        Instantiates and returns
+        the list of permissions that this view requires.
+        """
+        try:
+            # return permission_classes depending on `action`
+            return [permission() for permission in self.permission_action
+                    [self.action]]
+        except KeyError:
+            # action is not set return default permission_classes
+            return [permission() for permission in self.permission_classes]
 
     def initialize_request(self, request, *args, **kwargs):
         self.user = request.user
-        self.schedule_uuid = request.GET.get('schedule_uuid', None)
-        self.uuid = kwargs.get('uuid', None)
         return super().initialize_request(request, *args, **kwargs)
 
     @property
-    def query(self):
-        query = ScheduleExpertise.objects \
+    def queryset(self):
+        q = ScheduleExpertise.objects \
             .prefetch_related(Prefetch('schedule'), Prefetch('expertise'),
                               Prefetch('expertise__topic')) \
             .select_related('schedule', 'expertise')
-        return query
+        return q
 
-    def get_object(self, is_update=False):
+    # single object
+    def get_object(self, uuid=None, is_update=False):
         try:
             if is_update:
-                queryset = self.query.select_for_update() \
-                    .get(uuid=self.uuid, schedule__user__uuid=self.user.uuid)
+                queryset = self.queryset.select_for_update() \
+                    .get(uuid=uuid, user__uuid=self.user.uuid)
             else:
-                queryset = self.query.get(uuid=self.uuid, schedule__user__uuid=self.user.uuid)
-        except Exception as e:
+                queryset = self.queryset.get(uuid=uuid, user__uuid=self.user.uuid)
+        except (ValidationError, ObjectDoesNotExist, Exception) as e:
             raise NotAcceptable(detail=str(e))
         return queryset
 
-    def get_objects(self):
+    # multiple objects
+    def get_objects(self, schedule_uuid=None):
         try:
-            queryset = self.query.filter(schedule__uuid=self.schedule_uuid)
+            queryset = self.queryset.filter(schedule__uuid=schedule_uuid)
         except (ValidationError, Exception) as e:
-            raise NotAcceptable(detail=repr(e))
+            raise NotAcceptable(detail=str(e))
         return queryset
 
     def list(self, request, format=None):
         context = {'request': request}
-        if self.schedule_uuid is None:
+        schedule_uuid = request.query_params.get('schedule_uuid', None)
+        if not schedule_uuid:
             raise NotAcceptable(detail=_("Param schedule_uuid required"))
 
-        queryset = self.get_objects()
+        queryset = self.get_objects(schedule_uuid=schedule_uuid)
         serializer = ScheduleExpertiseSerializer(queryset, many=True, context=context)
         return Response(serializer.data, status=response_status.HTTP_200_OK)
 
     def retrieve(self, request, uuid=None, format=None):
         context = {'request': request}
-        queryset = self.get_object()
+        queryset = self.get_object(uuid=uuid)
         serializer = ScheduleExpertiseSerializer(queryset, many=False, context=context)
         return Response(serializer.data, status=response_status.HTTP_200_OK)
 
@@ -426,12 +396,12 @@ class ScheduleExpertiseApiView(viewsets.ViewSet):
     @transaction.atomic
     def create(self, request, format=None):
         context = {'request': request}
-        serializer = ScheduleExpertiseSerializer(data=request.data, context=context)
+        serializer = ScheduleExpertiseSerializer(data=request.data, many=True, context=context)
         if serializer.is_valid(raise_exception=True):
             try:
                 serializer.save()
             except (ValidationError, IntegrityError) as e:
-                raise NotAcceptable(detail=repr(e))
+                raise NotAcceptable(detail=str(e))
             return Response(serializer.data, status=response_status.HTTP_201_CREATED)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
@@ -439,20 +409,67 @@ class ScheduleExpertiseApiView(viewsets.ViewSet):
     @transaction.atomic
     def partial_update(self, request, uuid=None, format=None):
         context = {'request': request}
-        queryset = self.get_object(is_update=True)
+        queryset = self.get_object(uuid=uuid, is_update=True)
+
+        self.check_object_permissions(request, queryset)
+    
         serializer = ScheduleExpertiseSerializer(queryset, data=request.data, partial=True,
                                                  context=context)
         if serializer.is_valid(raise_exception=True):
             try:
                 serializer.save()
             except (ValidationError, IntegrityError) as e:
-                raise NotAcceptable(detail=repr(e))
+                raise NotAcceptable(detail=str(e))
             return Response(serializer.data, status=response_status.HTTP_200_OK)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
     @method_decorator(never_cache)
     @transaction.atomic
     def destroy(self, request, uuid=None, format=None):
-        queryset = self.get_object()
+        queryset = self.get_object(uuid=uuid)
+
+        self.check_object_permissions(request, queryset)
+    
         queryset.delete()
-        return Response({'detail': _("Delete success!")}, status=response_status.HTTP_204_NO_CONTENT)
+        return Response({'detail': _("Delete success!")},
+                        status=response_status.HTTP_204_NO_CONTENT)
+
+    @method_decorator(never_cache)
+    @transaction.atomic
+    def put(self, request, format=None):
+        context = {'request': request}
+        update_fields = list()
+        update_uuids = [item.get('uuid', None) for item in request.data]
+
+        # Collect fields affect for updated
+        for item in request.data:
+            update_fields.extend(list(item.keys()))
+        update_fields = list(dict.fromkeys(update_fields))
+
+        queryset = self.queryset.filter(uuid__in=update_uuids).only(*update_fields)
+        serializer = ScheduleExpertiseSerializer(queryset, data=request.data, many=True, context=context,
+                                                 fields_used=update_fields)
+        if serializer.is_valid(raise_exception=True):
+            try:
+                serializer.save()
+            except (ValidationError, Exception) as e:
+                raise NotAcceptable(detail=str(e))
+            return Response(serializer.data, status=response_status.HTTP_200_OK)
+        return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
+
+    @method_decorator(never_cache)
+    @transaction.atomic
+    @action(methods=['delete'], detail=False, permission_classes=[IsAuthenticated],
+            url_path='delete', url_name='delete')
+    def delete(self, request, format=None):
+        uuids = [item.get('uuid', None) for item in request.data]
+
+        try:
+            queryset = self.queryset.filter(uuid__in=uuids, user__uuid=request.user.uuid)
+        except (ValidationError, Exception) as e:
+            raise NotAcceptable(detail=str(e))
+
+        if queryset.exists():
+            queryset.delete()
+            return Response(status=response_status.HTTP_204_NO_CONTENT)
+        raise NotFound()

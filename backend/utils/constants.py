@@ -15,5 +15,3 @@ MONTH_CHOICES = (
     (NOV, _(u"November")),
     (DEC, _(u"December")),
 )
-
-MONTH_CHOICES_STR = tuple({(str(m[0]), m[1]) for m in MONTH_CHOICES})

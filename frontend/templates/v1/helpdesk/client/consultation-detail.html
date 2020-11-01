@@ -1,0 +1,251 @@
+{% extends 'v1/base/base-user.html' %}
+{% load i18n static %}
+
+{% block head_title %}{% trans "Detil Konsultasi" noop %}{% endblock %}
+
+{% block main %}
+    <h6 class="mb-3 text-uppercase font-weight-bold">
+        {% trans 'Detil Konsultasi' noop %}
+    </h6>
+
+    <form id="helpdesk-issue-form" action="{% url 'helpdesk_view:client:consultation_detail' uuid %}" method="POST">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="label">{% trans "Label" noop %} *</label>
+            <input class="form-control" type="text" id="label" name="label" placeholder="{% trans "Contoh: Jelaskan tentang PHP" noop %}" autocomplete="off" required>
+        </div>
+
+        <div class="form-group">
+            <textarea name="description" id="editor"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="topic_label">{% trans 'Topik' noop %}</label>
+            <input class="form-control w-100" type="text" id="topic_label" name="topic_label" placeholder="Ex: Java" autocomplete="off">
+            <div id="topic-list"></div>
+        </div>
+
+        <div class="text-right">
+            <button type="submit" class="btn btn-info pl-4 pr-4">{% trans "Simpan" noop %}</button>
+        </div>
+    </form>
+{% endblock %}
+
+{% block style %}
+    <link rel="stylesheet" href="{% static 'vendors/autocomplete/easy-autocomplete.min.css' %}" type="text/css">
+    
+    <style type="text/css">
+        #topic-list span { cursor: pointer; }
+    </style>
+{% endblock %}
+
+{% block js %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+    <script src="{% static 'vendors/autocomplete/jquery.easy-autocomplete.min.js' %}" defer></script>
+    <script src="{% static 'vendors/ckeditor5/build/ckeditor.js' %}" defer></script>
+
+    <script type="text/javascript">
+        window.addEventListener('DOMContentLoaded', function() {
+            // ...
+            // ADD TOPICS
+            // ...
+            var topicItem = function(data) {
+                var item = `<span class="topic-item badge badge-warning p-2 pt-1 pb-1 mt-1 mb-1" data-uuid="${data.uuid}">
+                    ${data.label}
+                    <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-x" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                    </svg>
+                </span>`;
+
+                return item;
+            }
+
+            var options = {
+                url: function(phrase) {
+                    return API_ENDPOINT + 'master/topics/?s=' + phrase;
+                },
+                getValue: function(element) {
+                    return element.label;
+                },
+                ajaxSettings: {
+                    dataType: "json",
+                    method: "GET",
+                    data: {
+                        dataType: "json"
+                    }
+                },
+                preparePostData: function(data) {
+                    data.phrase = $("#topic_label").val();
+                    return data;
+                },
+                requestDelay: 400,
+                list: {
+                    onChooseEvent: function() {
+                        var topicList = [];
+
+                        // Collect topic.
+                        $.each($('.topic-item'), function(i, v) {
+                            var uuid = $(v).attr('data-uuid');
+                            var label = $(v).text();
+                            var data = {'uuid': uuid, 'label': label};
+                            var item = topicItem(data);
+
+                            topicList.push(item);
+                        });
+
+                        var data = $("#topic_label").getSelectedItemData();
+                        var item = topicItem(data);
+                        
+                        topicList.push(item);
+
+                        $('#topic-list').html(topicList.join(' '));
+                        $('#topic_label').val('');
+                    },
+                    onLoadEvent: function() {
+                        
+                    }
+                }
+            };
+
+            $("#topic_label").easyAutocomplete(options);
+
+
+            // ...
+            // REMOVE TOPIC
+            // ...
+            $(document).on('click', '.topic-item', function(e) {
+                e.preventDefault();
+
+                var uuid = $(this).attr('data-uuid');
+
+                $(this).remove();
+            });
+
+
+            var $editor = ClassicEditor
+                .create( document.querySelector( '#editor' ), {
+                    toolbar: [ 
+                        'heading', '|',
+                        'bold', 'italic', 'link', 'bulletedList', 'numberedList', 'blockQuote', '|', 
+                        'ImageInsert'
+                    ],
+                    simpleUpload: {
+                        // The URL that the images are uploaded to.
+                        uploadUrl: 'http://example.com',
+                    }
+                } )
+                .catch( error => {
+                    console.log( error );
+                } );
+    
+    
+            // ...
+            // LOAD ISSUE
+            // ...
+            var loadConsultation = function() {
+                $.ajax({
+                    method: 'GET',
+                    url: API_ENDPOINT + 'helpdesk/client/issues/{{ uuid }}/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    cache: false,
+                    success: function(response) {
+                        $('input[name=label]').val(response?.label);
+
+                        $editor.then(editor => {
+                            editor.setData(response?.description);
+                        });
+
+                        var topic = response?.topic;
+                        var topicLabel = response?.topic_label;
+                        var topicList = [];
+
+                        $.each(topic, function(i, v) {
+                            var data = {
+                                'label': topicLabel[i],
+                                'uuid': v,
+                            }
+
+                            var item = topicItem(data);
+                            topicList.push(item);
+                        });
+
+                        $('#topic-list').html(topicList.join(' '));
+                    }
+                });
+            }
+
+            loadConsultation();
+
+
+            // ...
+            // SUBMIT FORM
+            // ...
+            $(document).on('submit', '#helpdesk-issue-form', function(e) {
+                e.preventDefault();
+
+                var values = $(this).serializeArray();
+                var param = {};
+                var topics = [];
+
+                $.each(values, function(i, v) {
+                    param[v.name] = v.value;
+                });
+
+                // Collect topic.
+                $.each($('.topic-item'), function(i, v) {
+                    var uuid = $(v).attr('data-uuid');
+                    topics.push(uuid);
+                });
+
+                param['topic'] = topics;
+                updateIssue(param);
+            });
+
+
+            // ...
+            // CREATE ISSUE
+            // ...
+            var updateIssue = function(data) {
+                $.ajax({
+                    method: 'PATCH',
+                    url: API_ENDPOINT + 'helpdesk/client/issues/{{ uuid }}/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    cache: false,
+                    success: function(response) {
+                        Swal.fire(
+                            'Informasi',
+                            'Pembaruan berhasil',
+                            'success'
+                        );
+                    },
+                    error: function(error) {
+                        var errorJSON = error?.responseJSON;
+
+                        if (error && errorJSON) {
+                            $.each(errorJSON, function(k, v) {
+                                var message = '';
+
+                                if(Array.isArray(v)) {
+                                    message = v.join(' ');
+                                } else {
+                                    message = v;
+                                }
+                                
+                                var el = $('#' + k);
+                                el.closest('.form-gorup').after('<p class="small">' + message + '</p>');
+                            });
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+{% endblock %}

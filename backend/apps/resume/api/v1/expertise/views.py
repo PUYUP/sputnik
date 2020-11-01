@@ -9,10 +9,11 @@ from rest_framework import status as response_status, viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import NotAcceptable, NotFound, ValidationError
+from rest_framework.exceptions import NotAcceptable, ValidationError
 
 from utils.generals import get_model
 from .serializers import ExpertiseSerializer
+from apps.resume.utils.permissions import IsObjectOwnerOrReject
 
 Expertise = get_model('resume', 'Expertise')
 
@@ -39,26 +40,62 @@ class ExpertiseApiView(viewsets.ViewSet):
     """
     lookup_field = 'uuid'
     permission_classes = (IsAuthenticated,)
+    permission_action = {
+        'partial_update': [IsAuthenticated, IsObjectOwnerOrReject],
+        'destroy': [IsAuthenticated, IsObjectOwnerOrReject],
+    }
+
+    def get_permissions(self):
+        """
+        Instantiates and returns
+        the list of permissions that this view requires.
+        """
+        try:
+            # return permission_classes depending on `action`
+            return [permission() for permission in self.permission_action
+                    [self.action]]
+        except KeyError:
+            # action is not set return default permission_classes
+            return [permission() for permission in self.permission_classes]
 
     def initialize_request(self, request, *args, **kwargs):
-        self.uuid = kwargs.get('uuid', None)
         self.user = request.user
-        self.user_uuid = request.GET.get('user_uuid', None)
-
-        if not self.user_uuid:
-            if self.user.is_authenticated:
-                self.user_uuid = self.user.uuid
-
         return super().initialize_request(request, *args, **kwargs)
+
+    @property
+    def queryset(self):
+        q = Expertise.objects.prefetch_related(Prefetch('user'), Prefetch('topic')) \
+            .select_related('user', 'topic')
+        return q
+
+    # single object
+    def get_object(self, uuid=None, is_update=False):
+        try:
+            if is_update:
+                queryset = self.queryset.select_for_update().get(uuid=uuid)
+            else:
+                queryset = self.queryset.get(uuid=uuid)
+        except (ObjectDoesNotExist, ValidationError) as e:
+            raise NotAcceptable(detail=str(e))
+        return queryset
+
+    # multiple objects
+    def get_objects(self, user_uuid=None):
+        try:
+            queryset = self.queryset \
+                .filter(user__uuid=user_uuid) \
+                .order_by('sort_order')
+        except (ValidationError, Exception) as e:
+            raise NotAcceptable(detail=str(e))
+        return queryset
 
     def list(self, request, format=None):
         context = {'request': request}
-        queryset = Expertise.objects \
-            .prefetch_related(Prefetch('topic'), Prefetch('user')) \
-            .select_related('topic', 'user') \
-            .filter(user__uuid=self.user_uuid) \
-            .order_by('sort_order')
+        user_uuid = request.query_params.get('user_uuid', None)
+        if user_uuid is None:
+            user_uuid = self.user.uuid
 
+        queryset = self.get_objects(user_uuid=user_uuid)
         serializer = ExpertiseSerializer(queryset, many=True, context=context)
         return Response(serializer.data, status=response_status.HTTP_200_OK)
 
@@ -71,7 +108,7 @@ class ExpertiseApiView(viewsets.ViewSet):
             try:
                 serializer.save()
             except (ValidationError, Exception) as e:
-                raise NotAcceptable(detail=repr(e))
+                raise NotAcceptable(detail=str(e))
             return Response(serializer.data, status=response_status.HTTP_200_OK)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
@@ -79,14 +116,8 @@ class ExpertiseApiView(viewsets.ViewSet):
     @transaction.atomic
     def partial_update(self, request, uuid=None, format=None):
         context = {'request': request}
+        queryset = self.get_object(uuid=uuid, is_update=True)
 
-        # single object
-        try:
-            queryset = Expertise.objects.get(uuid=uuid, user_id=self.user.id)
-        except (ValidationError, ObjectDoesNotExist, Exception) as e:
-            raise NotAcceptable(detail=repr(e))
-
-        # check permission
         self.check_object_permissions(request, queryset)
 
         serializer = ExpertiseSerializer(queryset, data=request.data, partial=True, context=context)
@@ -94,72 +125,42 @@ class ExpertiseApiView(viewsets.ViewSet):
             try:
                 serializer.save()
             except (ValidationError, Exception) as e:
-                raise NotAcceptable(detail=repr(e))
+                raise NotAcceptable(detail=str(e))
             return Response(serializer.data, status=response_status.HTTP_200_OK)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
     @method_decorator(never_cache)
     @transaction.atomic
     def destroy(self, request, uuid=None, format=None):
-        # single object
-        try:
-            queryset = Expertise.objects.get(uuid=uuid, user_id=self.user.id)
-        except (ValidationError, ObjectDoesNotExist, Exception) as e:
-            raise NotAcceptable(detail=repr(e))
+        queryset = self.get_object(uuid=uuid)
 
-        # check permission
         self.check_object_permissions(request, queryset)
 
         # execute delete
         queryset.delete()
-        return Response(
-            {'detail': _("Delete success!")},
-            status=response_status.HTTP_204_NO_CONTENT)
+        return Response({'detail': _("Delete success!")},
+                        status=response_status.HTTP_204_NO_CONTENT)
 
-    """***********
-    BULK UPDATES
-    ***********"""
     @method_decorator(never_cache)
     @transaction.atomic
-    @action(methods=['patch'], detail=False,
-            permission_classes=[IsAuthenticated],
-            url_path='bulk-updates', url_name='view_bulk_updates')
-    def view_bulk_updates(self, request, uuid=None):
-        """
-        Params:
-            [
-                {"uuid": "adadafa"},
-                {"uuid": "adadafa"}
-            ]
-        """
-        method = request.method
- 
-        if not request.data:
-            raise NotAcceptable()
+    def put(self, request, format=None):
+        context = {'request': request}
+        update_fields = ['user', 'topic'] # related field to select_related in queryset
+        update_uuids = [item.get('uuid') for item in request.data]
+        
+        # Collect fields affect for updated
+        for item in request.data:
+            update_fields.extend(list(item.keys()))
+        update_fields = list(dict.fromkeys(update_fields))
+        
+        queryset = self.queryset.filter(uuid__in=update_uuids).only(*update_fields)
+        serializer = ExpertiseSerializer(queryset, data=request.data, many=True, context=context,
+                                         fields_used=update_fields)
+        if serializer.is_valid(raise_exception=True):
+            try:
+                serializer.save()
+            except (ValidationError, Exception) as e:
+                raise NotAcceptable(detail=str(e))
+            return Response(serializer.data, status=response_status.HTTP_200_OK)
+        return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
-        if method == 'PATCH':
-            update_objs = list()
-
-            for i, v in enumerate(request.data):
-                uuid = v.get('uuid')
- 
-                try:
-                    obj = Expertise.objects.get(user_id=self.user.id, uuid=uuid)
-                    setattr(obj, 'sort_order', i + 1) # auto set with sort index
-
-                    update_objs.append(obj)
-                except (ValidationError, ObjectDoesNotExist) as e:
-                    pass
-
-            if not update_objs:
-                raise NotAcceptable()
-
-            if update_objs:
-                try:
-                    Expertise.objects.bulk_update(update_objs, ['sort_order'])
-                except IntegrityError:
-                    return Response({'detail': _(u"Fatal error")},
-                                    status=response_status.HTTP_406_NOT_ACCEPTABLE)
-
-                return Response({'detail': _(u"Update success")},
-                                status=response_status.HTTP_200_OK)

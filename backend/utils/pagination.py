@@ -17,3 +17,17 @@ class Pagination:
         self.root_queryset = queryset
         self.show_all = False
         self.show_full_result_count = True
+
+
+def build_result_pagination(self, _PAGINATOR, serializer):
+    result = {
+        'offset': _PAGINATOR.offset,
+        'limit': _PAGINATOR.limit,
+        'per_page': settings.PAGINATION_PER_PAGE,
+        'total': _PAGINATOR.count,
+        'previous': _PAGINATOR.get_previous_link(),
+        'next': _PAGINATOR.get_next_link(),
+        'results': serializer.data,
+    }
+    
+    return result

@@ -1,25 +1,35 @@
+from django.db import transaction
 from django.db.models import Q, Prefetch
+from django.db.models.query import QuerySet
 from django.utils.translation import ugettext_lazy as _
 
 from rest_framework import serializers
 
 from utils.generals import get_model
+from utils.mixin.api import (
+    DynamicFieldsModelSerializer, 
+    ListSerializerUpdateMappingField, 
+    WritetableFieldPutMethod
+)
 from apps.resume.utils.constants import DRAFT
 
 Experience = get_model('resume', 'Experience')
 
 
-class ExperienceListSerializer(serializers.ListSerializer):
+class ExperienceListSerializer(ListSerializerUpdateMappingField, serializers.ListSerializer):
     def to_representation(self, value):
         request = self.context.get('request')
-        if hasattr(value, 'exists') and value.exists():
+        
+        if isinstance(value, QuerySet):
             value = value.prefetch_related(Prefetch('user')) \
                 .select_related('user') \
                 .exclude(~Q(user__uuid=request.user.uuid) & Q(status=DRAFT))
+
         return super().to_representation(value)
 
 
-class ExperienceSerializer(serializers.ModelSerializer):
+class ExperienceSerializer(DynamicFieldsModelSerializer, WritetableFieldPutMethod,
+                           serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='resume:experience-detail',
                                                lookup_field='uuid', read_only=True)
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
@@ -33,10 +43,6 @@ class ExperienceSerializer(serializers.ModelSerializer):
         instance = self.Meta.model(**attrs)
         instance.clean()
         return attrs
-
-    def to_internal_value(self, data):
-        data = super().to_internal_value(data)
-        return data
 
     def to_representation(self, value):
         request = self.context.get('request')

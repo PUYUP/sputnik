@@ -15,7 +15,7 @@ class AbstractEducation(models.Model):
     update_date = models.DateTimeField(auto_now=True, null=True)
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                             related_name='educations')
+                             related_name='education')
     attachments = GenericRelation('resume.Attachment', content_type_field='content_type',
                                   object_id_field='object_id', related_query_name='education')
 

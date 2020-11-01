@@ -41,6 +41,8 @@
 {% endblock %}
 
 {% block js %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+
     <script type="text/javascript">
         window.addEventListener('DOMContentLoaded', function() {
             var verifyCode = Cookies.get('person_verifycode_validation'),
@@ -90,7 +92,11 @@
                     },
                     error: function(error) {
                         if (error && error?.responseJSON) {
-                            alert(error?.responseJSON?.detail);
+                            Swal.fire(
+                                'Kesalahan',
+                                error?.responseJSON?.detail,
+                                'warning'
+                            );
                         }
                     }
                 });
@@ -123,11 +129,19 @@
                             {expires: COOKIE_AGE, path: '/', secure: {% if request.is_secure %}true{% else %}false{% endif %}}
                         );
 
-                        alert("{% trans 'Kode verifikasi berhasil dikirim ulang' noop %}");
+                        Swal.fire(
+                            'Informasi',
+                            "{% trans 'Kode verifikasi berhasil dikirim ulang' noop %}",
+                            'success'
+                        );
                     },
                     error: function(error) {
                         if (error && error?.responseJSON) {
-                            alert(error?.responseJSON?.detail);
+                            Swal.fire(
+                                'Kesalahan',
+                                error?.responseJSON?.detail,
+                                'warning'
+                            );
                         }
                     }
                 });

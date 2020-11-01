@@ -14,8 +14,8 @@ class ScopeSerializer(serializers.ModelSerializer):
 
 
 class TopicSerializer(serializers.ModelSerializer):
-    scopes = serializers.SlugRelatedField(many=True, read_only=True,
-                                          slug_field='label')
+    scope = serializers.SlugRelatedField(many=True, read_only=True,
+                                         slug_field='label')
 
     class Meta:
         model = Topic

@@ -1,11 +1,11 @@
-{% extends 'v1/base/base-consultant.html' %}
+{% extends 'v1/base/base-user.html' %}
 {% load i18n %}
 
 {% block head_title %}{% trans "Keamanan" noop %}{% endblock %}
 
 {% block main %}
     <div class="uk-width-1-1">
-        <h6 class="uk-text-uppercase uk-content-title"><strong>{% trans 'Keamanan' noop %}</strong></h6>
+        <h6 class="text-uppercase font-weight-bold">{% trans 'Keamanan' noop %}</h6>
 
         <ul class="nav nav-tabs small" id="myTab" role="tablist">
             <li class="nav-item" role="presentation">
@@ -374,7 +374,11 @@
                     },
                     error: function(error) {
                         if (error && error?.responseJSON) {
-                            alert(error?.responseJSON?.detail);
+                            Swal.fire(
+                                'Kesalahan',
+                                error?.responseJSON?.detail,
+                                'warning'
+                            );
                         }
                     }
                 });
@@ -398,7 +402,11 @@
                         window.username = response?.username;
                         window.msisdn = response?.msisdn;
 
-                        alert('Update berhasil');
+                        Swal.fire(
+                            'Informasi',
+                            'Update berhasil',
+                            'success'
+                        );
                     },
                     error: function(error) {
                         var errorJSON = error?.responseJSON;
@@ -482,7 +490,11 @@
                     data: {...param},
                     cache: false,
                     success: function(response) {
-                        alert('Kata sandi berhasil diperbarui');
+                        Swal.fire(
+                            'Informasi',
+                            'Kata sandi berhasil diperbarui',
+                            'success'
+                        );
                         window.location.href = "{% url 'person_view:login' %}";
                     },
                     error: function(error) {

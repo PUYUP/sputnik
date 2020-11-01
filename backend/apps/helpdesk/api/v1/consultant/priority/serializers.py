@@ -2,12 +2,21 @@ from apps.helpdesk.models.models import SLA
 from rest_framework import serializers
 
 from utils.generals import get_model
-from apps.helpdesk.api.fields import DynamicFieldsModelSerializer
+from utils.mixin.api import (
+    DynamicFieldsModelSerializer, 
+    ListSerializerUpdateMappingField,
+    WritetableFieldPutMethod
+)
 
 Priority = get_model('helpdesk', 'Priority')
 
 
-class PrioritySerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
+class PriorityListSerializer(ListSerializerUpdateMappingField, serializers.ListSerializer):
+    pass
+
+
+class PrioritySerializer(DynamicFieldsModelSerializer, WritetableFieldPutMethod,
+                         serializers.ModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name='helpdesk_api:consultant:priority-detail',
                                                lookup_field='uuid', read_only=True)
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
@@ -15,6 +24,7 @@ class PrioritySerializer(DynamicFieldsModelSerializer, serializers.ModelSerializ
 
     class Meta:
         model = Priority
+        list_serializer_class = PriorityListSerializer
         fields = '__all__'
 
     def to_representation(self, value):

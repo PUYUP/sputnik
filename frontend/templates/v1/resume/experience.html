@@ -1,12 +1,10 @@
-{% extends 'v1/base/base-consultant.html' %}
+{% extends 'v1/base/base-user.html' %}
 {% load i18n static %}
 
 {% block head_title %}{% trans 'Pengalaman Kerja' noop %}{% endblock %}
 
 {% block main %}
-    <h6 class="uk-text-uppercase uk-content-title m-0-top">
-        <strong>{% trans 'Pengalaman Kerja' noop %}</strong>
-    </h6>
+    <h6 class="text-uppercase font-weight-bold">{% trans 'Pengalaman Kerja' noop %}</h6>
 
     <button type="button" id="add-item" class="btn btn-info pr-3 pl-3 btn-sm mb-3">
         {% trans 'Tambah' %}
@@ -52,12 +50,12 @@
                                 {% csrf_token %}
 
                                 <div class="form-group">
-                                    <label for="title">{% trans 'Jabatan' %} *</label>
+                                    <label for="title">{% trans 'Jabatan' noop %} *</label>
                                     <input class="form-control" type="text" id="title" name="title" placeholder="CTO Tanya Pakar" autocomplete="off" required>
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="employment">{% trans 'Jenis pekerjaan' %} *</label>
+                                    <label for="employment">{% trans 'Jenis pekerjaan' noop %} *</label>
                                     <select id="employment" class="form-control" name="employment" required>
                                         <option value="">{% trans 'Pilih salah satu' %}</option>
                                         ${employmentOptions}
@@ -65,12 +63,12 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="company">{% trans 'Perusahaan' %}</label>
+                                    <label for="company">{% trans 'Perusahaan' noop %}</label>
                                     <input class="form-control" type="text" id="company" name="company" placeholder="PT Tanya Pakar" autocomplete="off">
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="location">{% trans 'Lokasi' %}</label>
+                                    <label for="location">{% trans 'Lokasi' noop %} *</label>
                                     <input class="form-control" type="text" id="location" name="location" placeholder="Kota Jambi" autocomplete="off" required>
                                 </div>
 
@@ -78,7 +76,7 @@
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="currently" name="currently">
                                         <label class="form-check-label" for="currently">
-                                            {% trans 'Masih kerja disini' %}
+                                            {% trans 'Masih kerja disini' noop %}
                                         </label>
                                     </div>
                                 </div>
@@ -86,7 +84,7 @@
                                 <div class="row">
                                     <div class="col-6">
                                         <div class="form-group">
-                                            <label>{% trans 'Mulai bekerja' %} *</label>
+                                            <label>{% trans 'Mulai bekerja' noop %} *</label>
                                             
                                             <div class="row row-small">
                                                 <div class="col-6">
@@ -124,7 +122,7 @@
                                 </div>
 
                                <div class="form-group">
-                                    <label for="description">{% trans 'Keterangan' %}</label>
+                                    <label for="description">{% trans 'Keterangan' noop %}</label>
                                     <textarea class="form-control" id="description" name="description" placeholder="Keterangan tambahan jika ada..." autocomplete="off"></textarea>
                                 </div>
 
@@ -132,13 +130,13 @@
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="status" name="status" value="publish" checked>
                                         <label class="form-check-label" for="status">
-                                            {% trans 'Terbitkan' %}
+                                            {% trans 'Terbitkan' noop %}
                                         </label>
                                     </div>
                                 </div>
 
                                 <div class="text-right">
-                                    <button type="submit" class="btn btn-info pl-3 pr-3">{% trans 'Simpan' %}</button>
+                                    <button type="submit" class="btn btn-info pl-3 pr-3">{% trans 'Simpan' noop %}</button>
                                 </div>
                             </form>
                         </div>
@@ -242,8 +240,8 @@
 
             var doSorting = function(param) {
                 $.ajax({
-                    method: 'PATCH',
-                    url: API_ENDPOINT + 'resume/experiences/bulk-updates/',
+                    method: 'PUT',
+                    url: API_ENDPOINT + 'resume/experiences/',
                     headers: {'X-CSRFToken': Cookies.get('csrftoken')},
                     xhrFields: {withCredentials: true},
                     contentType: 'application/json; charset=utf-8',
@@ -281,6 +279,9 @@
                 // set to false if currently not true
                 if (!hasCurrently) param['currently'] = false;
                 if (!hasStatus) param['status'] = 'draft';
+
+                if (!param['end_month']) param['end_month'] = null;
+                if (!param['end_year']) param['end_year'] = null;
 
                 if (uuid) {
                     doUpdate(param, uuid);
@@ -417,7 +418,7 @@
                     cache: false,
                     success: function(response) {
                         Swal.fire(
-                            'Berhasil!',
+                            'Informasi',
                             'Data telah dihapus permanen.',
                             'success'
                         )
@@ -437,9 +438,9 @@
                     json = (data ? JSON.parse(data) : {});
                 
                 $($modalEl).appendTo('body');
-                $('#modal-form').modal('show');
 
-                $(document).on('shown.bs.modal', '#modal-form', function() {
+                $('#modal-form').modal('show');
+                $('#modal-form').on('shown.bs.modal', function() {
                     var $thisModal = $(this);
 
                     $.each(json, function(n, v) {
@@ -461,6 +462,11 @@
                 });
 
                 $('#modal-form button[type="submit"]').attr('data-uuid', json.uuid);
+            });
+
+            $(document).on('hidden.bs.modal', '#modal-form', function() {
+                $(this).modal('dispose');
+                $(this).remove();
             });
         });
     </script>

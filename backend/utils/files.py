@@ -1,10 +1,11 @@
 import os
 import calendar
 import time
-import datetime
 
 from django.core.files.storage import FileSystemStorage
 from django.template.defaultfilters import slugify
+
+ALLOWED_EXTENSIONS = ['.jpeg', '.jpg', '.png', '.pdf', '.docx']
 
 
 class FileSystemStorageExtend(FileSystemStorage):
@@ -16,7 +17,6 @@ class FileSystemStorageExtend(FileSystemStorage):
 
         instance = kwargs.get('instance', None)
         content_type = slugify(instance.content_type)
-        content_object = instance.content_object
         object_uuid = instance.uuid
         timestamp = calendar.timegm(time.gmtime())
         filename = '{0}_{1}_{2}_{3}'.format(
@@ -27,32 +27,13 @@ class FileSystemStorageExtend(FileSystemStorage):
                 dirname, self.get_valid_name(slugify(filename)+file_ext)))
 
 
-def directory_image_path(instance, filename):
-    fs = FileSystemStorageExtend()
-    year = datetime.date.today().year
-    month = datetime.date.today().month
-    filename = fs.generate_filename(filename, instance=instance)
+def handle_upload_attachment(instance, file):
+    if instance and file:
+        name, ext = os.path.splitext(file.name)
+        filename_slug = slugify(name)
+        model_name = instance.content_type.model
 
-    # Will be 'files/2019/10/filename.jpg
-    return 'images/{0}/{1}/{2}'.format(year, month, filename)
-
-
-def directory_file_path(instance, filename):
-    fs = FileSystemStorageExtend()
-    year = datetime.date.today().year
-    month = datetime.date.today().month
-    filename = fs.generate_filename(filename, instance=instance)
-
-    # Will be 'files/2019/10/filename.jpg
-    return 'files/{0}/{1}/{2}'.format(year, month, filename)
-
-
-def material_upload_path(instance, filename):
-    fs = FileSystemStorageExtend()
-    year = datetime.date.today().year
-    month = datetime.date.today().month
-    filename = fs.generate_filename(filename, instance=instance)
-    dir_path = instance.lecture.material_type
-
-    # Will be 'files/2019/10/video/filename.mp4
-    return 'materials/{0}/{1}/{2}/{3}'.format(year, month, filename, dir_path)
+        instance.type = ext
+        instance.file.save('%s-%s%s' % (model_name, filename_slug, ext), file, save=False)
+        instance.label = instance.file.name
+        instance.save(update_fields=['label', 'file', 'type'])

@@ -1,3 +1,6 @@
+import operator
+from functools import reduce
+
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Prefetch, Q, Case, When, Value
@@ -35,6 +38,7 @@ from ..profile.serializers import ProfileSerializer
 
 # GET MODELS FROM GLOBAL UTILS
 from utils.generals import get_model
+from utils.pagination import build_result_pagination
 from apps.person.utils.permissions import IsCurrentUserOrReject
 from apps.person.utils.auth import validate_username
 from apps.person.utils.constants import PASSWORD_RECOVERY
@@ -56,7 +60,7 @@ class UserApiView(viewsets.ViewSet):
         If :email NOT provide :msisdn required
 
         {
-            "roles": [
+            "role": [
                 {"identifier": "student"}
             ],
             "password": "string with special character",
@@ -99,15 +103,16 @@ class UserApiView(viewsets.ViewSet):
 
     # Get a object
     def get_object(self, is_update=False):
-        queryset = User.objects
+        queryset = User.objects \
+            .prefetch_related(Prefetch('education'), Prefetch('certificate'),
+                              Prefetch('experience'), Prefetch('expertise'),
+                              Prefetch('expertise__topic'))
 
         try:
             if is_update:
                 queryset = queryset.select_for_update().get(uuid=self.uuid)
             else:
-                queryset = queryset.prefetch_related(Prefetch('educations'), Prefetch('certificates'),
-                                                     Prefetch('experiences')) \
-                    .get(uuid=self.uuid)
+                queryset = queryset.get(uuid=self.uuid)
         except ObjectDoesNotExist:
             raise NotFound()
 
@@ -115,33 +120,37 @@ class UserApiView(viewsets.ViewSet):
 
     # Many objects
     def get_objects(self):
-        queryset = User.objects.prefetch_related(Prefetch('account'), Prefetch('profile')) \
-            .select_related('account', 'profile') \
-            .all()
+        queryset = User.objects.prefetch_related(Prefetch('account'), Prefetch('profile'),
+                                                 Prefetch('expertise'), Prefetch('expertise__topic')) \
+            .select_related('account', 'profile')
         return queryset
-
-    # Return a response
-    def get_response(self, serializer, serializer_parent=None):
-        response = dict()
-        response['count'] = _PAGINATOR.count
-        response['per_page'] = settings.PAGINATION_PER_PAGE
-        response['navigate'] = {
-            'offset': _PAGINATOR.offset,
-            'limit': _PAGINATOR.limit,
-            'previous': _PAGINATOR.get_previous_link(),
-            'next': _PAGINATOR.get_next_link(),
-        }
-        response['results'] = serializer.data
-        return Response(response, status=response_status.HTTP_200_OK)
 
     # All Users
     def list(self, request, format=None):
         context = {'request': self.request}
+        role = request.query_params.get('role')
+        expertise = request.query_params.get('expertise')
+        keyword = request.query_params.get('keyword')
         queryset = self.get_objects()
+
+        if role:
+            queryset = queryset.filter(role__identifier__in=[role])
+
+        if keyword:
+            queryset = queryset.filter(Q(username__icontains=keyword)
+                                       | Q(first_name__icontains=keyword))
+
+        if expertise:
+            queryset = queryset.filter(reduce(operator.or_, (Q(
+                expertise__topic__label__icontains=x) for x in expertise.split(',')))) \
+            .distinct()
+
         queryset_paginator = _PAGINATOR.paginate_queryset(queryset, request)
         serializer = UserSerializer(queryset_paginator, many=True, context=context,
-                                    fields=('uuid', 'username', 'url', 'profile',))
-        return self.get_response(serializer)
+                                    fields_used=('uuid', 'username', 'url', 'profile',
+                                                 'permalink', 'expertise_label',))
+        pagination_result = build_result_pagination(self, _PAGINATOR, serializer)
+        return Response(pagination_result, status=response_status.HTTP_200_OK)
 
     # Single User
     def retrieve(self, request, uuid=None, format=None):
@@ -149,12 +158,12 @@ class UserApiView(viewsets.ViewSet):
         queryset = self.get_object()
 
         # limit when other user see the user
-        fields = ('__all__')
+        fields_used = ('__all__')
         if str(request.user.uuid) != uuid:
-            fields = ('uuid', 'username', 'url', 'profile', 'first_name',
-                      'educations', 'certificates', 'experiences', 'expertises',)
+            fields_used = ('uuid', 'username', 'url', 'profile', 'first_name',
+                      'education', 'certificate', 'experience', 'expertise',)
 
-        serializer = UserSerializer(queryset, many=False, context=context, fields=fields)
+        serializer = UserSerializer(queryset, many=False, context=context, fields_used=fields_used)
         return Response(serializer.data, status=response_status.HTTP_200_OK)
 
     # Get verifycode object
@@ -203,7 +212,10 @@ class UserApiView(viewsets.ViewSet):
             url_path='check-email', url_name='check-email')
     def check_email(self, request):
         """
-        Params:
+        POST
+        ------------------
+
+        Param:
 
             {
                 "email": "my@email.com"
@@ -250,7 +262,10 @@ class UserApiView(viewsets.ViewSet):
             url_path='check-msisdn', url_name='check-msisdn')
     def check_msisdn(self, request):
         """
-        Params:
+        POST
+        ------------------
+
+        Param:
 
             {
                 "msisdn": "1234567890"
@@ -288,7 +303,10 @@ class UserApiView(viewsets.ViewSet):
             url_path='check-account', url_name='check-account')
     def check_account(self, request):
         """
-        Params:
+        POST
+        ------------------
+
+        Param:
 
             {
                 "account": "my@email.com / username / msisdn"
@@ -331,7 +349,10 @@ class UserApiView(viewsets.ViewSet):
             url_path='check-username', url_name='check-username')
     def check_username(self, request):
         """
-        Params:
+        POST
+        ------------------
+
+        Param:
 
             {
                 "username": "string"
@@ -390,6 +411,11 @@ class UserApiView(viewsets.ViewSet):
             url_path='account', url_name='account')
     def account(self, request, uuid=None):
         """
+        POST
+        ------------------
+
+        Param;
+
             {
                 "msisdn": "0144151511"
             }
@@ -419,7 +445,10 @@ class UserApiView(viewsets.ViewSet):
             url_path='password-recovery', url_name='password-recovery')
     def password_recovery(self, request):
         """
-        Params:
+        POST
+        ------------------
+
+        Param:
 
             {
                 "token": "string",
@@ -507,7 +536,7 @@ class TokenObtainPairSerializerExtend(TokenObtainPairSerializer):
             data['email'] = self.user.email
             data['msisdn'] = self.user.account.msisdn
             data['picture'] = picture_url
-            data['roles'] = self.user.roles_identifier()
+            data['role'] = self.user.role_identifier()
         return data
 
 

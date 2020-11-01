@@ -1,3 +1,4 @@
+import uuid
 from django.conf import settings
 from django.views import View
 from django.shortcuts import render
@@ -33,4 +34,14 @@ class SecurityView(View):
     context = dict()
 
     def get(self, request):
+        return render(request, self.template_name, self.context)
+
+
+@method_decorator(login_required, name='dispatch')
+class UserDetailView(View):
+    template_name = _APP_VERSION + '/person/user/detail.html'
+    context = dict()
+
+    def get(self, request, uuid=None):
+        self.context['uuid'] = uuid
         return render(request, self.template_name, self.context)

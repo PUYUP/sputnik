@@ -31,6 +31,33 @@ label { margin-bottom: .15rem; }
 }
 
 /***
+ * Fullcalendar
+ */
+.fc-theme-standard td, 
+.fc-theme-standard th {
+    font-size: 13px;
+}
+
+.fc-daygrid-dot-event {
+    padding: 0 !important;
+}
+
+/***
+ * DataTable
+ */
+.dataTables_filter {
+    margin-left: -10px;
+    margin-right: -10px;
+}
+
+.dataTables_filter > label {
+    width: 50%;
+    padding-left: 10px;
+    padding-right: 10px;
+    margin-bottom: 10px;
+}
+
+/***
  * App
  */
 #sideMenu > li:not(.collapsed) .chevron {
@@ -122,6 +149,10 @@ label { margin-bottom: .15rem; }
         padding-left: 0;
         margin-top: 25px;
         padding-top: 25px;
+    }
+
+    .dataTables_filter > label {
+        width: 100%;
     }
 }
 

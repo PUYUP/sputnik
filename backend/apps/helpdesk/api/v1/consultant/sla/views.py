@@ -14,7 +14,7 @@ from rest_framework.decorators import action
 
 from utils.generals import get_model
 from apps.helpdesk.api.v1.consultant.sla.serializers import SLASerializer
-from apps.helpdesk.utils.permissions import IsConsultantOnly
+from apps.helpdesk.utils.permissions import IsConsultantOnly, IsObjectOwnerOrReject, IsResumeCompleteOrReject
 
 SLA = get_model('helpdesk', 'SLA')
 
@@ -38,13 +38,13 @@ class SLAApiView(viewsets.ViewSet):
         {
             "segment": "85eab55d-9466-4029-8725-10405d5594cd",
             "label": "abc",
-            "summary": null,
+            "description": null,
             "promise": "saa",
             "secret_content": null,
             "grace_periode": 10,
             "cost": 10000,
             "is_active": true,
-            "priorities": [
+            "priority": [
                 {"identifier": "high", "label": "Penting", "cost": 1000}
             ]
         }
@@ -56,45 +56,61 @@ class SLAApiView(viewsets.ViewSet):
 
         {
             "label": "abc",
-            "summary": null,
+            "description": null,
             "promise": "saa",
             "secret_content": null,
             "grace_periode": 10,
             "cost": 10000,
             "is_active": true,
-            "priorities": [
+            "priority": [
                 {"uuid": "uuid.v4", "identifier": "high", "label": "Penting", "cost": 1000}
             ]
         }
     """
     lookup_field = 'uuid'
-    permission_classes = (IsAuthenticated, IsConsultantOnly,)
+    permission_classes = (IsAuthenticated, IsConsultantOnly, IsResumeCompleteOrReject,)
+    permission_action = {
+        'partial_update': [IsAuthenticated, IsObjectOwnerOrReject],
+        'destroy': [IsAuthenticated, IsObjectOwnerOrReject],
+    }
+
+    def get_permissions(self):
+        """
+        Instantiates and returns
+        the list of permissions that this view requires.
+        """
+        try:
+            # return permission_classes depending on `action`
+            return [permission() for permission in self.permission_action
+                    [self.action]]
+        except KeyError:
+            # action is not set return default permission_classes
+            return [permission() for permission in self.permission_classes]
 
     def initialize_request(self, request, *args, **kwargs):
         self.user = request.user
-        self.uuid = kwargs.get('uuid', None)
         return super().initialize_request(request, *args, **kwargs)
 
-    def get_object(self, is_update=False):
-        queryset = SLA.objects \
-            .prefetch_related(Prefetch('user'), Prefetch('segment'), Prefetch('schedule')) \
-            .select_related('user', 'segment', 'schedule')
+    @property
+    def queryset(self):
+        q = SLA.objects \
+            .prefetch_related(Prefetch('user'), Prefetch('segment')) \
+            .select_related('user', 'segment')
+        return q
 
+    def get_object(self, uuid=None, is_update=False):
         try:
             if is_update:
-                queryset = queryset.select_for_update().get(uuid=self.uuid, user__uuid=self.user.uuid)
+                queryset = self.queryset.select_for_update().get(uuid=uuid)
             else:
-                queryset = queryset.get(uuid=self.uuid, user__uuid=self.user.uuid)
+                queryset = self.queryset.get(uuid=uuid)
         except (ValidationError, Exception) as e:
             raise NotAcceptable(detail=str(e))
         return queryset
 
     def get_objects(self, segment_uuid=None):
-        queryset = SLA.objects
-
-        # If current user not creator show only PUBLISH status
         try:
-            queryset = queryset.prefetch_related(Prefetch('schedule'), Prefetch('priorities'),
+            queryset = self.queryset.prefetch_related(Prefetch('schedule'), Prefetch('priority'),
                                                  Prefetch('user'), Prefetch('segment')) \
                 .select_related('schedule', 'segment', 'user') \
                 .filter(user__uuid=self.user.uuid, segment__uuid=segment_uuid)
@@ -104,8 +120,9 @@ class SLAApiView(viewsets.ViewSet):
 
     def list(self, request, format=None):
         context = {'request': request}
-        query_params = request.query_params
-        segment_uuid = query_params.get('segment_uuid')
+        segment_uuid = request.query_params.get('segment_uuid')
+        if not segment_uuid:
+            raise NotAcceptable({'segment_uuid': _("Param segment_uuid required!")})
 
         queryset = self.get_objects(segment_uuid=segment_uuid)
         serializer = SLASerializer(queryset, many=True, context=context)
@@ -113,7 +130,7 @@ class SLAApiView(viewsets.ViewSet):
 
     def retrieve(self, request, uuid=None, format=None):
         context = {'request': request}
-        queryset = self.get_object()
+        queryset = self.get_object(uuid=uuid)
         serializer = SLASerializer(queryset, many=False, context=context)
         return Response(serializer.data, status=response_status.HTTP_200_OK)
 
@@ -126,7 +143,7 @@ class SLAApiView(viewsets.ViewSet):
             try:
                 serializer.save()
             except (IntegrityError, ValidationError, Exception) as e:
-                raise NotAcceptable(detail=repr(e))
+                raise NotAcceptable(detail=str(e))
             return Response(serializer.data, status=response_status.HTTP_201_CREATED)
         return Response(serializer.errors, status=response_status.HTTP_403_FORBIDDEN)
 
@@ -134,23 +151,27 @@ class SLAApiView(viewsets.ViewSet):
     @method_decorator(never_cache)
     def partial_update(self, request, uuid=None, format=None):
         context = {'request': request}
-        queryset = self.get_object(is_update=True)
+        queryset = self.get_object(uuid=uuid, is_update=True)
+
+        self.check_object_permissions(request, queryset)
+    
         serializer = SLASerializer(queryset, data=request.data, partial=True, context=context)
         if serializer.is_valid(raise_exception=True):
             try:
                 serializer.save()
             except (IntegrityError, ValidationError, Exception) as e:
-                raise NotAcceptable(detail=repr(e))
+                raise NotAcceptable(detail=str(e))
             return Response(serializer.data, status=response_status.HTTP_200_OK)
         return Response(serializer.errors, status=response_status.HTTP_403_FORBIDDEN)
 
     @transaction.atomic
     @method_decorator(never_cache)
     def destroy(self, request, uuid=None, format=None):
-        queryset = self.get_object()
+        queryset = self.get_object(uuid=uuid)
+
+        self.check_object_permissions(request, queryset)
 
         # execute delete
         queryset.delete()
-        return Response(
-            {'detail': _("Delete success!")},
-            status=response_status.HTTP_204_NO_CONTENT)
+        return Response({'detail': _("Delete success!")},
+                        status=response_status.HTTP_204_NO_CONTENT)

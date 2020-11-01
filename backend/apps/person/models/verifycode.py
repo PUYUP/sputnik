@@ -74,8 +74,7 @@ class AbstractVerifyCode(models.Model):
     :is_expired; expired
     """
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                             null=True, blank=True, related_name='verifycodes',
-                             related_query_name='verifycode')
+                             null=True, blank=True, related_name='verifycode')
 
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     create_date = models.DateTimeField(auto_now_add=True, null=True)

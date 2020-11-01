@@ -45,12 +45,10 @@ CLASSIFY_CHOICES = (
 ACCEPT = 'accept'
 REJECT = 'reject'
 WAITING = 'waiting'
-CANCEL = 'cancel'
 ASSIGN_STATUS = (
     (ACCEPT, _("Accept")),
     (REJECT, _("Reject")),
     (WAITING, _("Waiting")),
-    (CANCEL, _("Cancel")),
 )
 
 CREATED = 'created'
@@ -100,6 +98,7 @@ RRULE_MODE_CHOICES = (
 )
 
 
+BYDATE = 'bydate'
 BYWEEKDAY = 'byweekday'
 BYMONTH = 'bymonth'
 BYSETPOS = 'bysetpos'
@@ -116,6 +115,7 @@ LATE_BOOKING = 'late_booking'
 ASSIGN_EXTRA_COST = 'extra_cost'
 
 RRULE_IDENTIFIER_CHOICES = (
+    (BYDATE, _("Bydate")),
     (BYWEEKDAY, _("Byweekday")),
     (BYMONTH, _("Bymonth")),
     (BYSETPOS, _("Bysetpos")),
@@ -129,12 +129,12 @@ RRULE_IDENTIFIER_CHOICES = (
 )
 
 
-_X = (
-    (LATE_PAYMENT, _("Late Payment")),
-    (LATE_BOOKING, _("Late Booking")),
-    (ASSIGN_EXTRA_COST, ("Extra Cost")),
+RECUR = 'recur'
+ONCE = 'once'
+RRULE_RECURRENCE_CHOICES = (
+    (RECUR, _("Recur")),
+    (ONCE, _("Once")),
 )
-
 
 # RRule types
 VARCHAR = "varchar"

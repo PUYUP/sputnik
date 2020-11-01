@@ -21,6 +21,32 @@
         </a>
     </li>
 
+    <li class="nav-item">
+        <a class="nav-link pr-0 pl-0 position-relative {% if url_name == 'schedule' or url_name == 'schedule_detail' or url_name == 'schedule_calendar' %}active text-dark{% endif %}" href="{% url 'helpdesk_view:consultant:schedule' %}">
+            <div class="d-flex w-100 align-items-center">
+                <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-calendar-week" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
+                    <path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm-3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm-5 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z"/>
+                </svg>
+
+                <span class="ml-2">{% trans "Jadwal" noop %}</span>
+            </div>
+        </a>
+    </li>
+
+    <li class="nav-item">
+        <a class="nav-link pr-0 pl-0 position-relative" href="{% url 'person_view:client:dashboard' %}">
+            <div class="d-flex w-100 align-items-center">
+                <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-chat-right-text" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M2 1h12a1 1 0 0 1 1 1v11.586l-2-2A2 2 0 0 0 11.586 11H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zm12-1a2 2 0 0 1 2 2v12.793a.5.5 0 0 1-.854.353l-2.853-2.853a1 1 0 0 0-.707-.293H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h12z"/>
+                    <path fill-rule="evenodd" d="M3 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 6a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 6zm0 2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/>
+                </svg>
+
+                <span class="ml-2">{% trans "Konsultasi" noop %}</span>
+            </div>
+        </a>
+    </li>
+
     <li class="nav-item {% if url_name == 'profile' or url_name == 'security' %}collapsed{% endif %}">
         <a class="nav-link pr-0 pl-0 position-relative" href="#" data-toggle="collapse" data-target="#collapseAccount">
             <div class="d-flex w-100 align-items-center">
@@ -90,35 +116,6 @@
         </div>
     </li>
 
-    <li class="nav-item {% if url_name == 'schedule' or url_name == 'schedule_detail' %}collapsed{% endif %}">
-        <a class="nav-link pr-0 pl-0 position-relative" href="#" data-toggle="collapse" data-target="#collapseCalendar">
-            <div class="d-flex w-100 align-items-center">
-                <div class="mr-auto">
-                    <div class="d-flex w-100 align-items-center">
-                        <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-calendar-week" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                            <path fill-rule="evenodd" d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
-                            <path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm-3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm-5 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1zm3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z"/>
-                        </svg>
-
-                        <span class="ml-2">{% trans "Kalender" noop %}</span>
-                    </div>
-                </div>
-
-                <span class="chevron"></span>
-            </div>
-        </a>
-
-        <div id="collapseCalendar" class="collapse {% if url_name == 'schedule' or url_name == 'schedule_detail' %}show{% endif %}" data-parent="#sideMenu">
-            <ul class="list-unstyled pl-4">
-                <li>
-                    <a href="{% url 'helpdesk_view:consultant:schedule' %}" class="d-block pt-1 pb-1 {% if url_name == 'schedule' or url_name == 'schedule_detail' %}text-dark{% endif %}">{% trans "Jadwal" noop %}</a>
-                </li>
-
-                <li><a href="#">Libur</a></li>
-            </ul>
-        </div>
-    </li>
-
     <li class="dropdown-divider"></li>
 
     <li class="nav-item">
@@ -146,24 +143,3 @@
         </a>
     </li>
 </ul>
-
-<!--
-<ul class="uk-nav-default uk-nav-parent-icon" uk-nav>
-
-    <li class="uk-parent">
-        <a href="#"><span class="uk-margin-small-right" uk-icon="icon: comment"></span> Konsultasi</a>
-        <ul class="uk-nav-sub">
-            <li><a href="#">Baru</a></li>
-            <li><a href="#">Saat Ini</a></li>
-            <li><a href="#">Tertunda</a></li>
-            <li><a href="#">Selesai</a></li>
-            <li><a href="#">Menolak</a></li>
-        </ul>
-    </li>
-
-    <li class="uk-nav-header">Lain-lain</li>
-    <li><a href="#"><span class="uk-margin-small-right" uk-icon="icon: question"></span> Petunjuk</a></li>
-    <li class="uk-nav-divider"></li>
-    <li><a href=""><span class="uk-margin-small-right" uk-icon="icon: sign-out"></span> Keluar</a></li>
-</ul>
--->

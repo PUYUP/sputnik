@@ -46,12 +46,12 @@ if not is_model_registered('person', 'Role'):
 
 
 # 3
-if not is_model_registered('person', 'RoleCapabilities'):
-    class RoleCapabilities(AbstractRoleCapabilities):
-        class Meta(AbstractRoleCapabilities.Meta):
-            db_table = 'person_role_capabilities'
+if not is_model_registered('person', 'RoleCapability'):
+    class RoleCapability(AbstractRoleCapability):
+        class Meta(AbstractRoleCapability.Meta):
+            db_table = 'person_role_capability'
 
-    __all__.append('RoleCapabilities')
+    __all__.append('RoleCapability')
 
 
 # 4

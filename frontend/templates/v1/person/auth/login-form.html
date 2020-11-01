@@ -12,11 +12,10 @@
     </div>
 </form>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
 <script type="text/javascript">
-    var account;
-
     window.addEventListener('DOMContentLoaded', function() {
-        account = Cookies.get('person_login');
+        var account = Cookies.get('person_login');
         if (account) $('input#account').val(account);
 
         // SUBMIT FORM
@@ -49,7 +48,11 @@
                 },
                 error: function(error) {
                     if (error && error?.responseJSON) {
-                        alert(error?.responseJSON?.detail);
+                        Swal.fire(
+                            'Kesalahan',
+                            error?.responseJSON?.detail,
+                            'warning'
+                        );
                     }
                 }
             });

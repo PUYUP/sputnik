@@ -40,14 +40,22 @@ class RootApiView(APIView):
                 'consultant': {
                     'schedules': reverse('helpdesk_api:consultant:schedule-list', request=request,
                                          format=format, current_app='helpdesk_api:consultant'),
-                    'recurrences': reverse('helpdesk_api:consultant:recurrence-list', request=request,
-                                           format=format, current_app='helpdesk_api:consultant'),
+                    'schedulesterm': reverse('helpdesk_api:consultant:scheduleterm-list', request=request,
+                                             format=format, current_app='helpdesk_api:consultant'),
                     'rules': reverse('helpdesk_api:consultant:rule-list', request=request,
                                      format=format, current_app='helpdesk_api:consultant'),
+                    'rulesvalue': reverse('helpdesk_api:consultant:rulevalue-list', request=request,
+                                          format=format, current_app='helpdesk_api:consultant'),
                     'segments': reverse('helpdesk_api:consultant:segment-list', request=request,
                                         format=format, current_app='helpdesk_api:consultant'),
                     'slas': reverse('helpdesk_api:consultant:sla-list', request=request,
                                     format=format, current_app='helpdesk_api:consultant'),
+                    'priorities': reverse('helpdesk_api:consultant:priority-list', request=request,
+                                          format=format, current_app='helpdesk_api:consultant'),
+                },
+                'client': {
+                    'issues': reverse('helpdesk_api:client:issue-list', request=request,
+                                      format=format, current_app='helpdesk_api:client'),
                 }
             }
         })

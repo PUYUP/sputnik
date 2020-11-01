@@ -21,14 +21,14 @@
 
                             <div class="form-group">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="roles" id="client" value="client" required>
+                                    <input class="form-check-input" type="radio" name="role" id="client" value="client" required>
                                     <label class="form-check-label" for="client">
                                         {% trans "Klien" noop %}
                                     </label>
                                 </div>
 
                                 <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="roles" id="consultant" value="consultant" required>
+                                    <input class="form-check-input" type="radio" name="role" id="consultant" value="consultant" required>
                                     <label class="form-check-label" for="consultant">
                                         {% trans "Konsultan" noop %}
                                     </label>
@@ -76,6 +76,8 @@
 {% endblock %}
 
 {% block js %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+
     <script type="text/javascript">
         window.addEventListener('DOMContentLoaded', function() {
             var verifyCode = Cookies.get('person_verifycode_result'),
@@ -98,8 +100,8 @@
                 $.each(values, function(i, v) {
                     param[v.name] = v.value;
 
-                    // roles set as list object
-                    if (v.name == 'roles') {
+                    // role set as list object
+                    if (v.name == 'role') {
                         var role = {'identifier': v.value};
                         param[v.name] = [role];
                     }
@@ -109,7 +111,12 @@
                     password2 = param?.password2
     
                 if (password1 !== password2) {
-                    alert("{% trans 'Kata sandi tidak sama' %}");
+                    Swal.fire(
+                        'Kesalahan',
+                        "{% trans 'Kata sandi tidak sama' %}",
+                        'warning'
+                    );
+
                     return false;
                 }
 
@@ -152,7 +159,7 @@
                                 
                                 var el = $('#' + k);
                                 if (k === 'password') el = $('#password2');
-                                el.closest('.uk-margin').after('<p class="uk-text-small uk-text-danger uk-alert">' + message + '</p>');
+                                el.closest('.form-gorup').after('<p class="small">' + message + '</p>');
                             });
                         }
                     }
@@ -173,7 +180,11 @@
                     },
                     error: function(error) {
                         if (error && error?.responseJSON) {
-                            alert(error?.responseJSON?.detail);
+                            Swal.fire(
+                                'Kesalahan',
+                                error?.responseJSON?.detail,
+                                'warning'
+                            );
                         }
                     }
                 });

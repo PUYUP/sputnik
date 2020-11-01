@@ -10,7 +10,7 @@ User = get_model('person', 'User')
 Profile = get_model('person', 'Profile')
 Account = get_model('person', 'Account')
 Role = get_model('person', 'Role')
-RoleCapabilities = get_model('person', 'RoleCapabilities')
+RoleCapability = get_model('person', 'RoleCapability')
 VerifyCode = get_model('person', 'VerifyCode')
 Permission = get_model('auth', 'Permission')
 
@@ -24,12 +24,12 @@ class AccountInline(admin.StackedInline):
     readonly_fields = ('email',)
 
 
-class RoleCapabilitiesExtend(admin.ModelAdmin):
-    model = RoleCapabilities
-    filter_horizontal = ('permissions',)
+class RoleCapabilityExtend(admin.ModelAdmin):
+    model = RoleCapability
+    filter_horizontal = ('permission',)
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
-        if db_field.name == 'permissions':
+        if db_field.name == 'permission':
             kwargs['queryset'] = Permission.objects.prefetch_related(Prefetch('content_type')) \
                 .select_related('content_type')
         return super().formfield_for_manytomany(db_field, request, **kwargs)
@@ -46,13 +46,13 @@ class UserExtend(UserAdmin):
         (None, {'fields': ('username', 'password', 'email',)}),
         (_(u"Personal info"), {'fields': ('first_name', 'last_name',)}),
         (_(u"Permissions"), {
-            'fields': ('roles', 'is_active', 'is_staff', 'is_superuser',),
+            'fields': ('role', 'is_active', 'is_staff', 'is_superuser',),
         }),
         (_(u"Important dates"), {'fields': ('last_login', 'date_joined')}),
     )
     add_fieldsets = (
         (None, {
-            'fields': ('username', 'email', 'password1', 'password2', 'roles',)
+            'fields': ('username', 'email', 'password1', 'password2', 'role',)
         }),
     )
 
@@ -88,5 +88,5 @@ class VerifyCodeExtend(admin.ModelAdmin):
 
 
 admin.site.register(User, UserExtend)
-admin.site.register(RoleCapabilities, RoleCapabilitiesExtend)
+admin.site.register(RoleCapability, RoleCapabilityExtend)
 admin.site.register(VerifyCode, VerifyCodeExtend)

@@ -2,7 +2,8 @@ from django.urls import path, include
 from django.contrib.auth import views as auth_views
 
 from .consultant import urls as consultant_urls
-from .user import ProfileView, SecurityView
+from .client import urls as client_urls
+from .user import ProfileView, SecurityView, UserDetailView
 from .auth import (
     LoginPasswordView, LostPasswordRecoveryView, RegisterCaptureView,
     RegisterView, LoginView, LostPasswordView, VerifyCodeView
@@ -22,7 +23,11 @@ urlpatterns = [
     path('register/capture/', RegisterCaptureView.as_view(), name='register_capture'),
     path('profile/', ProfileView.as_view(), name='profile'),
     path('security/', SecurityView.as_view(), name='security'),
+    path('<uuid:uuid>/', UserDetailView.as_view(), name='user_detail'),
 
     # CONSULTANT URL's
     path('consultant/', include(consultant_urls, namespace='consultant')),
+
+    # CLIENT URL's
+    path('client/', include(client_urls, namespace='client')),
 ]

@@ -14,5 +14,5 @@ class ExpertiseView(View):
     context = dict()
 
     def get(self, request):
-        self.context['expertise_levels'] = choices_to_json(EXPERTISE_LEVELS)
+        self.context['level_choices'] = choices_to_json(EXPERTISE_LEVELS)
         return render(request, self.template_name, self.context)

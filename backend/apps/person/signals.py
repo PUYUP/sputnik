@@ -5,7 +5,7 @@ from django.db.models import Q, Case, When, Value
 
 from utils.generals import get_model
 from apps.person.utils.constants import ROLE_DEFAULTS
-from apps.person.utils.auth import set_roles
+from apps.person.utils.auth import set_role
 
 # Celery task
 from apps.person.tasks import send_verifycode_email
@@ -33,17 +33,17 @@ def user_save_handler(sender, instance, created, **kwargs):
             except IntegrityError:
                 pass
 
-        # Set roles if created by admin
-        roles = getattr(instance, 'roles_value', None)
-        if roles is None:
-            # Set roles on register
+        # Set role if created by admin
+        role = getattr(instance, 'role_input', None)
+        if role is None:
+            # Create role on register
             Role.objects.create(user=instance)
 
-            # set default roles
-            roles = list()
+            # set default role
+            role = list()
             for item in ROLE_DEFAULTS:
-                roles.append(item[0])
-        set_roles(user=instance, roles=roles)
+                role.append(item[0])
+        set_role(user=instance, role=role)
 
     if not created:
         # create Account if not exist

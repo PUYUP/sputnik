@@ -12,7 +12,7 @@ class AbstractScope(models.Model):
     update_date = models.DateTimeField(auto_now=True, null=True)
     label = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    topics = models.ManyToManyField('master.Topic', related_name='scopes')
+    topics = models.ManyToManyField('master.Topic', related_name='scope')
     is_active = models.BooleanField(default=True)
 
     class Meta:

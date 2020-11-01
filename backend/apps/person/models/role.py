@@ -6,8 +6,8 @@ from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import Permission
 
-from utils.validators import IDENTIFIER_VALIDATOR, non_python_keyword
-from apps.person.utils.constants import ROLES_ALLOWED, ROLE_IDENTIFIERS, REGISTERED
+from utils.validators import identifier_validator, non_python_keyword
+from apps.person.utils.constants import ROLE_ALLOWED, ROLE_IDENTIFIERS, REGISTERED
 
 try:
     _REGISTERED = REGISTERED
@@ -22,16 +22,16 @@ except NameError:
 
 class AbstractRole(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                             related_name='roles')
+                             related_name='role')
 
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     create_date = models.DateTimeField(auto_now_add=True, null=True)
     update_date = models.DateTimeField(auto_now=True, null=True)
     identifier = models.CharField(choices=_ROLE_IDENTIFIERS, default=_REGISTERED, max_length=255,
-                                  validators=[IDENTIFIER_VALIDATOR, non_python_keyword])
+                                  validators=[identifier_validator, non_python_keyword])
 
     # we need to restrict this role active or not
-    # example roles: [client] and [consultant]
+    # example role: [client] and [consultant]
     # role as [client] must active (in other way this action take by admin)
     is_active = models.BooleanField(default=False)
 
@@ -47,21 +47,20 @@ class AbstractRole(models.Model):
 
     def clean(self, *args, **kwargs):
         from_restful = kwargs.get('from_restful')
-        if (self.identifier not in dict(ROLE_IDENTIFIERS)) or (from_restful and self.identifier not in dict(ROLES_ALLOWED)):
+        if (self.identifier not in dict(ROLE_IDENTIFIERS)) or (from_restful and self.identifier not in dict(ROLE_ALLOWED)):
             raise ValidationError(
                 {'identifier': _(u"Role %s not available." % (self.identifier))}
             )
 
 
-class AbstractRoleCapabilities(models.Model):
+class AbstractRoleCapability(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     create_date = models.DateTimeField(auto_now_add=True, null=True)
     update_date = models.DateTimeField(auto_now=True, null=True)
 
     identifier = models.CharField(choices=ROLE_IDENTIFIERS, max_length=255,
-                                  validators=[IDENTIFIER_VALIDATOR, non_python_keyword])
-    permissions = models.ManyToManyField(Permission, related_name='role_capabilities',
-                                         related_query_name='role_capability')
+                                  validators=[identifier_validator, non_python_keyword])
+    permission = models.ManyToManyField(Permission, related_name='role_capability')
 
     class Meta:
         abstract = True

@@ -8,7 +8,7 @@ from django.utils.html import strip_tags, escape
 from django.utils.regex_helper import _lazy_re_compile
 
 
-IDENTIFIER_VALIDATOR = RegexValidator(
+identifier_validator = RegexValidator(
     regex=_lazy_re_compile(r'^[a-zA-Z_][a-zA-Z_]*$'),
     message=_(u"Can only contain the letters a-z and underscores.")
 )

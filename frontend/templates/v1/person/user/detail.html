@@ -1,0 +1,223 @@
+{% extends 'v1/base/base-user.html' %}
+{% load i18n static %}
+
+{% block head_title %}{% trans "Ringkasan Pengguna" noop %}{% endblock %}
+
+{% block main %}
+    <h6 class="mb-3 text-uppercase font-weight-bold">
+        {% trans 'Ringkasan Pengguna' noop %}
+    </h6>
+
+    <div id="content"></div>
+{% endblock %}
+
+{% block js %}
+    <script type="text/javascript">
+        (function() {
+            'use strict';
+
+            window.addEventListener('DOMContentLoaded', function() {
+                // ...
+                // EXPERIENCE ITEM
+                // ...
+                var experienceItem = function(data) {
+                    return `<li id="experience-${data.id}" class="media">
+                        <div class="media-body">
+                            <h6 class="media-heading mb-1">${data.title}</h6>
+                            ${data.company ? `<p class="m-0 text-muted small">${data.company} &middot; ${data.employment_display} &middot; ${data.location}</p>` : ``}
+                            
+                            ${data.start_month ? 
+                                `<p class="m-0 text-muted small">
+                                    ${data.start_month_display} ${data.start_year}
+                                    &mdash; 
+                                    ${data.end_month ? data.end_month_display + ` ` + data.end_year : ` Sekarang`}
+                                </p>` 
+                            : ``}
+                            
+                            ${data.description ? `<p class="m-0">${data.description}</p>` : ``}
+                        </div>
+                    </li>`;
+                }
+
+
+                // ...
+                // EDUCATION ITEM
+                // ...
+                var educationItem = function(data) {
+                    return `<li id="education-${data.id}" class="media">
+                        <div class="media-body">
+                            <h6 class="media-heading mb-1">${data.school}</h6>
+
+                            ${data.degree || data.study ? `
+                                <p class="m-0 small text-muted">
+                                    ${data.study ? data.study : ''}${data.degree ? `, ${data.degree}` : ``}
+                                </p>`
+                            : ``}
+
+                            ${data.start_year ? `<p class="m-0 text-muted small">${data.start_year}${data.end_year ? ` - ${data.end_year}` : ``}</p>` : ``}
+                            ${data.description ? `<p class="m-0">${data.description}</p>` : ``}
+                        </div>
+                    </li>`;
+                }
+
+
+                // ...
+                // EXPERTISE ITEM
+                // ...
+                var expertiseItem = function(data) {
+                    return `<li id="expertise-${data.id}" class="media">
+                        <div class="media-body">
+                            <h6 class="media-heading mb-1">
+                                ${data.topic_label}
+                                <span class="badge badge-info">${data.level_display}</span>
+                            </h6>
+
+                            ${data.description ? `<p class="m-0 small">${data.description}</p>` : ``}
+                        </div>
+                    </li>`;
+                }
+
+
+                // ...
+                // CERTIFICATE ITEM
+                // ...
+                var certificateItem = function(data) {
+                    return `<li id="certificate-${data.id}" class="media">
+                        <div class="media-body">
+                            <h6 class="media-heading mb-1">${data.name}<h6>
+                            ${data.organization ? `
+                                <p class="m-0 text-muted small">
+                                    ${data.organization} / ${data.issued_formated} ${data.expired ? '&mdash; ' + data.expired_formated : ''}
+                                </p>
+                            ` : ``}
+                            
+                            ${data.start_month ? 
+                                `<p class="m-0 text-muted small">
+                                    ${data.start_month_display} ${data.start_year}
+                                    &mdash; 
+                                    ${data.end_month ? data.end_month_display + ` ` + data.end_year : ` Sekarang`}
+                                </p>` 
+                            : ``}
+
+                            ${data.credential_id ? 
+                                `<p class="m-0 text-muted small">
+                                    ${data.credential_id ? 'ID: ' + data.credential_id : ''}
+                                    ${data.credential_url ? ' &middot; URL: ' + data.credential_url : ''}
+                                </p>` 
+                            : ``}
+                            
+                            ${data.description ? `<p class="m-0">${data.description}</p>` : ``}
+                        </div>
+                    </li>`;
+                }
+
+
+                var userDetailEl = function(data) {
+                    var profile = data?.profile;
+                    var displayName = profile?.first_name ? profile?.first_name : data.username;
+                    var profilePicture = profile?.picture ? profile?.picture : DEFAULT_PROFILE_PICTURE;
+                    var headline = profile?.headline ? profile?.headline : '&mdash;';
+                    var about = profile?.about ? profile?.about : '&mdash;';
+
+                    // Experience.
+                    var experience = data?.experience;
+                    var experienceItems = '';
+
+                    $.each(experience, function(k, v) {
+                        experienceItems += experienceItem(v);
+                    });
+
+                    // Education.
+                    var education = data?.education;
+                    var educationItems = '';
+
+                    $.each(education, function(k, v) {
+                        educationItems += educationItem(v);
+                    });
+
+                    // Expertise.
+                    var expertise = data?.expertise;
+                    var expertiseItems = '';
+
+                    $.each(expertise, function(k, v) {
+                        expertiseItems += expertiseItem(v);
+                    });
+
+                    // Certificate.
+                    var certificate = data?.certificate;
+                    var certificateItems = '';
+
+                    $.each(certificate, function(k, v) {
+                        certificateItems += certificateItem(v);
+                    });
+
+                    var content = `<div class="d-block">
+                        <div class="d-flex w-100">
+                            <div class="pr-3" style="width: 125px">
+                                <figure><img src="${profilePicture}" class="w-100" alt="${displayName}"></figure>
+                            </div>
+
+                            <div>
+                                <h4 class="text-sm">${displayName}</h4>
+                                <h6 class="text-muted">${headline}</h6>
+                                <p>${about}</p>
+                            </div>
+                        </div>
+
+                        <a href="#" class="btn btn-info pr-3 pl-3">{% trans "Mulai Konsultai" noop %}</a>
+
+                        <hr />
+
+                        <h5 class="font-weight-bold">{% trans "Pengalaman Kerja" noop %}</h5>
+                        <ul class="list-unstyled list-margin">
+                            ${experienceItems}
+                        </ul>
+
+                        <hr />
+
+                        <h5 class="font-weight-bold">{% trans "Pendidikan" noop %}</h5>
+                        <ul class="list-unstyled list-margin">
+                            ${educationItems}
+                        </ul>
+
+                        <hr />
+
+                        <h5 class="font-weight-bold">{% trans "Keahlian" noop %}</h5>
+                        <ul class="list-unstyled list-margin">
+                            ${expertiseItems}
+                        </ul>
+
+                        <hr />
+
+                        <h5 class="font-weight-bold">{% trans "Sertifikasi" noop %}</h5>
+                        <ul class="list-unstyled list-margin">
+                            ${certificateItems}
+                        </ul>
+                    </div>`;
+
+                    return content;
+                }
+
+
+                // ...
+                // LOAD USER
+                // ...
+                var loadUser = function() {
+                    $.ajax({
+                        method: 'GET',
+                        url: API_ENDPOINT + 'person/users/{{ uuid }}/',
+                        headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                        xhrFields: {withCredentials: true},
+                        cache: false,
+                        success: function(response) {
+                            var item = userDetailEl(response);
+                            $('#content').html(item);
+                        }
+                    });
+                }
+
+                loadUser();
+            });
+        })();
+    </script>
+{% endblock %}

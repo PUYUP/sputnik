@@ -147,7 +147,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         for key, value in validated_data.items():
             if hasattr(instance, key):
                 old_value = getattr(instance, key, None)
-                if value and old_value != value:
+                if old_value != value:
                     update_fields.append(key)
                     setattr(instance, key, value)
         

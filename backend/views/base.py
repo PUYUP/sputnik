@@ -19,9 +19,9 @@ class HomeView(View):
 
     def get(self, request):
         if self.request.user.is_authenticated:
-            roles = request.user.roles_identifier()
-            if CLIENT in roles:
-                pass
-            elif CONSULTANT in roles:
+            role = request.user.role_identifier()
+            if CLIENT in role:
+                return redirect(reverse('person_view:client:dashboard'))
+            elif CONSULTANT in role:
                 return redirect(reverse('person_view:consultant:dashboard'))
         return render(request, self.template_name, self.context)

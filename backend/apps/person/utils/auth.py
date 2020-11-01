@@ -97,85 +97,85 @@ def clear_verifycode_session(request, interact):
             pass
 
 
-def set_roles(user=None, roles=list()):
+def set_role(user=None, role=list()):
     """
     :user is user object
-    :roles is list of identifier for role, egg: ['registered', 'client']
+    :role is list of identifier for role, egg: ['registered', 'client']
     """
-    RoleCapabilities = get_model('person', 'RoleCapabilities')
+    RoleCapability = get_model('person', 'RoleCapability')
 
-    roles_created = list()
-    identifiers_initial = list(user.roles.values_list('identifier', flat=True))
-    identifiers_new = list(set(roles) - set(identifiers_initial))
+    role_created = list()
+    identifier_initial = list(user.role.values_list('identifier', flat=True))
+    identifier_new = list(set(role) - set(identifier_initial))
 
-    for identifier in identifiers_new:
-        role_obj = user.roles.model(user=user, identifier=identifier)
-        roles_created.append(role_obj)
+    for identifier in identifier_new:
+        role_obj = user.role.model(user=user, identifier=identifier)
+        role_created.append(role_obj)
 
-    if roles_created:
-        user.roles.model.objects.bulk_create(roles_created)
+    if role_created:
+        user.role.model.objects.bulk_create(role_created)
 
-    capabilities_objs = RoleCapabilities.objects \
-        .prefetch_related(Prefetch('permissions')) \
-        .filter(identifier__in=user.roles.all().values('identifier'))
-    permission_objs = [list(item.permissions.all()) for item in capabilities_objs]
+    capability_objs = RoleCapability.objects \
+        .prefetch_related(Prefetch('permission')) \
+        .filter(identifier__in=user.role.all().values('identifier'))
+    permission_objs = [list(item.permission.all()) for item in capability_objs]
     permission_objs_unique = list(set(itertools.chain.from_iterable(permission_objs)))
     user.user_permissions.add(*permission_objs_unique)
 
 
-def update_roles(user=None, roles=list()):
+def update_role(user=None, role=list()):
     """
     :user is user object
-    :roles is list of identifier for role, egg: ['registered', 'client']
+    :role is list of identifier for role, egg: ['registered', 'client']
     """
-    RoleCapabilities = get_model('person', 'RoleCapabilities')
+    RoleCapability = get_model('person', 'RoleCapability')
 
-    permissions_removed = list()
-    permissions_add = list()
-    permissions_current = user.user_permissions.all()
-    capabilities = RoleCapabilities.objects \
-        .prefetch_related(Prefetch('permissions'))
+    permission_removed = list()
+    permission_add = list()
+    permission_current = user.user_permissions.all()
+    capability = RoleCapability.objects \
+        .prefetch_related(Prefetch('permission'))
 
-    # REMOVE ROLES
-    roles_removed = user.roles.exclude(identifier__in=roles)
-    if roles_removed.exists():
-        capabilities = capabilities.filter(identifier__in=roles_removed.values('identifier'))
-        permissions = [list(item.permissions.all()) for item in capabilities]
-        permissions_removed = list(set(itertools.chain.from_iterable(permissions)))
-        roles_removed.delete()
+    # REMOVE ROLE
+    role_removed = user.role.exclude(identifier__in=role)
+    if role_removed.exists():
+        capability = capability.filter(identifier__in=role_removed.values('identifier'))
+        permission = [list(item.permission.all()) for item in capability]
+        permission_removed = list(set(itertools.chain.from_iterable(permission)))
+        role_removed.delete()
 
-    # ADD ROLES
-    if roles:
-        roles_created = list()
-        identifiers_initial = list(user.roles.values_list('identifier', flat=True))
-        identifiers_new = list(set(roles) ^ set(identifiers_initial))
+    # ADD ROLE
+    if role:
+        role_created = list()
+        identifier_initial = list(user.role.values_list('identifier', flat=True))
+        identifier_new = list(set(role) ^ set(identifier_initial))
 
-        for identifier in identifiers_new:
-            role_obj = user.roles.model(user=user, identifier=identifier)
-            roles_created.append(role_obj)
+        for identifier in identifier_new:
+            role_obj = user.role.model(user=user, identifier=identifier)
+            role_created.append(role_obj)
 
-        if roles_created:
-            user.roles.model.objects.bulk_create(roles_created)
+        if role_created:
+            user.role.model.objects.bulk_create(role_created)
 
-        capabilities = capabilities.filter(identifier__in=user.roles.all().values('identifier'))
-        permissions = [list(item.permissions.all()) for item in capabilities]
-        permissions_add = list(set(itertools.chain.from_iterable(permissions)))
+        capability = capability.filter(identifier__in=user.role.all().values('identifier'))
+        permission = [list(item.permission.all()) for item in capability]
+        permission_add = list(set(itertools.chain.from_iterable(permission)))
 
-    # Compare current with new permissions
+    # Compare current with new permission
     # If has different assign that to user
-    if permissions_current:
-        add_diff = list(set(permissions_add) & set(permissions_current))
+    if permission_current:
+        add_diff = list(set(permission_add) & set(permission_current))
         if add_diff:
-            add_diff = list(set(permissions_add) ^ set(add_diff))
+            add_diff = list(set(permission_add) ^ set(add_diff))
     else:
-        add_diff = list(set(permissions_add))
+        add_diff = list(set(permission_add))
 
-    if add_diff and permissions_add:
+    if add_diff and permission_add:
         user.user_permissions.add(*list(add_diff))
 
-    # Compare current with old permissions
+    # Compare current with old permission
     # If has different remove that
-    removed_diff = list(set(permissions_add) ^ set(permissions_removed))
-    if removed_diff and permissions_removed:
-        diff = set(removed_diff) & set(permissions_removed)
+    removed_diff = list(set(permission_add) ^ set(permission_removed))
+    if removed_diff and permission_removed:
+        diff = set(removed_diff) & set(permission_removed)
         user.user_permissions.remove(*list(diff))

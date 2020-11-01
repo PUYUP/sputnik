@@ -1,11 +1,11 @@
-{% extends 'v1/base/base-consultant.html' %}
+{% extends 'v1/base/base-user.html' %}
 {% load i18n static %}
 
 {% block head_title %}{% trans "Profil" noop %}{% endblock %}
 
 {% block main %}
     <div class="d-block">
-        <h6><strong>{% trans 'Profil' noop %}</strong></h6>
+        <h6 class="text-uppercase font-weight-bold">{% trans 'Profil' noop %}</h6>
 
         <div class="form-group" id="upload-zone">
             <figure class="mb-3">
@@ -56,6 +56,8 @@
 {% endblock %}
 
 {% block js %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+
     <script src="{% static 'vendors/jquery-file-upload/jquery.iframe-transport.js' %}" defer></script>
     <script src="{% static 'vendors/jquery-file-upload/vendor/load-image.all.min.js' %}" defer></script>
     <script src="{% static 'vendors/jquery-file-upload/vendor/jquery.ui.widget.js' %}" defer></script>
@@ -131,7 +133,11 @@
                         data: JSON.stringify({...param}),
                         cache: false,
                         success: function(response) {
-                            alert("{% trans 'Profil berhasi perbarui' %}");
+                            Swal.fire(
+                                'Informasi',
+                                "{% trans 'Profil berhasi perbarui' noop %}",
+                                'success'
+                            );
                         }
                     });
                 }
@@ -197,7 +203,11 @@
                 // ...
                 $('#upload-avatar').bind('fileuploadfail', function (error, data) {
                     var errorMessage = '{% trans "Maksimal ukuran file 2.5 MB." noop %}';
-                    alert(errorMessage);
+                    Swal.fire(
+                        'Kesalahan',
+                        errorMessage,
+                        'warning'
+                    );
                 });
             });
         })();

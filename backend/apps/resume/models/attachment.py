@@ -16,16 +16,18 @@ class AbstractAttachment(models.Model):
     create_date = models.DateTimeField(auto_now_add=True, null=True)
     update_date = models.DateTimeField(auto_now=True, null=True)
 
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                             related_name='resume_attachment')
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE,
                                      limit_choices_to={'app_label': 'resume'},
-                                     related_name='attachments')
+                                     related_name='resume_attachment')
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
 
     label = models.CharField(max_length=255, null=True)
     description = models.TextField(null=True, blank=True)
-    attach_type = models.CharField(max_length=255, editable=False)
-    attach_file = models.FileField(max_length=500)
+    type = models.CharField(max_length=255, editable=False)
+    file = models.FileField(max_length=500)
 
     class Meta:
         abstract = True
@@ -39,7 +41,7 @@ class AbstractAttachment(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.label:
-            self.label = self.attach_file.name
+            self.label = self.file.name
 
         super().save(*args, **kwargs)
 
@@ -53,12 +55,12 @@ class AbstractAttachment(models.Model):
                     {'object_id': _('Invalid pk "'+str(self.object_id)+'" - object does not exist.')}
                 )
 
-        if self.attach_file:
-            name, ext = os.path.splitext(self.attach_file.name)
-            fsize = self.attach_file.size / 1000
+        if self.file:
+            name, ext = os.path.splitext(self.file.name)
+            fsize = self.file.size / 1000
 
             if fsize > 5000:
-                raise ValidationError({'attach_file': _("Ukuran file maksimal 5 MB")})
+                raise ValidationError({'file': _("Ukuran file maksimal 5 MB")})
 
             if ext not in ALLOWED_EXTENSIONS:
-                raise ValidationError({'attach_file': _("Jenis file tidak diperbolehkan")})
+                raise ValidationError({'file': _("Jenis file tidak diperbolehkan")})

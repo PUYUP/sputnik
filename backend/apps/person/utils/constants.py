@@ -14,7 +14,7 @@ ROLE_DEFAULTS = (
     (REGISTERED, _(u"Registered")),
 )
 
-ROLES_ALLOWED = (
+ROLE_ALLOWED = (
     (CLIENT, _(u"Client")),
     (CONSULTANT, _(u"Consultant")),
 )

@@ -1,9 +1,12 @@
 
 from django.conf import settings
 from django.db import transaction, IntegrityError
+from django.db.models import Prefetch
 from django.contrib import messages
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
+from django.db.models.query import QuerySet
+from django.http import request
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import EmailValidator
@@ -12,7 +15,7 @@ from rest_framework import serializers
 
 # PROJECT UTILS
 from utils.generals import get_model
-from utils.validators import non_python_keyword, IDENTIFIER_VALIDATOR
+from utils.validators import non_python_keyword, identifier_validator
 
 from apps.person.api.validator import (
     EmailDuplicateValidator,
@@ -42,8 +45,6 @@ class RoleSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         instance = self.Meta.model(**attrs)
-        
-        # with this we can set custom attribute to model
         instance.clean(from_restful=True)
         return attrs
 
@@ -56,7 +57,7 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
         # Don't pass the 'fields' arg up to the superclass
-        fields = kwargs.pop('fields', None)
+        fields_used = kwargs.pop('fields_used', None)
         context = kwargs.get('context', dict())
         request = context.get('request', None)
 
@@ -66,14 +67,22 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
         # Use this field on specific request
         if request.method == 'PATCH':
             # Only this field can us at user update
-            fields = ('username', 'password', 'first_name', 'email',)
+            fields_used = ('username', 'password', 'first_name', 'email',)
 
-        if fields is not None and fields != '__all__':
-            # Drop any fields that are not specified in the `fields` argument.
-            allowed = set(fields)
+        if fields_used is not None and fields_used != '__all__':
+            # Drop any fields that are not specified in the `fields_used` argument.
+            allowed = set(fields_used)
             existing = set(self.fields)
             for field_name in existing - allowed:
                 self.fields.pop(field_name)
+
+class UserListSerializer(serializers.ListSerializer):
+    def to_representation(self, value):
+        print(value)
+        if isinstance(value, QuerySet):
+            print('AAAAAAAAAAAA')
+            value = value.prefetch_related(Prefetch('topic'))
+        return super().to_representation(value)
 
 
 class UserSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
@@ -82,10 +91,10 @@ class UserSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
 
     profile = ProfileSerializer(many=False, read_only=True)
     account = AccountSerializer(many=False, read_only=True)
-    educations = EducationSerializer(many=True, read_only=True)
-    certificates = CertificateSerializer(many=True, read_only=True)
-    experiences = ExperienceSerializer(many=True, read_only=True)
-    expertises = ExpertiseSerializer(many=True, read_only=True)
+    education = EducationSerializer(many=True, read_only=True)
+    certificate = CertificateSerializer(many=True, read_only=True)
+    experience = ExperienceSerializer(many=True, read_only=True)
+    expertise = ExpertiseSerializer(many=True, read_only=True)
 
     # for registration only
     # msisdn not part of User model
@@ -95,21 +104,30 @@ class UserSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
                                    min_length=8, max_length=14)
 
     # for registration only
-    # set user roles at register
-    roles = RoleSerializer(many=True)
+    # set user role at register
+    role = RoleSerializer(many=True)
 
     # use if action need verify code
     # eg: register, change email, ect
     token = serializers.CharField(required=False, write_only=True)
     challenge = serializers.CharField(required=False, write_only=True,
-                                      validators=[non_python_keyword, IDENTIFIER_VALIDATOR])
+                                      validators=[non_python_keyword,
+                                                  identifier_validator])
 
     # change password purposed
     password1 = serializers.CharField(required=False, write_only=True)
     password2 = serializers.CharField(required=False, write_only=True)
 
+    # for display purpose only
+    role_identifier = serializers.SlugRelatedField(slug_field='identifier', many=True,
+                                                   read_only=True, source='role')
+    permalink = serializers.SerializerMethodField(read_only=True)
+    expertise_label = serializers.SlugRelatedField(slug_field='topic_label', read_only=True, many=True,
+                                                   source='expertise')
+
     class Meta:
         model = User
+        list_serializer_class = UserListSerializer
         exclude = ('id', 'user_permissions', 'groups', 'date_joined',
                    'is_superuser', 'last_login', 'is_staff',)
         extra_kwargs = {
@@ -142,7 +160,7 @@ class UserSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
         self.token = data.get('token', None)
 
         self.email = data.get('email', None)
-        self.roles = data.get('roles', None)
+        self.role = data.get('role', None)
 
         # used for password change only
         self.password = data.get('password', None) # as old password
@@ -172,6 +190,10 @@ class UserSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
             if settings.STRICT_EMAIL_DUPLICATE:
                 self.fields['email'].validators.extend([EmailDuplicateValidator()])
 
+    def get_permalink(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.permalink)
+
     def to_internal_value(self, data):
         data = super().to_internal_value(data)
 
@@ -186,15 +208,10 @@ class UserSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
         data['is_active'] = True
         return data
 
-    def to_representation(self, value):
-        ret = super().to_representation(value)
-        ret['roles'] = value.roles.values_list('identifier', flat=True)
-        return ret
-
-    def validate_roles(self, value):
+    def validate_role(self, value):
         # make user only allow one role
         if len(value) > 1:
-            raise serializers.ValidationError(_(u"Multiple roles not allowed"))
+            raise serializers.ValidationError(_(u"Multiple role not allowed"))
         return value
 
     def validate_email(self, value):
@@ -267,14 +284,14 @@ class UserSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
-        self.roles = validated_data.pop('roles')
+        self.role = validated_data.pop('role')
 
         try:
             user = User.objects.create_user(**validated_data)
         except IntegrityError as e:
-            raise ValidationError(repr(e))
+            raise ValidationError(str(e))
         except TypeError as e:
-            raise ValidationError(repr(e))
+            raise ValidationError(str(e))
 
         # create Account instance
         if self.msisdn:
@@ -288,10 +305,10 @@ class UserSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
                 except IntegrityError:
                     pass
 
-        # set roles
-        if self.roles:
+        # set role
+        if self.role:
             role_list = list()
-            for r in self.roles:
+            for r in self.role:
                 i = Role(user=user, **r)
                 role_list.append(i)
 
@@ -318,7 +335,7 @@ class UserSerializer(DynamicFieldsModelSerializer, serializers.ModelSerializer):
                                                 " Login dengan kata sandi baru Anda"))
                 else:
                     old_value = getattr(instance, key, None)
-                    if value and old_value != value:
+                    if old_value != value:
                         setattr(instance, key, value)
         instance.save()
 

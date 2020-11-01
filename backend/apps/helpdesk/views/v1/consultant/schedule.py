@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.views import View
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
@@ -16,6 +17,7 @@ class Consultant_ScheduleView(View):
     context = dict()
 
     def get(self, request):
+        self.context['per_page'] = settings.PAGINATION_PER_PAGE
         self.context['freq_choices'] = choices_to_json(RRULE_FREQ_CHOICES)
         self.context['wkst_choices'] = choices_to_json(RRULE_WKST_CHOICES)
         return render(request, self.template_name, self.context)
@@ -30,4 +32,14 @@ class Consultant_ScheduleDetailView(View):
         self.context['uuid'] = uuid
         self.context['wkst_choices'] = choices_to_json(RRULE_WKST_CHOICES)
         self.context['priority_choices'] = choices_to_json(PRIORITY_CHOICES)
+        return render(request, self.template_name, self.context)
+
+
+@method_decorator([login_required, consultant_required], name='dispatch')
+class Consultant_ScheduleCalendarView(View):
+    template_name = 'v1/helpdesk/consultant/schedule-calendar.html'
+    context = dict()
+
+    def get(self, request, uuid=None):
+        self.context['uuid'] = uuid
         return render(request, self.template_name, self.context)

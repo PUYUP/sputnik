@@ -13,7 +13,7 @@ from rest_framework.exceptions import NotAcceptable
 
 from utils.generals import get_model
 from .serializers import CertificateSerializer
-from apps.resume.utils.permissions import IsCertificateCreator
+from apps.resume.utils.permissions import IsObjectOwnerOrReject
 from apps.resume.utils.constants import PUBLISH
 
 Certificate = get_model('resume', 'Certificate')
@@ -50,10 +50,8 @@ class CertificateApiView(viewsets.ViewSet):
     lookup_field = 'uuid'
     permission_classes = (IsAuthenticated,)
     permission_action = {
-        'list': [IsAuthenticated],
-        'create': [IsAuthenticated],
-        'partial_update': [IsAuthenticated, IsCertificateCreator],
-        'destroy': [IsAuthenticated, IsCertificateCreator],
+        'partial_update': [IsAuthenticated, IsObjectOwnerOrReject],
+        'destroy': [IsAuthenticated, IsObjectOwnerOrReject],
     }
 
     def get_permissions(self):
@@ -70,37 +68,31 @@ class CertificateApiView(viewsets.ViewSet):
             return [permission() for permission in self.permission_classes]
 
     def initialize_request(self, request, *args, **kwargs):
-        self.uuid = kwargs.get('uuid', None)
         self.user = request.user
-        self.user_uuid = request.GET.get('user_uuid', None)
-
-        if not self.user_uuid:
-            if self.user.is_authenticated:
-                self.user_uuid = self.user.uuid
-
         return super().initialize_request(request, *args, **kwargs)
 
-    # Get a object
-    def get_object(self, is_update=False):
-        queryset = Certificate.objects
+    @property
+    def queryset(self):
+        q = Certificate.objects.prefetch_related(Prefetch('user')) \
+            .select_related('user')
+        return q
 
+    # single object
+    def get_object(self, uuid=None, is_update=False):
         try:
             if is_update:
-                queryset = queryset.select_for_update().get(uuid=self.uuid)
+                queryset = self.queryset.select_for_update().get(uuid=uuid)
             else:
-                queryset = queryset.get(uuid=self.uuid)
+                queryset = self.queryset.get(uuid=uuid)
         except (ObjectDoesNotExist, ValidationError) as e:
-            raise NotAcceptable(detail=repr(e))
+            raise NotAcceptable(detail=str(e))
         return queryset
 
-    def get_objects(self):
-        queryset = Certificate.objects
-
-        # If current user not creator show only PUBLISH status
+    # multiple objects
+    def get_objects(self, user_uuid=None):
         try:
-            queryset = queryset.prefetch_related(Prefetch('user')) \
-                .select_related('user') \
-                .filter(user__uuid=self.user_uuid) \
+            queryset = self.queryset \
+                .filter(user__uuid=user_uuid) \
                 .exclude(~Q(user__uuid=self.user.uuid) & ~Q(status=PUBLISH)) \
                 .order_by('sort_order')
         except (ValidationError, Exception) as e:
@@ -109,13 +101,17 @@ class CertificateApiView(viewsets.ViewSet):
 
     def list(self, request, format=None):
         context = {'request': request}
-        queryset = self.get_objects()
+        user_uuid = request.query_params.get('user_uuid', None)
+        if user_uuid is None:
+            user_uuid = self.user.uuid
+
+        queryset = self.get_objects(user_uuid=user_uuid)
         serializer = CertificateSerializer(queryset, many=True, context=context)
         return Response(serializer.data, status=response_status.HTTP_200_OK)
 
     def retrieve(self, request, uuid=None, format=None):
         context = {'request': request}
-        queryset = self.get_object()
+        queryset = self.get_object(uuid=uuid)
         serializer = CertificateSerializer(queryset, many=False, context=context)
         return Response(serializer.data, status=response_status.HTTP_200_OK)
 
@@ -128,7 +124,7 @@ class CertificateApiView(viewsets.ViewSet):
             try:
                 serializer.save()
             except (ValidationError, Exception) as e:
-                return Response({'detail': repr(e)}, status=response_status.HTTP_406_NOT_ACCEPTABLE)
+                return Response({'detail': str(e)}, status=response_status.HTTP_406_NOT_ACCEPTABLE)
             return Response(serializer.data, status=response_status.HTTP_200_OK)
         return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
@@ -136,11 +132,8 @@ class CertificateApiView(viewsets.ViewSet):
     @transaction.atomic
     def partial_update(self, request, uuid=None, format=None):
         context = {'request': request}
-
-        # single object
-        queryset = self.get_object(is_update=True)
+        queryset = self.get_object(uuid=uuid, is_update=True)
   
-        # check permission
         self.check_object_permissions(request, queryset)
 
         serializer = CertificateSerializer(queryset, data=request.data, partial=True, context=context)
@@ -152,62 +145,35 @@ class CertificateApiView(viewsets.ViewSet):
     @method_decorator(never_cache)
     @transaction.atomic
     def destroy(self, request, uuid=None, format=None):
-        # single object
-        queryset = self.get_object()
+        queryset = self.get_object(uuid=uuid)
 
-        # check permission
         self.check_object_permissions(request, queryset)
 
         # execute delete
         queryset.delete()
-        return Response(
-            {'detail': _("Delete success!")},
-            status=response_status.HTTP_204_NO_CONTENT)
+        return Response({'detail': _("Delete success!")},
+                        status=response_status.HTTP_204_NO_CONTENT)
 
-    """***********
-    BULK UPDATES
-    ***********"""
     @method_decorator(never_cache)
     @transaction.atomic
-    @action(methods=['patch'], detail=False,
-            permission_classes=[IsAuthenticated],
-            url_path='bulk-updates', url_name='view_bulk_updates')
-    def view_bulk_updates(self, request, uuid=None):
-        """
-        Params:
-            [
-                {"uuid": "adadafa"},
-                {"uuid": "adadafa"}
-            ]
-        """
-        method = request.method
-  
-        if not request.data:
-            raise NotAcceptable()
+    def put(self, request, format=None):
+        context = {'request': request}
+        update_fields = ['user'] # related field to select_related in queryset
+        update_uuids = [item.get('uuid') for item in request.data]
 
-        if method == 'PATCH':
-            update_objs = list()
+        # Collect fields affect for updated
+        for item in request.data:
+            update_fields.extend(list(item.keys()))
+        update_fields = list(dict.fromkeys(update_fields))
 
-            for i, v in enumerate(request.data):
-                uuid = v.get('uuid')
- 
-                try:
-                    obj = Certificate.objects.get(user_id=self.user.id, uuid=uuid)
-                    setattr(obj, 'sort_order', i + 1) # auto set with sort index
+        queryset = self.queryset.filter(uuid__in=update_uuids).only(*update_fields)
+        serializer = CertificateSerializer(queryset, data=request.data, many=True, context=context,
+                                           fields_used=update_fields)
+        if serializer.is_valid(raise_exception=True):
+            try:
+                serializer.save()
+            except (ValidationError, Exception) as e:
+                raise NotAcceptable(detail=str(e))
+            return Response(serializer.data, status=response_status.HTTP_200_OK)
+        return Response(serializer.errors, status=response_status.HTTP_400_BAD_REQUEST)
 
-                    update_objs.append(obj)
-                except (ValidationError, ObjectDoesNotExist) as e:
-                    pass
-
-            if not update_objs:
-                raise NotAcceptable()
-
-            if update_objs:
-                try:
-                    Certificate.objects.bulk_update(update_objs, ['sort_order'])
-                except IntegrityError:
-                    return Response({'detail': _(u"Fatal error")},
-                                    status=response_status.HTTP_406_NOT_ACCEPTABLE)
-
-                return Response({'detail': _(u"Update success")},
-                                status=response_status.HTTP_200_OK)

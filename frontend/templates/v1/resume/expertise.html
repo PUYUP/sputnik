@@ -1,4 +1,4 @@
-{% extends 'v1/base/base-consultant.html' %}
+{% extends 'v1/base/base-user.html' %}
 {% load i18n static %}
 
 {% block head_title %}{% trans 'Keahlian' noop %}{% endblock %}
@@ -30,7 +30,7 @@
     
     <script type="text/javascript">
         window.addEventListener('DOMContentLoaded', function() {
-            var expertiseLevels = JSON.parse('{{ expertise_levels | safe }}');
+            var expertiseLevels = JSON.parse('{{ level_choices | safe }}');
             var expertiseOptions = '';
 
             $.each(expertiseLevels, function(k, v) {
@@ -198,8 +198,8 @@
 
             var doSorting = function(param) {
                 $.ajax({
-                    method: 'PATCH',
-                    url: API_ENDPOINT + 'resume/expertises/bulk-updates/',
+                    method: 'PUT',
+                    url: API_ENDPOINT + 'resume/expertises/',
                     headers: {'X-CSRFToken': Cookies.get('csrftoken')},
                     xhrFields: {withCredentials: true},
                     contentType: 'application/json; charset=utf-8',
@@ -392,7 +392,7 @@
                     cache: false,
                     success: function(response) {
                         Swal.fire(
-                            'Berhasil!',
+                            'Informasi',
                             'Data telah dihapus permanen.',
                             'success'
                         )
@@ -412,9 +412,9 @@
                     json = (data ? JSON.parse(data) : {});
 
                 $($modalEl).appendTo('body');
+            
                 $('#modal-form').modal('show');
-
-                $(document).on('shown.bs.modal', '#modal-form', function() {
+                $('#modal-form').on('shown.bs.modal', function() {
                     var $thisModal = $(this);
 
                     $.each(json, function(n, v) {
@@ -423,6 +423,11 @@
                 });
 
                 $('#modal-form button[type="submit"]').attr('data-uuid', json.uuid);
+            });
+
+            $(document).on('hidden.bs.modal', '#modal-form', function() {
+                $(this).modal('dispose');
+                $(this).remove();
             });
         });
     </script>

@@ -4,7 +4,7 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
-from utils.validators import non_python_keyword, IDENTIFIER_VALIDATOR
+from utils.validators import non_python_keyword, identifier_validator
 from apps.person.utils.constants import UNDEFINED, GENDER_CHOICES
 
 
@@ -59,7 +59,7 @@ class AbstractProfile(models.Model):
     headline = models.CharField(max_length=255, null=True, blank=True)
     gender = models.CharField(choices=GENDER_CHOICES, blank=True, null=True,
                               default=UNDEFINED, max_length=255,
-                              validators=[IDENTIFIER_VALIDATOR, non_python_keyword])
+                              validators=[identifier_validator, non_python_keyword])
     birthdate = models.DateField(blank=True, null=True)
     about = models.TextField(blank=True, null=True)
     picture = models.ImageField(upload_to=_UPLOAD_TO, max_length=500,

@@ -1,11 +1,11 @@
-{% extends 'v1/base/base-consultant.html' %}
+{% extends 'v1/base/base-user.html' %}
 {% load i18n %}
 
 {% block head_title %}{% trans "Dasbor" noop %}{% endblock %}
 
 {% block main %}
-    <h6 class="mb-3">
-        <strong>{% trans 'Ringkasan' noop %}</strong>
+    <h6 class="mb-3 text-uppercase font-weight-bold">
+        {% trans 'Ringkasan' noop %}
     </h6>
 
     <div class="row">
@@ -64,7 +64,7 @@
         </div>
     </div>
 
-    <h6 class="uk-text-uppercase mb-2"><strong>Segera Layani</strong></h6>
+    <h6 class="text-uppercase mb-2 font-weight-bold">Segera Layani</h6>
 
     <ul class="list-unstyled list-margin">
         <li class="media">

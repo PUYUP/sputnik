@@ -3,10 +3,9 @@ from django.contrib.contenttypes.models import ContentType
 
 from utils.generals import get_model
 
-User = get_model('person', 'User')
 Schedule = get_model('helpdesk', 'Schedule')
 ScheduleExpertise = get_model('helpdesk', 'ScheduleExpertise')
-Recurrence = get_model('helpdesk', 'Recurrence')
+ScheduleTerm = get_model('helpdesk', 'ScheduleTerm')
 Rule = get_model('helpdesk', 'Rule')
 RuleValue = get_model('helpdesk', 'RuleValue')
 Segment = get_model('helpdesk', 'Segment')
@@ -14,11 +13,16 @@ SLA = get_model('helpdesk', 'SLA')
 Priority = get_model('helpdesk', 'Priority')
 Issue = get_model('helpdesk', 'Issue')
 Respond = get_model('helpdesk', 'Respond')
-RespondLog = get_model('helpdesk', 'RespondLog')
+Reply = get_model('helpdesk', 'Reply')
+Replied = get_model('helpdesk', 'Replied')
+Consultation = get_model('helpdesk', 'Consultation')
+ConsultationLog = get_model('helpdesk', 'ConsultationLog')
 Entry = get_model('helpdesk', 'Entry')
 Assign = get_model('helpdesk', 'Assign')
 Assigned = get_model('helpdesk', 'Assigned')
 Gift = get_model('helpdesk', 'Gift')
+Reservation = get_model('helpdesk', 'Reservation')
+Attachment = get_model('helpdesk', 'Attachment')
 
 
 # Extend Schedule
@@ -30,13 +34,13 @@ class ScheduleExpertiseInline(admin.StackedInline):
     model = ScheduleExpertise
 
 
-class RecurrenceInline(admin.StackedInline):
-    model = Recurrence
+class ScheduleTermInline(admin.StackedInline):
+    model = ScheduleTerm
 
 
 class ScheduleExtend(admin.ModelAdmin):
     model = Schedule
-    inlines = [RecurrenceInline, ScheduleExpertiseInline, SegmentInline,]
+    inlines = [ScheduleTermInline, ScheduleExpertiseInline, SegmentInline,]
 
 
 # Extend SLA
@@ -49,13 +53,13 @@ class SegmentExtend(admin.ModelAdmin):
     inlines = [SLAInline,]
 
 
-# Extend Recurrence
+# Extend ScheduleTerm
 class RuleInline(admin.StackedInline):
     model = Rule
 
 
-class RecurrenceExtend(admin.ModelAdmin):
-    model = Recurrence
+class ScheduleTermExtend(admin.ModelAdmin):
+    model = ScheduleTerm
     inlines = [RuleInline,]
 
 
@@ -71,15 +75,20 @@ class RuleExtend(admin.ModelAdmin):
 
 admin.site.register(ContentType)
 admin.site.register(Schedule, ScheduleExtend)
-admin.site.register(Recurrence, RecurrenceExtend)
+admin.site.register(ScheduleTerm, ScheduleTermExtend)
 admin.site.register(Rule, RuleExtend)
 admin.site.register(Segment, SegmentExtend)
 admin.site.register(SLA)
 admin.site.register(Priority)
 admin.site.register(Issue)
 admin.site.register(Respond)
-admin.site.register(RespondLog)
+admin.site.register(Reply)
+admin.site.register(Replied)
+admin.site.register(Consultation)
+admin.site.register(ConsultationLog)
 admin.site.register(Entry)
 admin.site.register(Assign)
 admin.site.register(Assigned)
 admin.site.register(Gift)
+admin.site.register(Reservation)
+admin.site.register(Attachment)

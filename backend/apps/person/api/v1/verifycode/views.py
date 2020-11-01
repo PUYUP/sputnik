@@ -24,6 +24,9 @@ VerifyCode = get_model('person', 'VerifyCode')
 
 class VerifyCodeApiView(viewsets.ViewSet):
     """
+    POST
+    ---------------
+
     Param:
 
         {
@@ -42,6 +45,11 @@ class VerifyCodeApiView(viewsets.ViewSet):
     lookup_field = 'uuid'
     lookup_value_regex = '[^/]+'
     permission_classes = (AllowAny,)
+
+    @property
+    def queryset(self):
+        q = VerifyCode.objects
+        return q
 
     @method_decorator(never_cache)
     @transaction.atomic
@@ -71,7 +79,7 @@ class VerifyCodeApiView(viewsets.ViewSet):
             email = request.data.get('email', None)
             msisdn = request.data.get('msisdn', None)
 
-            instance = VerifyCode.objects.select_for_update() \
+            instance = self.queryset.select_for_update() \
                 .get_unverified_unused(email=email, msisdn=msisdn, uuid=uuid)
         except ValidationError as err:
             raise NotAcceptable(detail=_(' '.join(err.messages)))
@@ -96,6 +104,9 @@ class VerifyCodeApiView(viewsets.ViewSet):
             url_path='validate', url_name='validate', lookup_field='passcode')
     def validate(self, request, uuid=None):
         """
+        POST
+        --------------
+
         Format:
 
             {
@@ -127,7 +138,7 @@ class VerifyCodeApiView(viewsets.ViewSet):
             if not passcode.isupper():
                 passcode = passcode.upper()
 
-            verifycode_obj = VerifyCode.objects.select_for_update() \
+            verifycode_obj = self.queryset.select_for_update() \
                 .get_unverified_unused(email=email, msisdn=msisdn, token=token,
                                        challenge=challenge, passcode=passcode)
         except ObjectDoesNotExist:
@@ -139,10 +150,6 @@ class VerifyCodeApiView(viewsets.ViewSet):
             return Response(
                 {'detail': _(u" ".join(e.messages))},
                 status=response_status.HTTP_403_FORBIDDEN)
-
-        # in case 'request change' some verifycode need to mark used immediately
-        # if challenge == CHANGE_EMAIL or challenge == CHANGE_MSISDN:
-        #     verifycode_obj.mark_used()
 
         # if password recovery request and user not logged-in
         if not request.user.is_authenticated and challenge == PASSWORD_RECOVERY:

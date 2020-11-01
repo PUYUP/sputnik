@@ -9,7 +9,7 @@ from .base import *
 # GLOBAL CONFIGURATIONS
 APP_NAME = 'Tanya Pakar'
 PROJECT_WEBSITE = 'www.tanyapakar.com'
-PAGINATION_PER_PAGE = 20
+PAGINATION_PER_PAGE = 10
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 LOGIN_WITH_JWT = True
 
