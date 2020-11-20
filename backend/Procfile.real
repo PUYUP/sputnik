@@ -1,2 +1,2 @@
-web: gunicorn sputnik.wsgi --log-file -
+web: gunicorn setup.wsgi --log-file -
 worker: celery -A sputnik worker -l info

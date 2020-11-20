@@ -14,7 +14,7 @@ Rule = get_model('helpdesk', 'Rule')
 
 
 class HomeView(View):
-    template_name = settings.APP_VERSION_SLUG + '/base/home.html'
+    template_name = 'v1/base/home.html'
     context = dict()
 
     def get(self, request):

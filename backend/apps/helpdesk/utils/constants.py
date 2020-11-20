@@ -77,6 +77,7 @@ RRULE_FREQ_CHOICES = (
     (rrule.SECONDLY, _(u"Secondly")),
 )
 
+
 setattr(rrule, 'FD', 'FD')
 RRULE_WKST_CHOICES = (
     (str(rrule.MO), _(u"Monday")),
@@ -136,6 +137,7 @@ RRULE_RECURRENCE_CHOICES = (
     (ONCE, _("Once")),
 )
 
+
 # RRule types
 VARCHAR = "varchar"
 INTEGER = "integer"
@@ -156,4 +158,20 @@ DEADLINE_UNIT_CHOICES = (
     (DAY, _("Day")),
     (MONTH, _("Month")),
     (YEAR, _("Year")),
+)
+
+
+PUSH = 'push'
+PULL = 'pull'
+RSV_DATE_STATUS = (
+    (PUSH, _("Push")),
+    (PULL, _("Pull")),
+)
+
+
+PENDING = 'pending'
+PAID = 'paid'
+PAYMENT_STATUS = (
+    (PENDING, _("Pending")),
+    (PAID, _("Paid")),
 )

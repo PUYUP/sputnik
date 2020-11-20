@@ -11,7 +11,6 @@ class PersonConfig(AppConfig):
         from apps.person.signals import user_save_handler, verifycodecode_save_handler
 
         VerifyCode = get_model('person', 'VerifyCode')
-        Account = get_model('person', 'Account')
 
         post_save.connect(user_save_handler, sender=settings.AUTH_USER_MODEL,
                           dispatch_uid='user_save_signal')

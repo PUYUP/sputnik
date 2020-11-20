@@ -52,10 +52,18 @@ class RootApiView(APIView):
                                     format=format, current_app='helpdesk_api:consultant'),
                     'priorities': reverse('helpdesk_api:consultant:priority-list', request=request,
                                           format=format, current_app='helpdesk_api:consultant'),
+                    'reservations': reverse('helpdesk_api:consultant:reservation-list', request=request,
+                                            format=format, current_app='helpdesk_api:consultant'),
+                    'assigns': reverse('helpdesk_api:consultant:assign-list', request=request,
+                                       format=format, current_app='helpdesk_api:consultant'),
                 },
                 'client': {
                     'issues': reverse('helpdesk_api:client:issue-list', request=request,
                                       format=format, current_app='helpdesk_api:client'),
+                    'reservations': reverse('helpdesk_api:client:reservation-list', request=request,
+                                            format=format, current_app='helpdesk_api:client'),
+                    'reservationsitem': reverse('helpdesk_api:client:reservation_item-list', request=request,
+                                                format=format, current_app='helpdesk_api:client'),
                 }
             }
         })

@@ -23,12 +23,21 @@
     </div>
 {% endblock %}
 
+{% block style %}
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.1.2/css/tempusdominus-bootstrap-4.min.css" integrity="sha512-PMjWzHVtwxdq7m7GIxBot5vdxUY+5aKP9wpKtvnNBZrVv1srI8tU6xvFMzG8crLNcMj/8Xl/WWmo/oAP/40p1g==" crossorigin="anonymous" />
+{% endblock %}
+
 {% block js %}
+    <script src="{% static 'js/moment-with-locales.min.js' %}" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.1.2/js/tempusdominus-bootstrap-4.min.js" integrity="sha512-2JBCbWoMJPH+Uj7Wq5OLub8E5edWHlTM4ar/YJkZh3plwB2INhhOC3eDoqHm1Za/ZOSksrLlURLoyXVdfQXqwg==" crossorigin="anonymous" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.2/dist/jquery.validate.min.js" defer></script>
 
     <script type="text/javascript">
         window.addEventListener('DOMContentLoaded', function() {
+            moment.locale('id');
+
             var scheduleURL = "{% url 'helpdesk_view:consultant:schedule_detail' uuid %}";
             var wkstChoices = JSON.parse('{{ wkst_choices | safe }}');
             var priorityChoices = JSON.parse('{{ priority_choices | safe }}');
@@ -89,14 +98,14 @@
                                     <div class="col-6">
                                         <div class="form-group">
                                             <label for="open_hour">{% trans 'Jam buka' noop %} *</label>
-                                            <input class="form-control" type="time" id="open_hour" name="open_hour" required>
+                                            <input type="text" class="form-control datetimepicker-input" id="open_hour" data-toggle="datetimepicker" data-target="#open_hour" name="open_hour" autocomplete="off" required>
                                         </div>
                                     </div>
 
                                     <div class="col-6">
                                         <div class="form-group">
                                             <label for="close_hour">{% trans 'Jam tutup' noop %} *</label>
-                                            <input class="form-control" type="time" id="close_hour" name="close_hour" required>
+                                            <input type="text" class="form-control datetimepicker-input" id="close_hour" data-toggle="datetimepicker" data-target="#close_hour" name="close_hour" autocomplete="off" required>
                                         </div>
                                     </div>
                                 </div>
@@ -115,6 +124,16 @@
                     </div>
                 </div>
             </div> <!-- /.modal segment -->`;
+
+            $(document).on('shown.bs.modal', '#segment-modal', function() {
+                $('#open_hour').datetimepicker({
+                    format: 'HH:mm'
+                });
+
+                $('#close_hour').datetimepicker({
+                    format: 'HH:mm'
+                });
+            });
 
             var slaForm = function(segmentUUID = '') {
                 var elem = `<div class="modal fade" id="sla-modal" data-backdrop="static" data-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
@@ -148,12 +167,6 @@
                                     <div class="form-group">
                                         <label for="promise">{% trans "Tawaran" noop %} *</label>
                                         <textarea class="form-control" id="promise" name="promise" placeholder="{% trans 'Apa yang klien dapatkan?' noop %}" required></textarea>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="secret_content">{% trans "Konten esklusif" noop %}</label>
-                                        <textarea class="form-control" id="secret_content" name="secret_content" placeholder="{% trans 'Konten untuk klien' noop %}"></textarea>
-                                        <p class="form-text text-muted small">{% trans 'Hanya terlihat oleh klien yang lunas membayar' noop %}</p>
                                     </div>
 
                                     <p>{% trans "Prioritas (biaya tambahan) *" noop %}</p>`;
@@ -290,7 +303,7 @@
                     <div id="segment-${v.uuid}" class="card bg-light h-100">
                         <div class="card-body p-2 d-flex flex-column">
                             <div class="d-flex w-100">
-                                <strong id="sla-label-${v.uuid}">${v.canal_display}</strong>
+                                <strong id="sla-label-${v.uuid}">${v.canal_label}</strong>
 
                                 <div class="ml-auto">
                                     <div class="btn-group">
@@ -351,6 +364,7 @@
                             var schedule_term = response?.schedule_term;
                             var cur_dtstart = schedule_term?.dtstart ? schedule_term?.dtstart : Date.now();
                             var dtstart = new Date(cur_dtstart).toISOString().split('T')[0];
+                            var dtstartDefault = moment(dtstart, 'YYYY-DD-MM').format('DD-MM-YYYY');
                             var dtstart_open_hour = new Date(cur_dtstart).toISOString().split('T')[1],
                                 dtstart_open_hour = dtstart_open_hour.split('.')[0];
 
@@ -387,9 +401,9 @@
                                 </div>
 
                                 <section id="schedule_term">
-                                    <div class="form-group">
+                                    <div class="form-group position-relative">
                                         <label for="dtstart">{% trans 'Tanggal buka' noop %} *</label>
-                                        <input type="date" class="form-control" id="dtstart" name="dtstart" value="${dtstart}" required>
+                                        <input type="text" id="dtstart" class="form-control datetimepicker-input" data-toggle="datetimepicker" data-target="#dtstart" name="dtstart" autocomplete="off" required>
                                     </div>
 
                                     <div class="form-group">
@@ -511,6 +525,11 @@
                             window.scheduleTermUuid = response?.schedule_term.uuid;
                             window.scheduleUuid = response?.uuid;
                             window.byweekdayUuid = byweekday?.uuid;
+                            
+                            $('#dtstart').datetimepicker({
+                                date: moment(dtstart, 'YYYY-DD-MM'),
+                                format: 'DD-MM-YYYY',
+                            });
                         }
                     }
                 });
@@ -610,9 +629,11 @@
 
                 // collect schedule term
                 var dtstart = $('#dtstart').val();
+                var dtstartFmt = moment(dtstart, 'DD-MM-YYYY').toISOString();
+
                 if (dtstart) {
                     var scheduleTerm = {
-                        'dtstart': new Date(dtstart).toISOString(),
+                        'dtstart': dtstartFmt,
                         'direction': $('input[name=direction]:checked').val(),
                     }
 
@@ -942,7 +963,7 @@
                         $('#sla-open-hour-' + response.uuid).html(response.open_hour_formated);
                         $('#sla-close-hour-' + response.uuid).html(response.close_hour_formated);
                         $('#sla-quota-' + response.uuid).html(response.quota);
-                        $('#sla-label-' + response.uuid).html(response.canal_display);
+                        $('#sla-label-' + response.uuid).html(response.canal_label);
                         $('#segment-modal').modal('hide');
                     }
                 });
@@ -985,6 +1006,13 @@
                             $.each(response, function(n, v) {
                                 if (n === 'canal') {
                                     $thisModal.find('form #' + v).prop('checked', true);
+
+                                } else if (n === 'open_hour') {
+                                    $('#open_hour').datetimepicker({date: moment(v, 'HH:mm:ss'), format: 'HH:mm'});
+
+                                } else if (n === 'close_hour') {
+                                    $('#close_hour').datetimepicker({date: moment(v, 'HH:mm:ss'), format: 'HH:mm'});
+
                                 } else {
                                     $thisModal.find('form #' + n).val(v);
                                 }

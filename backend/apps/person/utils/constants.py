@@ -1,3 +1,4 @@
+from dateutil import rrule
 from django.utils.translation import ugettext_lazy as _
 
 
@@ -59,3 +60,16 @@ EDUCATION_STATUS = (
 )
 EXPERIENCE_STATUS = EDUCATION_STATUS
 CERTIFICATE_STATUS = EDUCATION_STATUS
+
+
+setattr(rrule, 'FD', 'FD')
+RRULE_WKST_CHOICES = (
+    (str(rrule.MO), _(u"Monday")),
+    (str(rrule.TU), _(u"Tuesday")),
+    (str(rrule.WE), _(u"Wednesday")),
+    (str(rrule.TH), _(u"Thursday")),
+    (str(rrule.FR), _(u"Friday")),
+    (str(rrule.SA), _(u"Saturday")),
+    (str(rrule.SU), _(u"Sunday")),
+    (str(rrule.FD), _(u"Few days")),
+)

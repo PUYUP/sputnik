@@ -64,6 +64,11 @@ class AbstractSchedule(models.Model):
         return reverse('helpdesk_view:consultant:schedule_detail', kwargs={'uuid': self.uuid})
 
     @property
+    def permalink_schedule_reservation(self):
+        from django.urls import reverse
+        return reverse('helpdesk_view:client:schedule_reservation', kwargs={'uuid': self.uuid})
+
+    @property
     def expertise(self):
         objs = self.schedule_expertise \
             .prefetch_related(Prefetch('expertise'), Prefetch('expertise__topic'), Prefetch('schedule')) \
@@ -167,6 +172,18 @@ class AbstractSegment(models.Model):
             .filter(status=OPEN).count()
         return self.max_opened > consultation_count
 
+    @property
+    def canal_label(self):
+        return self.get_canal_display()
+
+    @property
+    def open_hour_formated(self):
+        return self.open_hour.strftime("%H:%M")
+
+    @property
+    def close_hour_formated(self):
+        return self.close_hour.strftime("%H:%M")
+
     def __str__(self):
         return '{0} from {1} to {2}'.format(self.schedule, self.open_hour, self.close_hour)
 
@@ -188,8 +205,6 @@ class AbstractSLA(models.Model):
     label = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField(max_length=500, null=True, blank=True)
     promise = models.TextField(help_text=_("What the user gets"))
-    secret_content = models.TextField(help_text=_("Information only show to User has scheduled"),
-                                      null=True, blank=True)
     grace_periode = models.IntegerField(help_text=_("In hours"))
     cost = models.BigIntegerField()
     allocation = models.IntegerField(null=True, help_text=_("If canal Text unit is replied, if other is minute"))
@@ -210,7 +225,6 @@ class AbstractSLA(models.Model):
             raise ValidationError({'allocation': _(u"Must larger than 0")})
 
     def save(self, *args, **kwargs):
-        # fill label
         if not self.label:
             self.label = '{0} hours cost {1}'.format(self.grace_periode, self.cost)
         super().save(*args, **kwargs)
@@ -220,6 +234,10 @@ class AbstractSLA(models.Model):
         if not label:
             label = '{0} ({1} hours) cost {2}'.format(self.label, self.grace_periode, self.cost)
         return label
+
+    @property
+    def label_verbose(self):
+        return '{} jam'.format(self.grace_periode)
 
 
 class AbstractPriority(models.Model):

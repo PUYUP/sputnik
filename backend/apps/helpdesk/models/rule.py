@@ -33,6 +33,8 @@ class AbstractRule(models.Model):
     
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                              related_name='rule')
+    schedule = models.ForeignKey('helpdesk.Schedule', on_delete=models.CASCADE,
+                                 related_name='rule', editable=False, null=True)
     schedule_term = models.ForeignKey('helpdesk.ScheduleTerm', on_delete=models.CASCADE,
                                       related_name='rule')
     identifier = models.SlugField(choices=RRULE_IDENTIFIER_CHOICES, max_length=128,
@@ -47,8 +49,8 @@ class AbstractRule(models.Model):
         abstract = True
         app_label = 'helpdesk'
         ordering = ['-create_date']
-        verbose_name = _("ScheduleTerm Rule")
-        verbose_name_plural = _("ScheduleTerm Rules")
+        verbose_name = _("Schedule Term Rule")
+        verbose_name_plural = _("Schedule Term Rules")
         constraints = [
             models.UniqueConstraint(
                 fields=['schedule_term', 'mode', 'identifier', 'direction'], 
@@ -59,6 +61,10 @@ class AbstractRule(models.Model):
     def __str__(self):
         return '{0}'.format(self.get_identifier_display())
 
+    def save(self, *args, **kwargs):
+        self.schedule = self.schedule_term.schedule
+        super().save(*args, **kwargs)
+
 
 class AbstractRuleValue(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
@@ -67,6 +73,8 @@ class AbstractRuleValue(models.Model):
 
     rule = models.ForeignKey('helpdesk.Rule', on_delete=models.CASCADE,
                              related_name='rule_value')
+    schedule = models.ForeignKey('helpdesk.Schedule', on_delete=models.CASCADE,
+                                 related_name='rule_value', editable=False, null=True)
     schedule_term = models.ForeignKey('helpdesk.ScheduleTerm', on_delete=models.CASCADE,
                                       related_name='rule_value', editable=False)
 
@@ -78,8 +86,8 @@ class AbstractRuleValue(models.Model):
         abstract = True
         app_label = 'helpdesk'
         ordering = ['create_date']
-        verbose_name = _("ScheduleTerm Rule Value")
-        verbose_name_plural = _("ScheduleTerm Rule Values")
+        verbose_name = _("Schedule Term Rule Value")
+        verbose_name_plural = _("Schedule Term Rule Values")
         constraints = [
             models.UniqueConstraint(
                 fields=['rule', 'value_varchar'], 
@@ -97,6 +105,7 @@ class AbstractRuleValue(models.Model):
 
     def save(self, *args, **kwargs):
         self.schedule_term = self.rule.schedule_term
+        self.schedule = self.schedule_term.schedule
         super().save(*args, **kwargs)
 
     def __str__(self):

@@ -3,10 +3,10 @@ from django.urls import path, include
 
 from rest_framework.schemas import get_schema_view
 
-from apps.person.api.v1 import routers as person_routers
-from apps.resume.api.v1 import routers as resume_routers
-from apps.master.api.v1 import routers as master_routers
-from apps.helpdesk.api.v1 import routers as helpdesk_routers
+from apps.person.api import routers as person_routers
+from apps.resume.api import routers as resume_routers
+from apps.master.api import routers as master_routers
+from apps.helpdesk.api import routers as helpdesk_routers
 
 from api.views import RootApiView
 

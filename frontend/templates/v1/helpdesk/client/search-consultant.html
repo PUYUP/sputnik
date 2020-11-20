@@ -109,24 +109,27 @@
                 },
                 columns: [
                     {
-                        data: 'label',
                         render: function(data, type, row, meta) {
-                            var firstName = row?.profile?.first_name;
+                            var profile = row?.profile;
+                            var firstName = profile?.first_name;
                             var username = row?.username;
                             var displayName = firstName ? firstName : username;
-                            var profilePicture = row?.profile?.picture;
+                            var profilePicture = profile?.picture;
+                            var headline = profile?.headline ? `<p class="small text-muted mb-0">${profile?.headline}</p>` : '';
 
                             return `<a href="${row.permalink}" class="d-flex align-items-center">
                                 <figure class="mb-0 pr-2" style="width:50px;">
                                     <img src="${profilePicture ? profilePicture : DEFAULT_PROFILE_PICTURE}" alt="${displayName}" class="w-100 h-auto">
                                 </figure>
 
-                                <span>${displayName}</span>
+                                <div>
+                                    ${displayName}
+                                    ${headline}
+                                </div>
                             </a>`;
                         },
                     },
                     {
-                        data: 'keahlian',
                         render: function(data, type, row, meta) {
                             var expertiseItem = row.expertise_label.join(', ');
                             return expertiseItem;

@@ -23,6 +23,10 @@ label { margin-bottom: .15rem; }
     font-size: .75rem;
 }
 
+.table td, .table th {
+    vertical-align: middle;
+}
+
 /***
  * jQuery easy-autocomplete
  */
@@ -42,6 +46,19 @@ label { margin-bottom: .15rem; }
     padding: 0 !important;
 }
 
+.fc .fc-toolbar-title {
+    font-size: 1.35em !important;
+}
+
+.fc .fc-button {
+    padding: .2em .45em !important;
+    font-size: .9em !important;
+}
+
+.fc .fc-daygrid-day-frame {
+    pointer-events: none;
+}
+
 /***
  * DataTable
  */
@@ -55,6 +72,45 @@ label { margin-bottom: .15rem; }
     padding-left: 10px;
     padding-right: 10px;
     margin-bottom: 10px;
+}
+
+/***
+ * jQuery step
+ */
+.wizard .title {
+    display: none;
+}
+
+.wizard .current-info.audible {
+    display: none;
+}
+
+.wizard .steps > ul,
+.wizard .actions > ul {
+    padding: 0;
+}
+
+.wizard .steps > ul > li,
+.wizard .actions > ul > li {
+    display: inline-block;
+}
+
+.wizard .steps > ul > li + li,
+.wizard .actions > ul > li + li {
+    margin-left: 15px;
+}
+
+.wizard .steps > ul > li a {
+    color: #444;
+}
+
+.wizard .steps > ul > li.current a {
+    font-weight: 700;
+}
+
+.wizard .actions > ul > li a {
+    padding: 5px 15px;
+    border: 1px solid #e5e5e5;
 }
 
 /***

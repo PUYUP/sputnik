@@ -109,7 +109,7 @@
             // LIST
             // ...
             var perPage = '{{ per_page }}';
-            var $datatable = $('#example').DataTable( {
+            var $table = $('#example').DataTable( {
                 dom: 'rtp',
                 ordering: false,
                 stateSave: false,
@@ -178,13 +178,11 @@
                 },
                 columns: [
                     {
-                        data: 'label',
                         render: function(data, type, row, meta) {
                             return `<a href="${row.permalink}">${row?.label}</a>`;
                         }
                     },
                     {
-                        data: 'keahlian',
                         render: function(data, type, row, meta) {
                             var expertise = row?.expertise,
                                 expertiseItem = expertise.join(', ');
@@ -193,7 +191,6 @@
                         }
                     },
                     {
-                        data: 'status',
                         render: function(data, type, row, meta) {
                             var status = row?.is_active;
                             return status ? 'Aktif' : 'Non-aktif';

@@ -1,11 +1,11 @@
 {% extends 'v1/base/base-user.html' %}
 {% load i18n static %}
 
-{% block head_title %}{% trans 'Detail Jadwal' noop %}{% endblock %}
+{% block head_title %}{% trans 'Detil Jadwal' noop %}{% endblock %}
 
 {% block main %}
     <h6 class="text-uppercase">
-        <strong>{% trans 'Detail Jadwal' noop %}</strong>
+        <strong>{% trans 'Detil Jadwal' noop %}</strong>
     </h6>
 
     <ul class="nav nav-tabs small">
@@ -146,7 +146,7 @@
                         $.each(segment, function(i, v) {
                             var t = new moment(v?.open_hour, 'HH:mm:ss').format('HH:MM');
 
-                            var item = {title: t + ': ' + v?.canal_display}
+                            var item = {title: t + ': ' + v?.canal_label}
 
                             // Recurrence events.
                             if (isRecur) {
@@ -167,7 +167,7 @@
                         setTimeout(function() {
                             var calendarEl = document.getElementById('calendar');
                             var calendar = new FullCalendar.Calendar(calendarEl, {
-                                timeZone: 'UTC',
+                                firstDay: 1,
                                 initialView: 'dayGridMonth',
                                 eventDidMount: function (event) {
                                     var start = event.event.start,
@@ -194,8 +194,10 @@
                                     return title;
                                 },
                                 dateClick: function(info) {
-                                    var uuid = $(info.dayEl).attr('data-uuid');
-                                    var hasEvent = $(info.dayEl).attr('data-has-event');
+                                    console.log(info);
+                                    var dayEl = info.dayEl;
+                                    var uuid = $(dayEl).attr('data-uuid');
+                                    var hasEvent = $(dayEl).attr('data-has-event');
 
                                     if (hasEvent) {
                                         if (uuid) {

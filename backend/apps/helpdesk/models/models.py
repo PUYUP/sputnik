@@ -1,9 +1,10 @@
 from utils.generals import is_model_registered
 
 from .schedule import *
-from .issue import *
+from .consultation import *
 from .rule import *
 from .attachment import *
+from .payment import *
 
 __all__ = []
 
@@ -186,3 +187,38 @@ if not is_model_registered('helpdesk', 'Attachment'):
             db_table = 'helpdesk_attachment'
 
     __all__.append('Attachment')
+
+
+# 21
+if not is_model_registered('helpdesk', 'ReservationRule'):
+    class ReservationRule(AbstractReservationRule):
+        class Meta(AbstractReservationRule.Meta):
+            db_table = 'helpdesk_reservation_rule'
+
+    __all__.append('ReservationRule')
+
+
+# 22
+if not is_model_registered('helpdesk', 'ReservationItem'):
+    class ReservationItem(AbstractReservationItem):
+        class Meta(AbstractReservationItem.Meta):
+            db_table = 'helpdesk_reservation_item'
+
+    __all__.append('ReservationItem')
+
+
+# 24
+if not is_model_registered('helpdesk', 'Invoice'):
+    class Invoice(AbstractInvoice):
+        class Meta(AbstractInvoice.Meta):
+            db_table = 'helpdesk_invoice'
+
+    __all__.append('Invoice')
+
+# 25
+if not is_model_registered('helpdesk', 'InvoiceItem'):
+    class InvoiceItem(AbstractInvoiceItem):
+        class Meta(AbstractInvoiceItem.Meta):
+            db_table = 'helpdesk_invoice_item'
+
+    __all__.append('InvoiceItem')
