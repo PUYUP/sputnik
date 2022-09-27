@@ -1,0 +1,151 @@
+{% extends 'v1/base/base-clean.html' %}
+
+{% load i18n %}
+
+{% block head_title %}{% trans "Validasi kode verifikasi" noop %}{% endblock %}
+
+{% block main %}
+    <section class="container h-100">
+        <div class="row justify-content-center h-100 align-items-center">
+            <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5">
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h3 class="card-title font-weight-bold">
+                            <a href="{% url 'home' %}" class="text-dark">{{ app_name }}</a>
+                        </h3>
+
+                        <form id="person-verifycode-validate-form" action="{% url 'person_view:verifycode_validate' %}" method="POST">
+                            {% csrf_token %}
+
+                            <div class="form-group">
+                                <label for="passcode">{% trans "Kode verifikasi dikirim ke alamat email Anda" noop %}</label>
+                                <input class="form-control" type="text" id="passcode" name="passcode" placeholder="{% trans "Masukkan disini" noop %}" autocomplete="off">
+                            </div>
+
+                            <div class="form-group">
+                                <p class="m-0 text-muted">
+                                    {% trans "Tidak menerima kode verifikasi?" noop %} <br />
+                                    <a href="javascript:void(0);" id="verifycode-resend">{% trans "Kirim ulang" noop %}</a>
+                                </p>
+                            </div>
+
+                            <div class="form-group mb-0 text-right">
+                                <button type="submit" class="btn btn-info pr-3 pl-3">{% trans "Verifikasi" noop %}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+
+{% block js %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+
+    <script type="text/javascript">
+        window.addEventListener('DOMContentLoaded', function() {
+            var verifyCode = Cookies.get('person_verifycode_validation'),
+                verifyCodeObject = verifyCode ? JSON.parse(verifyCode) : {},
+                info = verifyCodeObject?.info;
+
+            // REDIRECT IF COOKIE NOT SET
+            if (!verifyCode) window.location.href = "{% url 'home' %}";
+
+            $('#info').html(info);
+            $('input#passcode').focus();
+        
+            // SUBMIT FORM
+            $(document).on('submit', 'form#person-verifycode-validate-form', function(event) {
+                event.preventDefault();
+                
+                var passcode = $(this).find('input#passcode').val();
+                if (passcode) doValidate(passcode);
+            });
+
+            // SEND FORM DATA
+            var doValidate = function(passcode) {
+                var verifyCode = Cookies.get('person_verifycode_validation'),
+                    verifyCodeObject = verifyCode ? JSON.parse(verifyCode) : {};
+
+                $.ajax({
+                    method: 'PATCH',
+                    url: API_ENDPOINT + 'person/verifycodes/' + passcode + '/validate/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    data: {
+                        passcode: passcode,
+                        token: verifyCodeObject?.token,
+                        challenge: verifyCodeObject?.challenge,
+                        email: verifyCodeObject?.email
+                    },
+                    cache: false,
+                    success: function(response) {
+                        Cookies.remove('person_verifycode_validation', {path: '/'});
+                        Cookies.set(
+                            'person_verifycode_result', 
+                            JSON.stringify(response), 
+                            {expires: COOKIE_AGE, path: '/', secure: {% if request.is_secure %}true{% else %}false{% endif %}}
+                        );
+
+                        window.location.href = verifyCodeObject?.redirect_to;
+                    },
+                    error: function(error) {
+                        if (error && error?.responseJSON) {
+                            Swal.fire(
+                                'Kesalahan',
+                                error?.responseJSON?.detail,
+                                'warning'
+                            );
+                        }
+                    }
+                });
+            }
+
+            // RESEND VERIFYCODE
+            $(document).on('click', '#verifycode-resend', function(e) {
+                event.preventDefault();
+                doResendVerifyCode();
+            });
+        
+            var doResendVerifyCode = function() {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'person/verifycodes/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    data: {
+                        email: verifyCodeObject?.email, 
+                        challenge: verifyCodeObject?.challenge
+                    },
+                    cache: false,
+                    success: function(response) {
+                        // after verifycode validate redirected to a page define below
+                        response['redirect_to'] = verifyCodeObject?.redirect_to;
+
+                        Cookies.set(
+                            'person_verifycode_validation', 
+                            JSON.stringify(response), 
+                            {expires: COOKIE_AGE, path: '/', secure: {% if request.is_secure %}true{% else %}false{% endif %}}
+                        );
+
+                        Swal.fire(
+                            'Informasi',
+                            "{% trans 'Kode verifikasi berhasil dikirim ulang' noop %}",
+                            'success'
+                        );
+                    },
+                    error: function(error) {
+                        if (error && error?.responseJSON) {
+                            Swal.fire(
+                                'Kesalahan',
+                                error?.responseJSON?.detail,
+                                'warning'
+                            );
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+{% endblock %}

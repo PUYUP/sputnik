@@ -1,0 +1,215 @@
+{% extends 'v1/base/base-user.html' %}
+{% load i18n static %}
+
+{% block head_title %}{% trans "Profil" noop %}{% endblock %}
+
+{% block main %}
+    <div class="d-block">
+        <h6 class="text-uppercase font-weight-bold">{% trans 'Profil' noop %}</h6>
+
+        <div class="form-group" id="upload-zone">
+            <figure class="mb-3">
+                <img id="profile-picture" class="h-auto" src="" alt="" width="150">
+            </figure>
+
+            <div class="progress mb-2 d-none">
+                <div class="progress-bar" role="progressbar" style="width: 25%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">25%</div>
+            </div>
+
+            <button type="button" id="select-avatar" class="btn btn-light btn-sm pl-3 pr-3">
+                {% trans "Pilih Foto" noop %}
+            </button>
+
+            <input id="upload-avatar" type="file" name="picture" class="d-none" accept="image/x-png,image/jpeg,image/jpg">
+        
+            <p class="text-muted small mb-0 mt-2">Besar file: maksimum 2.5 MB. Ekstensi file yang diperbolehkan: .JPG dan .PNG</p>
+        </div> <!-- /.upload-zone -->
+
+        <form id="person-profile-form" class="uk-form-stacked" action="{% url 'person_view:profile' %}" method="POST">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label for="first_name">{% trans 'Nama lengkap' %}</label>
+                <input class="form-control" type="text" id="first_name" name="first_name" placeholder="Contoh: John Doe" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="headline">{% trans 'Sorotan' %}</label>
+                <input class="form-control" type="text" id="headline" name="headline" placeholder="Contoh: Software Engineer" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="gender">{% trans 'Jenis Kelamin' %}</label>
+                <select id="gender" name="gender" class="form-control"></select>
+            </div>
+
+            <div class="form-group">
+                <label for="about">{% trans 'Tentang' %}</label>
+                <textarea class="form-control" id="about" name="about" placeholder="Saya adalah..." autocomplete="off"></textarea>
+            </div>
+
+            <div class="form-group mb-0 text-right">
+                <button type="submit" class="btn btn-info pl-3 pr-3">Simpan</button>
+            </div>
+        </form>
+    </div>
+{% endblock %}
+
+{% block js %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+
+    <script src="{% static 'vendors/jquery-file-upload/jquery.iframe-transport.js' %}" defer></script>
+    <script src="{% static 'vendors/jquery-file-upload/vendor/load-image.all.min.js' %}" defer></script>
+    <script src="{% static 'vendors/jquery-file-upload/vendor/jquery.ui.widget.js' %}" defer></script>
+    <script src="{% static 'vendors/jquery-file-upload/jquery.fileupload.js' %}" defer></script>
+    <script src="{% static 'vendors/jquery-file-upload/jquery.fileupload-process.js' %}" defer></script>
+    <script src="{% static 'vendors/jquery-file-upload/jquery.fileupload-image.js' %}" defer></script>
+    <script src="{% static 'vendors/jquery-file-upload/jquery.fileupload-validate.js' %}" defer></script>
+
+    <script type="text/javascript">
+        (function() {
+            'use strict';
+
+            window.addEventListener('DOMContentLoaded', function() {
+                // GENDERS
+                var genderChoices = JSON.parse('{{ gender_choices|safe }}');
+                var genderOption = '';
+                var currentGender = '{{ user.profile.gender }}';
+
+                $.each(genderChoices, function(k, v) {
+                    genderOption += `<option value="${k}" ${k == currentGender ? "selected" : ''}>${v}</option>`;
+                });
+
+                $('#gender').html(genderOption);
+
+                // ...
+                // LOAD PROFILE
+                // ...
+                var loadProfile = function() {
+                    $.ajax({
+                        method: 'GET',
+                        url: API_ENDPOINT + 'person/users/{{ user.uuid }}/profile/',
+                        headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                        xhrFields: {withCredentials: true},
+                        cache: false,
+                        success: function(response) {
+                            var values = $('#person-profile-form').serializeArray();
+                            
+                            $.each(values, function(i, v) {
+                                $('#' + v.name).val(response[v.name]);
+                            });
+
+                            $('#profile-picture').attr('src', response?.picture);
+                        }
+                    });
+                }
+
+                loadProfile();
+
+                // ...
+                // SUBMIT FORM
+                // ...
+                $(document).on('submit', 'form#person-profile-form', function(e) {
+                    e.preventDefault();
+
+                    var values = $(this).serializeArray(),
+                        param = {};
+
+                    $.each(values, function(i, v) {
+                        param[v.name] = v.value;
+                    });
+
+                    saveProfile(param);
+                });
+
+                var saveProfile = function(param) {
+                    $.ajax({
+                        method: 'PATCH',
+                        url: API_ENDPOINT + 'person/users/{{ user.uuid }}/profile/',
+                        dataType: 'json',
+                        contentType: "application/json; charset=utf-8",
+                        headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                        xhrFields: {withCredentials: true},
+                        data: JSON.stringify({...param}),
+                        cache: false,
+                        success: function(response) {
+                            Swal.fire(
+                                'Informasi',
+                                "{% trans 'Profil berhasi perbarui' noop %}",
+                                'success'
+                            );
+                        }
+                    });
+                }
+
+
+                // ...
+                // SELECT AVATAR
+                // ...
+                $(document).on('click', '#select-avatar', function(e) {
+                    e.preventDefault();
+                    $('#upload-avatar').trigger('click');
+                });
+
+
+                // ...
+                // UPLOAD AVATAR
+                // ...
+                $('#upload-avatar').fileupload({
+                    method: 'PATCH',
+                    url: API_ENDPOINT + 'person/users/{{ user.uuid }}/profile/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    dataType: 'json',
+                    sequentialUploads: true,
+                    progress: function (e, data) {
+                        var progress = parseInt(data.loaded / data.total * 100, 10);
+                        var strProgress = progress + "%";
+                        var uploadZoneEl = $(e.target).closest('#upload-zone');
+
+                        $(uploadZoneEl).find('.progress').removeClass('d-none');
+                        $(uploadZoneEl).find('.progress-bar').css({ 'width': strProgress });
+                        $(uploadZoneEl).find('.progress-bar').text(strProgress);
+                    },
+                    done: function (e, data) {
+                        var result = data.result;
+                        var uploadZoneEl = $(e.target).closest('#upload-zone');
+
+                        if (result) {
+                            var img = '<img src="' + result.picture + '" class="h-auto" width="150">';
+                            $(uploadZoneEl).find('figure').html(img);
+                        }
+
+                        $(uploadZoneEl).find('.progress').addClass('d-none');
+                    },
+                    stop: function (e) {
+                        var uploadZoneEl = $(e.target).closest('#upload-zone');
+                        $(uploadZoneEl).find('.progress').addClass('d-none');
+                    }
+                });
+
+
+                // ...
+                // UPLOAD AVATAR PARAMS
+                // ...
+                $('#upload-avatar').bind('fileuploadsubmit', function (e, data) {
+                    data.formData = {
+                        'abc': 'xyz',
+                    }
+                });
+
+
+                // ...
+                // UPLOAD FAIL
+                // ...
+                $('#upload-avatar').bind('fileuploadfail', function (error, data) {
+                    var errorMessage = '{% trans "Maksimal ukuran file 2.5 MB." noop %}';
+                    Swal.fire(
+                        'Kesalahan',
+                        errorMessage,
+                        'warning'
+                    );
+                });
+            });
+        })();
+    </script>
+{% endblock %}

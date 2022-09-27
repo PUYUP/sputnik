@@ -1,0 +1,362 @@
+{% extends 'v1/base/base-user.html' %}
+{% load i18n static %}
+
+{% block head_title %}{% trans 'Detil Jadwal' noop %}{% endblock %}
+
+{% block main %}
+    <h6 class="text-uppercase">
+        <strong>{% trans 'Detil Jadwal' noop %}</strong>
+    </h6>
+
+    <ul class="nav nav-tabs small">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" href="{% url 'helpdesk_view:consultant:schedule_detail' uuid %}">{% trans "Ringkasan" noop %}</a>
+        </li>
+
+        <li class="nav-item" role="presentation">
+            <a class="nav-link active" href="{% url 'helpdesk_view:consultant:schedule_calendar' uuid %}">{% trans "Kalender" noop %}</a>
+        </li>
+    </ul>
+    
+    <div class="w-100 mt-4">
+        <div id='calendar'></div>
+    </div>
+{% endblock %}
+
+{% block style %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.3.2/main.min.css" type="text/css">
+{% endblock %}
+
+{% block js %}
+    <script src="{% static 'js/moment.min.js' %}" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+
+    <!-- rrule lib -->
+    <script src='https://cdn.jsdelivr.net/npm/rrule@2.6.4/dist/es5/rrule.min.js' defer></script>
+
+    <!-- fullcalendar bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.3.2/main.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.3.2/locales-all.min.js" defer></script>
+
+    <!-- the rrule-to-fullcalendar connector. must go AFTER the rrule lib -->
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/rrule@5.2.0/main.global.min.js' defer></script>
+
+    <script type="text/javascript">
+        window.addEventListener('DOMContentLoaded', function() {
+            // ...
+            // RULE MODAL
+            // ...
+            var addRuleModal = function(info) {
+                var modalEl = `<div class="modal fade" id="ruleModal" data-backdrop="static" data-keyboard="false" tabindex="-1" aria-labelledby="ruleModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="ruleModalLabel">Libur Tanggal ${info.dateStr}</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            
+                            <div class="modal-body">
+                                ...
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+
+                return modalEl;
+            }
+
+
+            // ...
+            // LOAD SCHEDULE
+            // ... 
+            var loadSchedule = function() {
+                $.ajax({
+                    method: 'GET',
+                    url: API_ENDPOINT + 'helpdesk/consultant/schedules/{{ uuid }}/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    cache: false,
+                    success: function(response) {
+                        // Set to global.
+                        var schedule_term = response?.schedule_term;
+                        window.scheduleTermUuid = schedule_term?.uuid;
+
+                        // Build event source.
+                        var title = response?.label,
+                            freq = schedule_term?.freq,
+                            interval = schedule_term?.interval,
+                            dtstart = schedule_term?.dtstart,
+                            rule = schedule_term?.rule,
+                            isRecur = schedule_term?.direction == 'recur',
+                            segment = response?.segment,
+                            byweekdayValue = [],
+                            exclusionBydateValue = [],
+                            eventSources = [];
+                        
+                        /*
+                        // Create a rule:
+                        const rulex = new rrule.RRule({
+                            freq: rrule.RRule.WEEKLY,
+                            interval: 5,
+                            byweekday: [rrule.RRule.MO, rrule.RRule.FR],
+
+                            dtstart: new Date(Date.UTC(2020, 10, 1, 10, 30)),
+                            until: new Date(Date.UTC(2020, 12, 31))
+                        });
+
+                        console.log(rulex.all());
+
+                        const rruleSet = new rrule.RRuleSet();
+                        rruleSet.rrule(
+                            new rrule.RRule({
+                                freq: rrule.RRule.DAILY,
+                                count: 5,
+                                dtstart: new Date("Aug 2020 10 10:30 am"),
+                            })
+                        );
+                        rruleSet.exdate(new Date("Aug 2020 14 10:30 am"));
+                        console.log(rruleSet.all());
+                        */
+
+                        // Collect byweekday inclusion.
+                        var byweekday = rule.find(d => d.identifier === 'byweekday' && d.mode === 'inclusion' && d.direction === 'recur');
+                        if (byweekday) {
+                            var ruleValue = byweekday?.rule_value;
+                            if (ruleValue) {
+                                $.each(ruleValue, function(i, v) {
+                                    byweekdayValue.push(v?.value_varchar);
+                                });
+                            }
+                        }
+
+                        // Collect bydate exclusion.
+                        var exclusionBydate = rule.find(d => d.identifier === 'bydate' && d.mode === 'exclusion' && d.direction === 'once');
+                        if (exclusionBydate) {
+                            var ruleValue = exclusionBydate?.rule_value;
+                            if (ruleValue) {
+                                $.each(ruleValue, function(i, v) {
+                                    exclusionBydateValue.push({'uuid': v.uuid, 'date': moment(v?.value_datetime).format('YYYY-MM-DD')});
+                                });
+                            }
+                        }
+
+                        // Inject segment to event sources.
+                        $.each(segment, function(i, v) {
+                            var t = new moment(v?.open_hour, 'HH:mm:ss').format('HH:MM');
+
+                            var item = {title: t + ': ' + v?.canal_label}
+
+                            // Recurrence events.
+                            if (isRecur) {
+                                item['rrule'] = {
+                                    freq: freq,
+                                    interval: interval,
+                                    byweekday: byweekdayValue,
+                                    dtstart: dtstart,
+                                }
+                            } else {
+                                item['start'] = dtstart;
+                            }
+
+                            eventSources.push(item);
+                        });
+
+                        // Start calendar.
+                        setTimeout(function() {
+                            var calendarEl = document.getElementById('calendar');
+                            var calendar = new FullCalendar.Calendar(calendarEl, {
+                                firstDay: 1,
+                                initialView: 'dayGridMonth',
+                                eventDidMount: function (event) {
+                                    var start = event.event.start,
+                                        startFmt = moment(start).format('YYYY-MM-DD');
+                                    
+                                    var itemDate = exclusionBydateValue.find(d => {
+                                        if (d && d.date == startFmt) return d;
+                                    });
+
+                                    var isHoliday = itemDate && itemDate.date == startFmt ? true : false;
+                                    var bgColor = 'rgba(143, 223, 130, .3)';
+                                    var eventEl = $(event.el).closest('td.fc-day[data-date=' + startFmt + ']');
+
+                                    if (isHoliday) {
+                                        bgColor = 'rgba(193, 66, 66, 0.2)';
+                                        eventEl.attr('data-uuid', itemDate.uuid);
+                                    }
+
+                                    eventEl.css({'background-color': bgColor})
+                                        .attr('data-has-event', true);
+                                },
+                                eventContent: function (event) {
+                                    var title = event.event?.title;
+                                    return title;
+                                },
+                                dateClick: function(info) {
+                                    console.log(info);
+                                    var dayEl = info.dayEl;
+                                    var uuid = $(dayEl).attr('data-uuid');
+                                    var hasEvent = $(dayEl).attr('data-has-event');
+
+                                    if (hasEvent) {
+                                        if (uuid) {
+                                            deleteHoliday(info, uuid);
+                                        } else {
+                                            addHoliday(info);
+                                        }
+                                    }
+                                },
+                                events: eventSources
+                            });
+
+                            calendar.render();
+                        }, 100);
+                    }
+                });
+            }
+
+            loadSchedule();
+
+
+            // ...
+            // ADD HOLIDAY
+            // ...
+            var addHoliday = function(info) {
+                Swal.fire({
+                    title: 'Tambah Hari Libur',
+                    text: "Tanggal " + info.dateStr + " libur",
+                    icon: 'info',
+                    allowOutsideClick: false,
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Konfirmasi libur',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $(info.dayEl).css({'background-color': 'rgba(193, 66, 66, 0.2)'});
+
+                        var data = {
+                            "type": "datetime", 
+                            "identifier": "bydate",
+                            "direction": "once",
+                            "mode": "exclusion",
+                            "rule_value": [{'value_datetime': new Date(info.date).toISOString()}],
+                            "schedule_term": window.scheduleTermUuid,
+                        }
+
+                        saveRule(data, info);
+                    }
+                });
+            }
+
+
+            // ...
+            // DELETE HOLIDAY
+            // ...
+            var deleteHoliday = function(info, uuid) {
+                Swal.fire({
+                    title: 'Hapus Hari Libur',
+                    text: "Tanggal " + info.dateStr + " dihapus dari hari libur",
+                    icon: 'warning',
+                    allowOutsideClick: false,
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Konfirmasi hapus',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $(info.dayEl).css({'background-color': 'rgba(143, 223, 130, .3)'});
+
+                        var data = [{'uuid': uuid}];
+                        deleteRuleValue(data, info);
+                    }
+                });
+            }
+
+
+            // ...
+            // SAVE RULEs
+            // ...
+            var saveRule = function(data, info) {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'helpdesk/consultant/rules/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    cache: false,
+                    success: function(response) {
+                        // set rule uuid to value
+                        var ruleValue = [];
+                        
+                        $.each(data?.rule_value, function(i, v) {
+                            v['rule'] = response.uuid;
+                            ruleValue.push(v);
+                        });
+
+                        if (ruleValue.length > 0) saveRuleValue(ruleValue, info);
+                    }
+                });
+            }
+
+
+            // ...
+            // SAVE RULE VALUEs
+            // ...
+            var saveRuleValue = function(data, info) {
+                $.ajax({
+                    method: 'PUT',
+                    url: API_ENDPOINT + 'helpdesk/consultant/rulesvalue/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    cache: false,
+                    success: function(response) {
+                        $.each(response, function(i, v) {
+                            var vFmt = moment(v.value_datetime).format('YYYY-MM-DD');
+                            var eventEl = $('[data-date=' + vFmt + ']');
+                            if (eventEl) eventEl.attr('data-uuid', v.uuid);
+                        });
+
+                        Swal.fire(
+                            'Informasi',
+                            'Hari libur berhasil ditambahkan',
+                            'success'
+                        );
+                    }
+                });
+            }
+
+
+            // ...
+            // DELETE RULE VALUES
+            // ...
+            var deleteRuleValue = function(data, info) {
+                $.ajax({
+                    method: 'DELETE',
+                    url: API_ENDPOINT + 'helpdesk/consultant/rulesvalue/delete/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    cache: false,
+                    success: function(response) {
+                        var eventEl = $(info.dayEl).removeAttr('data-uuid');
+
+                        Swal.fire(
+                            'Informasi',
+                            'Hari libur berhasil dihapus',
+                            'success'
+                        );
+                    }
+                });
+            }
+        });
+    </script>
+{% endblock %}

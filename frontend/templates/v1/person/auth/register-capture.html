@@ -1,0 +1,194 @@
+{% extends 'v1/base/base-clean.html' %}
+
+{% load i18n %}
+
+{% block head_title %}{% trans "Lengkapi akun" noop %}{% endblock %}
+
+{% block main %}
+    <section class="container h-100">
+        <div class="row justify-content-center h-100 align-items-center">
+            <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5">
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h3 class="card-title font-weight-bold">
+                            <a href="{% url 'home' %}" class="text-dark">{{ app_name }}</a>
+                        </h3>
+
+                        <form id="person-register-capture-form" action="{% url 'person_view:register_capture' %}" method="POST">
+                            {% csrf_token %}
+                            
+                            <p class="mb-0">{% trans "Mendaftar sebagai?" noop %}</p>
+
+                            <div class="form-group">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="role" id="client" value="client" required>
+                                    <label class="form-check-label" for="client">
+                                        {% trans "Klien" noop %}
+                                    </label>
+                                </div>
+
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="role" id="consultant" value="consultant" required>
+                                    <label class="form-check-label" for="consultant">
+                                        {% trans "Konsultan" noop %}
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="username">{% trans "Nama pengguna" noop %}</label>
+                                <input class="form-control" type="text" id="username" name="username" placeholder="Contoh: johndoe" autocomplete="off" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="email">{% trans "Alamat email aktif" noop %}</label>
+                                <input class="form-control" type="email" id="email" name="email" placeholder="saya@email.com" autocomplete="off" readonly required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="username">{% trans "Nama lengkap" noop %}</label>
+                                <input class="form-control" type="text" id="first_name" name="first_name" placeholder="John Doe Boy" autocomplete="off" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="username">{% trans "Kata sandi" noop %}</label>
+                                <input class="form-control" type="password" id="password1" name="password1" placeholder="Min 6 karakter" autocomplete="off" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="username">{% trans "Ulangi kata sandi" noop %}</label>
+                                <input class="form-control" type="password" id="password2" name="password2" placeholder="Konfirmasikan kata sandi" autocomplete="off" required>
+                            </div>
+
+                            <div class="form-group">
+                                <p class="text-muted">{% trans "Sudah punya akun?" noop %} <a href="{% url 'person_view:login' %}">Masuk</a></p>
+                            </div>
+
+                            <div class="form-group mb-0 text-right">
+                                <button type="submit" class="btn btn-info pl-3 pr-3">{% trans "Daftar" noop %}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+
+{% block js %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+
+    <script type="text/javascript">
+        window.addEventListener('DOMContentLoaded', function() {
+            var verifyCode = Cookies.get('person_verifycode_result'),
+                verifyCodeObject = verifyCode ? JSON.parse(verifyCode) : {};
+            
+            if (!verifyCode && verifyCodeObject?.challenge !== 'register_validation') window.location.href = "{% url 'home' %}";
+
+            $('input#email').val(verifyCodeObject?.email);
+
+            // SUBMIT FORM
+            $(document).on('submit', 'form#person-register-capture-form', function(e) {
+                e.preventDefault();
+
+                // clear all alert
+                $(this).find('.uk-alert').remove();
+
+                var values = $(this).serializeArray(),
+                    param = {};
+
+                $.each(values, function(i, v) {
+                    param[v.name] = v.value;
+
+                    // role set as list object
+                    if (v.name == 'role') {
+                        var role = {'identifier': v.value};
+                        param[v.name] = [role];
+                    }
+                });
+
+                var password1 = param?.password1,
+                    password2 = param?.password2
+    
+                if (password1 !== password2) {
+                    Swal.fire(
+                        'Kesalahan',
+                        "{% trans 'Kata sandi tidak sama' %}",
+                        'warning'
+                    );
+
+                    return false;
+                }
+
+                param['challenge'] = verifyCodeObject?.challenge;
+                param['token'] = verifyCodeObject?.token;
+                param['password'] = password2;
+
+                doRegister(param);
+            });
+
+            // SEND FORM DATA
+            var doRegister = function(param) {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'person/users/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify({...param}),
+                    cache: false,
+                    success: function(response) {
+                        Cookies.remove('person_verifycode_result', {path: '/'});
+
+                        // Login
+                        doLogin(param?.email, param?.password);
+                    },
+                    error: function(error) {
+                        var errorJSON = error?.responseJSON;
+
+                        if (error && errorJSON) {
+                            $.each(errorJSON, function(k, v) {
+                                var message = '';
+
+                                if(Array.isArray(v)) {
+                                    message = v.join(' ');
+                                } else {
+                                    message = v;
+                                }
+                                
+                                var el = $('#' + k);
+                                if (k === 'password') el = $('#password2');
+                                el.closest('.form-gorup').after('<p class="small">' + message + '</p>');
+                            });
+                        }
+                    }
+                });
+            }
+
+            // LOGIN
+            var doLogin = function(account, password) {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'person/token/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    data: {username: account, password: password},
+                    cache: false,
+                    success: function(response) {
+                        window.location.href = "{% url 'home' %}";
+                    },
+                    error: function(error) {
+                        if (error && error?.responseJSON) {
+                            Swal.fire(
+                                'Kesalahan',
+                                error?.responseJSON?.detail,
+                                'warning'
+                            );
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+{% endblock %}

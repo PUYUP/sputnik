@@ -1,2 +1,0 @@
-web: gunicorn sputnik.wsgi --log-file -
-worker: celery -A sputnik worker -l info

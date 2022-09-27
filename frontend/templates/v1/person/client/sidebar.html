@@ -1,0 +1,124 @@
+{% load i18n %}
+
+<ul id="sideMenu" class="nav flex-column accordion">
+    <li class="nav-item" style="line-height: 1;">
+        <span class="nav-link pr-0 pl-0 pt-0 pb-2 position-relative">
+            <strong class="text-uppercase">{{ app_name }}</strong>
+            <div class="d-block mt-2 small font-weight-bold">{{ user.username }}</div>
+        </span>
+    </li>
+    
+    <li class="nav-item">
+        <a class="nav-link pr-0 pl-0 position-relative {% if url_name == 'dashboard' %}active text-dark{% endif %}" href="{% url 'person_view:client:dashboard' %}">
+            <div class="d-flex w-100 align-items-center">
+                <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-house-fill" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M8 3.293l6 6V13.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5V9.293l6-6zm5-.793V6l-2-2V2.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5z"/>
+                    <path fill-rule="evenodd" d="M7.293 1.5a1 1 0 0 1 1.414 0l6.647 6.646a.5.5 0 0 1-.708.708L8 2.207 1.354 8.854a.5.5 0 1 1-.708-.708L7.293 1.5z"/>
+                </svg>
+
+                <span class="ml-2">{% trans "Dasbor" noop %}</span>
+            </div>
+        </a>
+    </li>
+
+    <li class="nav-item">
+        <a class="nav-link pr-0 pl-0 position-relative {% if url_name == 'search_consultant' or url_name == 'user_detail' or url_name == 'schedule_reservation' %}active text-dark{% endif %}" href="{% url 'helpdesk_view:client:search_consultant' %}">
+            <div class="d-flex w-100 align-items-center">
+                <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-search" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M10.442 10.442a1 1 0 0 1 1.415 0l3.85 3.85a1 1 0 0 1-1.414 1.415l-3.85-3.85a1 1 0 0 1 0-1.415z"/>
+                    <path fill-rule="evenodd" d="M6.5 12a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11zM13 6.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0z"/>
+                </svg>
+
+                <span class="ml-2">{% trans "Cari Pakar" noop %}</span>
+            </div>
+        </a>
+    </li>
+
+    <li class="nav-item {% if url_name == 'issue' or url_name == 'issue_detail' or url_name == 'reservation' or url_name == 'reservation_detail' or url_name == 'reservation_accepted' or url_name == 'reservation_change' %}collapsed{% endif %}">
+        <a class="nav-link pr-0 pl-0 position-relative" href="#" data-toggle="collapse" data-target="#collapseConsultation">
+            <div class="d-flex w-100 align-items-center">
+                <div class="mr-auto">
+                    <div class="d-flex w-100 align-items-center">
+                        <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-chat-right-text" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M2 1h12a1 1 0 0 1 1 1v11.586l-2-2A2 2 0 0 0 11.586 11H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zm12-1a2 2 0 0 1 2 2v12.793a.5.5 0 0 1-.854.353l-2.853-2.853a1 1 0 0 0-.707-.293H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h12z"/>
+                            <path fill-rule="evenodd" d="M3 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 6a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 6zm0 2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/>
+                        </svg>
+
+                        <span class="ml-2">{% trans "Konsultasi" noop %}</span>
+                    </div>
+                </div>
+
+                <span class="chevron"></span>
+            </div>
+        </a>
+
+        <div id="collapseConsultation" class="collapse {% if url_name == 'issue' or url_name == 'issue_detail' or url_name == 'reservation' or url_name == 'reservation_detail' or url_name == 'reservation_accepted' or url_name == 'reservation_change' %}show{% endif %}" data-parent="#sideMenu">
+            <ul class="list-unstyled pl-4">
+                <li>
+                    <a href="{% url 'helpdesk_view:client:issue' %}" class="d-block pt-1 pb-1 {% if url_name == 'issue' or url_name == 'issue_detail' %}text-dark{% endif %}">{% trans "Pertanyaan" noop %}</a>
+                </li>
+
+                <li>
+                    <a href="{% url 'helpdesk_view:client:reservation' %}" class="d-block pt-1 pb-1 {% if url_name == 'reservation' or url_name == 'reservation_detail' or url_name == 'reservation_change' %}text-dark{% endif %}">{% trans "Reservasi" noop %}</a>
+                </li>
+            </ul>
+        </div>
+    </li>
+
+    <li class="nav-item {% if url_name == 'profile' or url_name == 'security' %}collapsed{% endif %}">
+        <a class="nav-link pr-0 pl-0 position-relative" href="#" data-toggle="collapse" data-target="#collapseAccount">
+            <div class="d-flex w-100 align-items-center">
+                <div class="mr-auto">
+                    <div class="d-flex w-100 align-items-center">
+                        <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-person-fill" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+                        </svg>
+
+                        <span class="ml-2">{% trans "Akun" noop %}</span>
+                    </div>
+                </div>
+
+                <span class="chevron"></span>
+            </div>
+        </a>
+
+        <div id="collapseAccount" class="collapse {% if url_name == 'profile' or url_name == 'security' %}show{% endif %}" data-parent="#sideMenu">
+            <ul class="list-unstyled pl-4">
+                <li>
+                    <a href="{% url 'person_view:profile' %}" class="d-block pt-1 pb-1 {% if url_name == 'profile' %}text-dark{% endif %}">Profil</a>
+                </li>
+
+                <li>
+                    <a href="{% url 'person_view:security' %}" class="d-block pt-1 pb-1 {% if url_name == 'security' %}text-dark{% endif %}">Keamanan</a>
+                </li>
+            </ul>
+        </div>
+    </li>
+
+    <li class="dropdown-divider"></li>
+
+    <li class="nav-item">
+        <a class="nav-link pr-0 pl-0 position-relative" href="{% url 'person_view:client:dashboard' %}">
+            <div class="d-flex w-100 align-items-center">
+                <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-question-circle-fill" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.496 6.033a.237.237 0 0 1-.24-.247C5.35 4.091 6.737 3.5 8.005 3.5c1.396 0 2.672.73 2.672 2.24 0 1.08-.635 1.594-1.244 2.057-.737.559-1.01.768-1.01 1.486v.105a.25.25 0 0 1-.25.25h-.81a.25.25 0 0 1-.25-.246l-.004-.217c-.038-.927.495-1.498 1.168-1.987.59-.444.965-.736.965-1.371 0-.825-.628-1.168-1.314-1.168-.803 0-1.253.478-1.342 1.134-.018.137-.128.25-.266.25h-.825zm2.325 6.443c-.584 0-1.009-.394-1.009-.927 0-.552.425-.94 1.01-.94.609 0 1.028.388 1.028.94 0 .533-.42.927-1.029.927z"/>
+                </svg>
+
+                <span class="ml-2">{% trans "Petunjuk" noop %}</span>
+            </div>
+        </a>
+    </li>
+
+    <li class="nav-item">
+        <a class="nav-link pr-0 pl-0 position-relative" href="{% url 'person_view:logout' %}">
+            <div class="d-flex w-100 align-items-center">
+                <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-box-arrow-right" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+                    <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                </svg>
+
+                <span class="ml-2">{% trans "Keluar" noop %}</span>
+            </div>
+        </a>
+    </li>
+</ul>

@@ -1,0 +1,519 @@
+{% extends 'v1/base/base-user.html' %}
+{% load i18n static %}
+
+{% block head_title %}{% trans 'Reservasi Jadwal' noop %}{% endblock %}
+
+{% block main %}
+    <h6 class="text-uppercase">
+        <strong>{% trans 'Reservasi Jadwal' noop %}</strong>
+    </h6>
+
+    <div id="content"></div>
+
+    <div class="w-100 mt-4">
+        <div id='calendar'></div>
+    </div>
+{% endblock %}
+
+{% block style %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.3.2/main.min.css" type="text/css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/css/select2.min.css" rel="stylesheet" />
+{% endblock %}
+
+{% block js %}
+    <script src="{% static 'js/moment.min.js' %}" defer></script>
+    <script src="{% static 'js/jquery.steps.min.js' %}" defer></script>
+    <script src="{% static 'js/jquery.validate.min.js' %}" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/js/select2.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+
+    <!-- rrule lib -->
+    <script src='https://cdn.jsdelivr.net/npm/rrule@2.6.4/dist/es5/rrule.min.js' defer></script>
+
+    <!-- fullcalendar bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.3.2/main.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.3.2/locales-all.min.js" defer></script>
+
+    <!-- the rrule-to-fullcalendar connector. must go AFTER the rrule lib -->
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/rrule@5.2.0/main.global.min.js' defer></script>
+
+    <script type="text/javascript">
+        (function() {
+            'use strict';
+
+            window.addEventListener('DOMContentLoaded', function() {
+                var modalEl = function(data) {
+                    var segmentChoices = '';
+                    var segment = data['segment'].filter(d => d.sla.length > 0);
+
+                    $.each(segment, function(i, v) {
+                        segmentChoices += `<div class="custom-control custom-radio mb-2">
+                            <input type="radio" id="segment-${v.uuid}" name="segment" value="${v.uuid}" class="custom-control-input" required>
+                            <label class="custom-control-label" for="segment-${v.uuid}">${v.canal_label}</label>
+                        </div>`;
+                    });
+
+                    return `<div class="modal fade" id="modalReservation" data-backdrop="static" data-keyboard="false" tabindex="-1" aria-labelledby="modalReservationLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="modalReservationLabel">Reservasi jadwal</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+
+                                <div class="modal-body">
+                                    <form id="reservation-form" action="#">
+                                        <h3>Segmen</h3>
+                                        <fieldset>
+                                            <div class="form-group">
+                                                ${segmentChoices}
+                                            </div>
+                                        </fieldset>
+    
+                                        <h3>SLA</h3>
+                                        <fieldset>
+                                            <div id="sla-choice" class="form-group"></div>
+                                        </fieldset>
+    
+                                        <h3>Prioritas</h3>
+                                        <fieldset>
+                                            <div id="priority-choice" class="form-group"></div>
+                                        </fieldset>
+
+                                        <h3>Pertanyaan</h3>
+                                        <fieldset>
+                                            <div class="form-group">
+                                                <p class="mb-1">Pilih pertanyaan Anda</p>
+                                                <select id="select-issue" class="select-issue form-control w-100" style="width: 100%;" required></select>
+                                            </div>
+                                        </fieldset>
+    
+                                        <h3>Tinjau</h3>
+                                        <fieldset>
+                                            <div id="summary"></div>
+                                        </fieldset>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                }
+
+
+                // ...
+                // LOAD SCHEDULE
+                // ... 
+                var loadSchedule = function() {
+                    $.ajax({
+                        method: 'GET',
+                        url: API_ENDPOINT + 'helpdesk/consultant/schedules/{{ uuid }}/',
+                        headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                        xhrFields: {withCredentials: true},
+                        cache: false,
+                        success: function(response) {
+                            // Set to global.
+                            var schedule_term = response?.schedule_term;
+                            window.scheduleTermUuid = schedule_term?.uuid;
+                            window.schedule = response;
+
+                            // Build event source.
+                            var title = response?.label,
+                                freq = schedule_term?.freq,
+                                interval = schedule_term?.interval,
+                                dtstart = schedule_term?.dtstart,
+                                rule = schedule_term?.rule,
+                                isRecur = schedule_term?.direction == 'recur',
+                                segment = response?.segment,
+                                consultant = response?.consultant,
+                                byweekdayValue = [],
+                                exclusionBydateValue = [],
+                                eventSources = [];
+                            
+                            // Collect byweekday inclusion.
+                            var byweekday = rule.find(d => d.identifier === 'byweekday' && d.mode === 'inclusion' && d.direction === 'recur');
+                            if (byweekday) {
+                                var ruleValue = byweekday?.rule_value;
+                                if (ruleValue) {
+                                    $.each(ruleValue, function(i, v) {
+                                        byweekdayValue.push(v?.value_varchar);
+                                    });
+                                }
+                            }
+
+                            // Collect bydate exclusion.
+                            var exclusionBydate = rule.find(d => d.identifier === 'bydate' && d.mode === 'exclusion' && d.direction === 'once');
+                            if (exclusionBydate) {
+                                var ruleValue = exclusionBydate?.rule_value;
+                                if (ruleValue) {
+                                    $.each(ruleValue, function(i, v) {
+                                        exclusionBydateValue.push({'uuid': v.uuid, 'date': moment(v?.value_datetime).format('YYYY-MM-DD')});
+                                    });
+                                }
+                            }
+
+                            // Inject segment to event sources.
+                            $.each(segment, function(i, v) {
+                                var t = new moment(v?.open_hour, 'HH:mm:ss').format('HH:MM');
+
+                                var item = {title: t + ': ' + v?.canal_label}
+
+                                // Recurrence events.
+                                if (isRecur) {
+                                    item['rrule'] = {
+                                        freq: freq,
+                                        interval: interval,
+                                        byweekday: byweekdayValue,
+                                        dtstart: dtstart,
+                                    }
+                                } else {
+                                    item['start'] = dtstart;
+                                }
+
+                                eventSources.push(item);
+                            });
+
+                            // Start calendar.
+                            setTimeout(function() {
+                                var collectReservation = '';
+                                var calendarEl = document.getElementById('calendar');
+                                var calendar = new FullCalendar.Calendar(calendarEl, {
+                                    firstDay: 1,
+                                    initialView: 'dayGridMonth',
+                                    eventDidMount: function (event) {
+                                        var start = event.event.start,
+                                            startFmt = moment(start).format('YYYY-MM-DD'),
+                                            dateNowFmt = moment(Date.now()).format('YYYY-MM-DD');
+                                        
+                                        var itemDate = exclusionBydateValue.find(d => {
+                                            if (d && d.date == startFmt) return d;
+                                        });
+
+                                        if (startFmt > dateNowFmt) {
+                                            var isHoliday = itemDate && itemDate.date == startFmt ? true : false;
+                                            var bgColor = 'rgba(143, 223, 130, .3)';
+                                            var eventEl = $(event.el).closest('td.fc-day[data-date=' + startFmt + ']');
+
+                                            if (isHoliday) {
+                                                bgColor = 'rgba(193, 66, 66, 0.2)';
+                                                eventEl.attr('data-uuid', itemDate.uuid)
+                                                    .attr('data-is-holiday', true);
+                                            }
+
+                                            eventEl.css({'background-color': bgColor})
+                                                .attr('data-has-event', true);
+                                        }
+                                    },
+                                    eventContent: function (event) {
+                                        var title = event.event?.title;
+                                        return title;
+                                    },
+                                    dateClick: function(info) {
+                                        var dayEl = info.dayEl,
+                                            uuid = $(dayEl).attr('data-uuid'),
+                                            hasEvent = $(dayEl).attr('data-has-event'),
+                                            isHoliday = $(dayEl).attr('data-is-holiday'),
+                                            reservationDate = info.date,
+                                            schedule = window.schedule,
+                                            reservationData = {},
+                                            segmentObj = '',
+                                            slaObj = '',
+                                            priorityObj = '';
+                                        
+                                        if (hasEvent && !isHoliday) {
+                                            // Insert consultant.
+                                            reservationData['consultant'] = schedule?.user;
+                                            reservationData['schedule'] = schedule?.uuid;
+
+                                            var segment = schedule?.segment;
+
+                                            $(modalEl({'segment': segment})).appendTo('body');
+                                            $('#modalReservation').modal('show');
+
+                                            var form = $("#reservation-form").show();
+                                            form.steps({
+                                                headerTag: "h3",
+                                                bodyTag: "fieldset",
+                                                labels: {
+                                                    finish: "Kirim Reservasi",
+                                                    next: "Lanjut",
+                                                    previous: "Kembali",
+                                                },
+                                                transitionEffect: 0,
+                                                transitionEffectSpeed: 0,
+                                                onStepChanging: function (event, currentIndex, newIndex) {
+                                                    // Allways allow previous action even if the current form is not valid!
+                                                    if (currentIndex > newIndex) {
+                                                        return true;
+                                                    }
+
+                                                    // Start segment.
+                                                    var segmentUUID = $('input[name=segment]:checked').val();
+                                                    segmentObj = segment.find(d => d.uuid == segmentUUID);
+
+                                                    // Insert segment.
+                                                    reservationData['segment'] = segmentUUID;
+
+                                                    // Start SLA.
+                                                    if (currentIndex == 0) {
+                                                        // Print out SLA from Segment obj.
+                                                        var slaItem = '';
+
+                                                        $.each(segmentObj?.sla, function(i, v) {
+                                                            slaItem += `<div class="custom-control custom-radio mb-2">
+                                                                <input type="radio" id="sla-${v.uuid}" name="sla" value="${v.uuid}" class="custom-control-input" required>
+                                                                <label class="custom-control-label font-weight-bold" for="sla-${v.uuid}">${v.grace_periode} jam</label>
+                                                                <ul class="list-unstyled">
+                                                                    <li>Harga: Rp ${v.cost.toLocaleString()}</li>
+                                                                    <li>${v.promise}</li>
+                                                                </ul>
+                                                            </div>`;
+                                                        });
+
+                                                        $('#sla-choice').html(slaItem);
+                                                    }
+
+                                                    if (currentIndex == 1) {
+                                                        var priorityItem = '';
+                                                        var slaUUID = $('input[name=sla]:checked').val();
+
+                                                        // Insert sla.
+                                                        reservationData['sla'] = slaUUID;
+
+                                                        slaObj = segmentObj?.sla?.find(d => d.uuid == slaUUID);
+                                                        
+                                                        $.each(slaObj?.priority, function(i, v) {
+                                                            priorityItem += `<div class="custom-control custom-radio mb-2">
+                                                                <input type="radio" id="priority-${v.uuid}" name="priority" value="${v.uuid}" class="custom-control-input" required>
+                                                                <label class="custom-control-label font-weight-bold" for="priority-${v.uuid}">${v.label}</label>
+                                                                <p class="m-0">+ Rp ${v.cost.toLocaleString()}</p>
+                                                            </div>`;
+                                                        });
+                                                
+                                                        $('#priority-choice').html(priorityItem);
+                                                    }
+                                                    
+                                                    // Start validation.
+                                                    var form = $("#reservation-form").show();
+
+                                                    // Needed in some cases if the user went back (clean up)
+                                                    if (currentIndex < newIndex) {
+                                                        // To remove error styles
+                                                        form.find(".body:eq(" + newIndex + ") label.error").remove();
+                                                        form.find(".body:eq(" + newIndex + ") .error").removeClass("error");
+                                                    }
+                                                    
+                                                    form.validate().settings.ignore = ":disabled,:hidden";
+                                                    return form.valid();
+                                                },
+                                                onStepChanged: function (event, currentIndex, priorIndex) {
+                                                    var priorityUUID = $('input[name=priority]:checked').val();
+
+                                                    if (slaObj) {
+                                                        priorityObj = slaObj?.priority.find(d => d.uuid == priorityUUID);
+
+                                                        // Insert priority.
+                                                        reservationData['priority'] = priorityUUID;
+                                                    }
+
+                                                    // Last step.
+                                                    if (currentIndex == 4) {
+                                                        var issue = window.issue;
+                                                        var slaCost = +slaObj?.cost;
+                                                        var priorityCost = +priorityObj?.cost;
+                                                        var totalCost = slaCost + priorityCost;
+
+                                                        var summary = `<table class="table">
+                                                            <tr>
+                                                                <td class="font-weight-bold">Pertanyaan</td>
+                                                                <td colspan="2">${issue?.label}</td>
+                                                            </tr>
+
+                                                            <tr>
+                                                                <td class="font-weight-bold">Segmen</td>
+                                                                <td colspan="2">${segmentObj?.canal_label}</td>
+                                                            </tr>
+
+                                                            <tr>
+                                                                <td class="font-weight-bold">SLA</td>
+                                                                <td>${slaObj?.label_verbose}</td>
+                                                                <td style="width: 125px;">Rp ${slaCost.toLocaleString()}</td>
+                                                            </tr>
+
+                                                            <tr>
+                                                                <td class="font-weight-bold">Prioritas</td>
+                                                                <td>${priorityObj?.label}</td>
+                                                                <td style="width: 125px;">Rp ${priorityCost.toLocaleString()}</td>
+                                                            </tr>
+
+                                                            <tr class="bg-warning">
+                                                                <td class="font-weight-bold" colspan="2">Total biaya</td>
+                                                                <td>Rp ${totalCost.toLocaleString()}</td>
+                                                            </tr>
+                                                        </table>`;
+
+                                                        $('#summary').html(summary);
+                                                    }
+                                                },
+                                                onFinishing: function (event, currentIndex) {
+                                                    form.validate().settings.ignore = ":disabled";
+                                                    return form.valid();
+                                                },
+                                                onFinished: function (event, currentIndex) {
+                                                    var issue = window.issue;
+                                                    var segmentOpenHour = moment.duration(segmentObj?.open_hour);
+
+                                                    reservationData['issue'] = issue?.uuid;
+                                                    reservationData['reservation_item'] = [
+                                                        {'datetime': moment(reservationDate).add(segmentOpenHour).toISOString()}
+                                                    ];
+
+                                                    console.log(reservationData);
+                                                    console.log(collectReservation);
+
+                                                    if (collectReservation) {
+                                                        collectReservation.reservation_item.concat(reservationData?.reservation_item);
+                                                    } else {
+                                                        collectReservation = reservationData;
+                                                    }
+                                                    
+                                                    console.log(collectReservation);
+                                                    // createResevation(reservationData);
+                                                }
+                                            }).validate({
+                                                errorPlacement: function errorPlacement(error, element) { 
+                                                    $(element).closest('.form-group').append(error);
+                                                }
+                                            });
+
+                                            $('#select-issue').select2({
+                                                ajax: {
+                                                    url: API_ENDPOINT + 'helpdesk/client/issues/',
+                                                    data: function (params) {
+                                                        var query = {
+                                                            keyword: params.term
+                                                        }
+
+                                                        // Query parameters will be ?search=[term]&type=public
+                                                        return query;
+                                                    },
+                                                    processResults: function (data) {
+                                                        var items = [];
+                                                        
+                                                        $.each(data?.results, function(i, v) {
+                                                            items.push({
+                                                                'id': v.uuid,
+                                                                'text': v.label,
+                                                                ...v
+                                                            });
+                                                        });
+
+                                                        // Transforms the top-level key of the response object from 'items' to 'results'
+                                                        return {
+                                                            results: items
+                                                        };
+                                                    }
+                                                }
+                                            }).on('select2:select', function (e) {
+                                                // Start validation.
+                                                var form = $("#reservation-form").show();
+
+                                                // To remove error styles
+                                                form.find(".body label.error").remove();
+                                                form.find(".body .error").removeClass("error");
+  
+                                                form.validate();
+
+                                                var data = e.params.data;
+                                                window.issue = data;
+                                            });
+                                        }
+                                    },
+                                    events: eventSources
+                                });
+
+                                calendar.render();
+                            }, 100);
+
+                            // Content.
+                            var content = `<div class="d-block">
+                                <h2>${response?.label}</h2>
+                                <h5>Konsultan: <u>${consultant?.first_name ? consultant?.first_name : consultant?.username}</u></h5>
+                                <div class="alert alert-warning mt-4">{% trans "Klik tanggal warna hijau untuk reservasi jadwal" noop %}</div>
+                            </div>`;
+
+                            $('#content').html(content);
+                        }
+                    });
+                }
+
+                loadSchedule();
+            
+                $(document).on('hidden.bs.modal', '#modalReservation', function(e) {
+                    $('#select-issue').select2('destroy');
+                    $('#reservation-form').steps('destroy');
+                });
+
+
+                // ...
+                // CREATE RESERVATION DATES
+                // ...
+                var createResevationDate = function(data, permalink) {
+                    $.ajax({
+                        method: 'PUT',
+                        url: API_ENDPOINT + 'helpdesk/client/reservationsitem/',
+                        headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                        xhrFields: {withCredentials: true},
+                        contentType: 'application/json; charset=utf-8',
+                        dataType: 'json',
+                        data: JSON.stringify(data),
+                        cache: false,
+                        success: function(response) {
+                            window.location.href = permalink;
+                        }
+                    });
+                }
+
+
+                // ...
+                // CREATE RESERVATION
+                // ...
+                var createResevation = function(data) {
+                    $.ajax({
+                        method: 'POST',
+                        url: API_ENDPOINT + 'helpdesk/client/reservations/',
+                        headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                        xhrFields: {withCredentials: true},
+                        contentType: 'application/json; charset=utf-8',
+                        dataType: 'json',
+                        data: JSON.stringify(data),
+                        cache: false,
+                        success: function(response) {
+                            var reservationDate = [];
+
+                            $.each(data?.reservation_item, function(i, v) {
+                                v['reservation'] = response?.uuid;
+                                v['issue'] = data?.issue;
+                                v['schedule'] = data?.schedule;
+                                v['segment'] = data?.segment;
+                                v['sla'] = data?.sla;
+                                v['priority'] = data?.priority;
+                                reservationDate.push(v);
+                            });
+
+                            createResevationDate(reservationDate, response?.permalink);
+                        },
+                        error: function(error) {
+                            var errorJSON = error?.responseJSON;
+
+                            if (error && errorJSON) {
+                                
+                            }
+                        }
+                    });
+                }
+            });
+        })();
+    </script>
+{% endblock %}

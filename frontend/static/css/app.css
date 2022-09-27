@@ -1,0 +1,223 @@
+/***
+ * Generals
+ */
+html, body, main { height: 100%; font-family: sans-serif; }
+
+/***
+ * Bootstrap override
+ */
+label { margin-bottom: .15rem; }
+
+.row-small {
+    margin-right: -5px;
+    margin-left: -5px;
+}
+
+.row-small > div[class^="col-"] {
+    padding-right: 5px;
+    padding-left: 5px;
+}
+
+.btn-group-xs>.btn, .btn-xs {
+    padding: .1rem .25rem;
+    font-size: .75rem;
+}
+
+.table td, .table th {
+    vertical-align: middle;
+}
+
+/***
+ * jQuery easy-autocomplete
+ */
+.easy-autocomplete {
+    width: 100% !important;
+}
+
+/***
+ * Fullcalendar
+ */
+.fc-theme-standard td, 
+.fc-theme-standard th {
+    font-size: 13px;
+}
+
+.fc-daygrid-dot-event {
+    padding: 0 !important;
+}
+
+.fc .fc-toolbar-title {
+    font-size: 1.35em !important;
+}
+
+.fc .fc-button {
+    padding: .2em .45em !important;
+    font-size: .9em !important;
+}
+
+.fc .fc-daygrid-day-frame {
+    pointer-events: none;
+}
+
+/***
+ * DataTable
+ */
+.dataTables_filter {
+    margin-left: -10px;
+    margin-right: -10px;
+}
+
+.dataTables_filter > label {
+    width: 50%;
+    padding-left: 10px;
+    padding-right: 10px;
+    margin-bottom: 10px;
+}
+
+/***
+ * jQuery step
+ */
+.wizard .title {
+    display: none;
+}
+
+.wizard .current-info.audible {
+    display: none;
+}
+
+.wizard .steps > ul,
+.wizard .actions > ul {
+    padding: 0;
+}
+
+.wizard .steps > ul > li,
+.wizard .actions > ul > li {
+    display: inline-block;
+}
+
+.wizard .steps > ul > li + li,
+.wizard .actions > ul > li + li {
+    margin-left: 15px;
+}
+
+.wizard .steps > ul > li a {
+    color: #444;
+}
+
+.wizard .steps > ul > li.current a {
+    font-weight: 700;
+}
+
+.wizard .actions > ul > li a {
+    padding: 5px 15px;
+    border: 1px solid #e5e5e5;
+}
+
+/***
+ * App
+ */
+#sideMenu > li:not(.collapsed) .chevron {
+    box-sizing: border-box;
+    position: relative;
+    display: block;
+    transform: scale(var(--ggs,1));
+    width: 20px;
+    height: 20px;
+    border: 1px solid transparent;
+    border-radius: 100px
+}
+
+#sideMenu > li:not(.collapsed) .chevron::after {
+    content: "";
+    display: block;
+    box-sizing: border-box;
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-bottom: 1px solid;
+    border-right: 1px solid;
+    transform: rotate(45deg);
+    left: 4px;
+    top: 1px
+}
+
+#sideMenu > li.collapsed .chevron {
+    box-sizing: border-box;
+    position: relative;
+    display: block;
+    transform: scale(var(--ggs,1));
+    width: 20px;
+    height: 20px;
+    border: 1px solid transparent;
+    border-radius: 100px
+}
+
+#sideMenu > li.collapsed .chevron::after {
+    content: "";
+    display: block;
+    box-sizing: border-box;
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-top: 1px solid;
+    border-right: 1px solid;
+    transform: rotate(-45deg);
+    left: 4px;
+    bottom: 1px
+}
+
+#sideMenu > li.collapsed > a {
+    color: #343a40;
+}
+
+.list-margin > li + li {
+    margin-top: 15px;
+}
+
+.main-content {
+    border-left: 1px solid #e9ecef;
+    padding-left: 25px;
+}
+
+/* Large devices (desktops, less than 1200px) */
+@media (max-width: 1199px) {
+    
+}
+
+/* Medium devices (tablets, less than 992px) */
+@media (max-width: 991.98px) {
+    .container { 
+        width: 100%; 
+        max-width: none;
+    }
+}
+
+/* Medium devices (tablets, less than 992px) */
+@media (max-width: 960px) {
+
+}
+
+/* Small devices (landscape phones, less than 768px) */
+@media (max-width: 767px) {
+    .main-content {
+        border-top: 2px solid #e9ecef;
+        border-left: 0;
+        padding-left: 0;
+        margin-top: 25px;
+        padding-top: 25px;
+    }
+
+    .dataTables_filter > label {
+        width: 100%;
+    }
+}
+
+/* Small devices (landscape phones, less than 768px) */
+@media (max-width: 640px) {
+    
+}
+
+/* Extra small devices (portrait phones, less than 576px) */
+@media (max-width: 575px) {
+    
+}

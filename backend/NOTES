@@ -1,0 +1,32 @@
+# BUG 28-10-2020
++ Susunan object di set schedule-expertise berpengaruh pada proses submit menyebabkan error duplikasi
+
+INI; [BENAR]
+[
+  {
+    "expertise": "0adbdff4-46e9-4d22-b11e-4ca8576720ed",
+    "schedule": "e6cb10bb-455a-4131-807e-299f6210e862",
+    "user": "c649b481-e7de-4326-a10a-45d4cde6e8a4"
+  },
+  {
+    "expertise": "29d855df-7305-443e-b5aa-18b5cb3db9bd",
+    "schedule": "e6cb10bb-455a-4131-807e-299f6210e862",
+    "user": "c649b481-e7de-4326-a10a-45d4cde6e8a4",
+    "uuid": "d04aac7e-c55a-43d6-8bfe-c50d0ea8ed32"
+  }
+]
+
+BERBEDA DENGAN INI; [SALAH]
+[
+  {
+    "expertise": "29d855df-7305-443e-b5aa-18b5cb3db9bd",
+    "schedule": "e6cb10bb-455a-4131-807e-299f6210e862",
+    "user": "c649b481-e7de-4326-a10a-45d4cde6e8a4",
+    "uuid": "d04aac7e-c55a-43d6-8bfe-c50d0ea8ed32"
+  },
+  {
+    "expertise": "0adbdff4-46e9-4d22-b11e-4ca8576720ed",
+    "schedule": "e6cb10bb-455a-4131-807e-299f6210e862",
+    "user": "c649b481-e7de-4326-a10a-45d4cde6e8a4"
+  }
+]

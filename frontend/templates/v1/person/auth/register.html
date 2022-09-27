@@ -1,0 +1,117 @@
+{% extends 'v1/base/base-clean.html' %}
+
+{% load i18n %}
+
+{% block head_title %}{% trans "Buat Akun Baru" noop %}{% endblock %}
+
+{% block main %}
+    <section class="container h-100">
+        <div class="row justify-content-center h-100 align-items-center">
+            <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5">
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h3 class="card-title font-weight-bold">
+                            <a href="{% url 'home' %}" class="text-dark">{{ app_name }}</a>
+                        </h3>
+
+                        <form id="person-check-email-form" action="{% url 'person_view:register' %}" method="POST">
+                            {% csrf_token %}
+
+                            <div class="form-group">
+                                <label for="email">{% trans "Buat akun baru" noop %}</label>
+                                <input class="form-control" type="email" id="email" name="email" placeholder="{% trans 'Alamat email aktif' noop %}" autocomplete="off">
+                            </div>
+                            
+                            <div class="form-group text-right mb-0">
+                                <button type="submit" class="btn btn-info pl-3 pr-3">{% trans 'Berikutnya' noop %}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+
+{% block js %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+
+    <script type="text/javascript">
+        window.addEventListener('DOMContentLoaded', function() {
+            var cookieData = Cookies.get('person_register_email_login'),
+                cookieDataObject = cookieData ? JSON.parse(cookieData) : {};
+                
+            if (!cookieDataObject) window.location.href = "{% url 'home' %}";
+
+            // SUBMIT FORM
+            $(document).on('submit', 'form#person-check-email-form', function(event) {
+                event.preventDefault();
+
+                var email = $(this).find('input#email').val();
+                if (email) doCheckEmail(email);
+            });
+
+            // SEND FORM DATA
+            var doCheckEmail = function(email) {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'person/users/check-email/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    data: {email: email},
+                    cache: false,
+                    success: function(response) {
+                        doRequestVerifyCode(email);
+                    },
+                    error: function(error) {
+                        if (error && error?.responseJSON) {
+                            Swal.fire(
+                                'Kesalahan',
+                                error?.responseJSON?.detail,
+                                'warning'
+                            );
+                        }
+                    }
+                });
+            }
+
+            // ...
+            // CREATE VERIFYCODE
+            // ...
+            var doRequestVerifyCode = function(email) {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'person/verifycodes/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    data: {
+                        email: email, 
+                        challenge: 'register_validation'
+                    },
+                    cache: false,
+                    success: function(response) {
+                        // after verifycode validate redirected to a page define below
+                        response['redirect_to'] = "{% url 'person_view:register_capture' %}";
+
+                        Cookies.set(
+                            'person_verifycode_validation', 
+                            JSON.stringify(response), 
+                            {expires: COOKIE_AGE, path: '/', secure: {% if request.is_secure %}true{% else %}false{% endif %}}
+                        );
+
+                        window.location.href = "{% url 'person_view:verifycode_validate' %}";
+                    },
+                    error: function(error) {
+                        if (error && error?.responseJSON) {
+                            Swal.fire(
+                                'Kesalahan',
+                                error?.responseJSON?.detail,
+                                'warning'
+                            );
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+{% endblock %}

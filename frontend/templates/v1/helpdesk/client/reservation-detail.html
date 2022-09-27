@@ -1,0 +1,222 @@
+{% extends 'v1/base/base-user.html' %}
+{% load i18n static %}
+
+{% block head_title %}{% trans "Detil Reservasi" noop %}{% endblock %}
+
+{% block main %}
+    <h6 class="mb-3 text-uppercase font-weight-bold">
+        {% trans 'Detil Reservasi' noop %}
+    </h6>
+
+    <div id="content"></div>
+{% endblock %}
+
+{% block js %}
+    <script src="{% static 'js/moment-with-locales.min.js' %}" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+
+    <script type="text/javascript">
+        (function() {
+            'use strict';
+
+            window.addEventListener('DOMContentLoaded', function() {
+                moment.locale('id');
+
+                // ...
+                // LOAD RESERVATION
+                // ...
+                var loadReservation = function() {
+                    $.ajax({
+                        method: 'GET',
+                        url: API_ENDPOINT + 'helpdesk/client/reservations/{{ uuid }}/',
+                        headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                        xhrFields: {withCredentials: true},
+                        contentType: 'application/json; charset=utf-8',
+                        dataType: 'json',
+                        cache: false,
+                        success: function(response) {
+                            var issue = response?.issue,
+                                topic = issue?.topic_label.join(', '),
+                                segment = response?.segment,
+                                sla = response?.sla,
+                                priority = response?.priority,
+                                reservation_item = response?.reservation_item,
+                                consultant = response?.consultant,
+                                totalCost = response?.total_cost,
+                                payCta = '';
+                            
+                            if (totalCost > 0) {
+                                payCta = `<br /> <button type="button" class="btn btn-sm btn-info pl-3 pr-3 mt-1">Bayar</button>`;
+                            }
+
+                            var content = `<div class="d-block">
+                                <div class="form-group row">
+                                    <div class="col-sm-12 col-md-12 col-lg-3 font-weight-bold">Konsultan</div>
+                                    <div class="col-sm-12 col-md-12 col-lg-9">
+                                        ${consultant?.first_name}
+                                    </div>
+                                </div>
+
+                                <h5 class="mb-3">Jadwal</h5>
+
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr class="bg-light">
+                                            <th>Nomor</th>
+                                            <th>Tanggal</th>
+                                        </tr>
+                                    </thead>
+                                    
+                                    <tbody>`;
+                                
+                                    $.each(reservation_item, function(i, v) {
+                                        var assignStatusEl = `<span class="badge badge-warning">Sedang dikonfirmasi</span>`;
+
+                                        // dont show if pulled
+                                        if (v.status === 'pull') assignStatusEl = '<span class="badge badge-danger">Anda batalkan</span>';
+
+                                        if (v.assign_status == 'accept') assignStatusEl = `<span class="badge badge-success">Diterima</span>`;
+                                        if (v.assign_status == 'reject') assignStatusEl = `<span class="badge badge-danger">Ditolak</span>`;
+
+                                        var x = moment(new Date());
+                                        var y = moment(v.datetime);
+                                        var dur = moment.duration(y.diff(x)).humanize();
+
+                                        var changeEl = '';
+                                        if (v.status === 'push' && v.assign_status === 'waiting') changeEl = `<a href="#" class="ml-2 change-reservation-item" data-uuid="${v.uuid}">Batalkan tanggal ini</a>`;
+
+                                        content += `<tr>
+                                            <td>${v.number} <br /> ${assignStatusEl}</td>
+                                            <td>${moment(v.datetime).format('LLLL')} <br /> <strong class="text-danger">${dur} lagi</strong> ${changeEl}</td>
+                                        </tr>`;
+                                    });
+
+                                    content += `</tbody>
+                                </table>
+
+                                <div class="bg-light p-3 mb-3">
+                                    <div class="form-group row">
+                                        <div class="col-sm-12 col-md-12 col-lg-3 font-weight-bold">Kanal</div>
+                                        <div class="col-sm-12 col-md-12 col-lg-9">
+                                            ${segment?.canal_label}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-group row">
+                                        <div class="col-sm-12 col-md-12 col-lg-3 font-weight-bold">SLA</div>
+                                        <div class="col-sm-12 col-md-12 col-lg-9">
+                                            ${sla?.label_verbose}
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group row">
+                                        <div class="col-sm-12 col-md-12 col-lg-3 font-weight-bold">Prioritas</div>
+                                        <div class="col-sm-12 col-md-12 col-lg-9">
+                                            ${priority?.label}
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group row mb-0">
+                                        <div class="col-sm-12 col-md-12 col-lg-3 font-weight-bold">Biaya</div>
+                                        <div class="col-sm-12 col-md-12 col-lg-9">
+                                            Rp ${response.total_cost.toLocaleString()} ${payCta}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-light p-3 mb-4">
+                                    <h5 class="mb-3">Pertanyaan</h5>
+
+                                    <div class="form-group row">
+                                        <div class="col-sm-12 col-md-12 col-lg-3 font-weight-bold">Judul</div>
+                                        <div class="col-sm-12 col-md-12 col-lg-9">
+                                            ${issue.label}
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group row">
+                                        <div class="col-sm-12 col-md-12 col-lg-3 font-weight-bold">Deskripsi</div>
+                                        <div class="col-sm-12 col-md-12 col-lg-9">
+                                            ${issue.description}
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group row mb-0">
+                                        <div class="col-sm-12 col-md-12 col-lg-3 font-weight-bold">Topik</div>
+                                        <div class="col-sm-12 col-md-12 col-lg-9">
+                                            ${topic}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>`;
+
+                            $('#content').html(content);
+                        }
+                    });
+                }
+
+                loadReservation();
+
+
+                // ...
+                // CHANGE ASSIGN STATUS
+                // ...
+                $(document).on('click', '.change-reservation-item', function(e) {
+                    e.preventDefault();
+                    var uuid = $(this).attr('data-uuid')
+                    
+                    Swal.fire({
+                        title: 'Apakah Yakin?',
+                        text: "Tindakan ini tidak bisa dikembalikan.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Ya, Batalkan'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            updateReservation(uuid, {'status': 'pull'});
+                        }
+                    });
+                });
+
+                var updateReservation = function(uuid, data) {
+                    $.ajax({
+                        method: 'PATCH',
+                        url: API_ENDPOINT + 'helpdesk/client/reservationsitem/' + uuid + '/',
+                        headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                        xhrFields: {withCredentials: true},
+                        contentType: 'application/json; charset=utf-8',
+                        dataType: 'json',
+                        data: JSON.stringify(data),
+                        cache: false,
+                        success: function(response) {
+                            window.location.reload();
+                        },
+                        error: function(error) {
+                            var errorJSON = error?.responseJSON;
+
+                            if (error && errorJSON) {
+                                $.each(errorJSON, function(k, v) {
+                                    var message = '';
+
+                                    if(Array.isArray(v)) {
+                                        message = v.join(' ');
+                                    } else {
+                                        message = v;
+                                    }
+                                    
+                                    Swal.fire(
+                                        'Informasi',
+                                        message,
+                                        'error',
+                                    );
+                                });
+                            }
+                        }
+                    });
+                }
+            });
+        })();
+    </script>
+{% endblock %}

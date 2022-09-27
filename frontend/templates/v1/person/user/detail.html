@@ -1,0 +1,16 @@
+{% extends 'v1/base/base-user.html' %}
+{% load i18n static %}
+
+{% block head_title %}{% trans "Ringkasan Pengguna" noop %}{% endblock %}
+
+{% block main %}
+    <h6 class="mb-3 text-uppercase font-weight-bold">
+        {% trans 'Ringkasan Pengguna' noop %}
+    </h6>
+    
+    {% if user.is_client %}
+        {% include 'v1/person/consultant/detail.html' %}
+    {% elif user.is_consultant %}
+        {% include 'v1/person/client/detail.html' %}
+    {% endif %}
+{% endblock %}

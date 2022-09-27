@@ -1,0 +1,434 @@
+{% extends 'v1/base/base-user.html' %}
+{% load i18n static %}
+
+{% block head_title %}{% trans 'Keahlian' noop %}{% endblock %}
+
+{% block main %}
+    <h6 class="text-uppercase">
+        <strong>{% trans 'Keahlian' noop %}</strong>
+    </h6>
+
+    <button type="button" id="add-item" class="btn btn-info pr-3 pl-3 btn-sm mb-3">
+        {% trans 'Tambah' %}
+    </button>
+
+    <p class="small">{% trans 'Maksimal 10 keahlian' noop %}</p>
+
+    <ul id="item-list" class="list-unstyled list-margin">
+        <!-- LIST HERE -->
+    </ul>
+{% endblock %}
+
+{% block style %}
+    <link rel="stylesheet" href="{% static 'vendors/autocomplete/easy-autocomplete.min.css' %}" type="text/css">
+{% endblock %}
+
+{% block js %}
+    <script src="{% static 'vendors/autocomplete/jquery.easy-autocomplete.min.js' %}" defer></script>
+    <script src="{% static 'vendors/jquery-ui/jquery-ui.min.js' %}" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+    
+    <script type="text/javascript">
+        window.addEventListener('DOMContentLoaded', function() {
+            var expertiseLevels = JSON.parse('{{ level_choices | safe }}');
+            var expertiseOptions = '';
+
+            $.each(expertiseLevels, function(k, v) {
+                expertiseOptions += `<option value="${k}">${v}</option>`;
+            });
+
+            var $modalEl = `<div class="modal fade" id="modal-form" data-backdrop="static" data-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="staticBackdropLabel">{% trans 'Keahlian' noop %}</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+
+                        <div class="modal-body">
+                            <form id="resume-expertise-form" method="POST" action="{% url 'resume_view:expertise' %}">
+                                {% csrf_token %}
+
+                                <div class="form-group">
+                                    <label for="topic_label">{% trans 'Nama Keahlian' noop %} *</label>
+                                    <input class="form-control w-100" type="text" id="topic_label" name="topic_label" placeholder="Ex: Java" autocomplete="off" required>
+                                    <input type="hidden" id="topic" name="topic">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="level">{% trans 'Level' noop %} *</label>
+                                    <select id="level" name="level" class="form-control">
+                                        <option value="">{% trans 'Pilih satu' noop %}</option>
+                                        ${expertiseOptions}
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="description">{% trans 'Keterangan' noop %}</label>
+                                    <textarea class="form-control" id="description" name="description" placeholder="Keterangan tambahan jika ada..." autocomplete="off"></textarea>
+                                </div>
+
+                                <div class="text-right">
+                                    <button type="submit" class="btn btn-info pl-3 pr-3">{% trans 'Simpan' noop %}</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+            // ...
+            // ITEM
+            // ...
+            var objItem = function(obj) {
+                return `<li id="expertise-${obj.id}" class="media" data-uuid="${obj.uuid}" data-sort-order="${obj.sort_order}" data-json='${JSON.stringify(obj)}'>
+                    <div class="media-body">
+                        <div class="d-flex w-100">
+                            <div>
+                                <strong>${obj.topic_label}</strong>
+                                <p class="m-0 text-muted small">${obj.level_display}</p>
+                                ${obj.description ? `<p class="m-0 small">${obj.description}</p>` : ``}
+                            </div>
+
+                            <div class="ml-auto">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-light btn-sm dropdown-toggle small" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        Opsi
+                                    </button>
+
+                                    <div class="dropdown-menu dropdown-menu-right">
+                                        <button class="dropdown-item" type="button" id="edit">Edit</button>
+                                        <button class="dropdown-item" type="button" id="delete" data-uuid="${obj.uuid}">Hapus</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </li>`;
+            }
+
+            // ... 
+            // ADD
+            // ...
+            $(document).on('click', '#add-item', function(e) {
+                e.preventDefault();
+
+                $($modalEl).appendTo('body');
+                $('#modal-form').modal('show');
+
+                // Search topic...
+                var options = {
+                    url: function(phrase) {
+                        return API_ENDPOINT + 'master/topics/?s=' + phrase;
+                    },
+                    getValue: function(element) {
+                        return element.label;
+                    },
+                    ajaxSettings: {
+                        dataType: "json",
+                        method: "GET",
+                        data: {
+                            dataType: "json"
+                        }
+                    },
+                    preparePostData: function(data) {
+                        data.phrase = $("#topic_label").val();
+                        return data;
+                    },
+                    requestDelay: 400,
+                    list: {
+                        onChooseEvent: function() {
+                            var data = $("#topic_label").getSelectedItemData();
+                            $('#topic').val(data.uuid);
+                        },
+                        onLoadEvent: function() {
+                            $('#topic').val('');
+                        }
+                    }
+                };
+
+                $("#topic_label").easyAutocomplete(options);
+            });
+
+            // ...
+            // LOAD
+            // ...
+            var loadExpertise = function() {
+                $.ajax({
+                    method: 'GET',
+                    url: API_ENDPOINT + 'resume/expertises/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    cache: false,
+                    success: function(response) {
+                        var items = '';
+
+                        $.each(response, function(k, v) {
+                            items += objItem(v);
+                        });
+
+                        $('#item-list').html(items);
+                        $('#item-list').sortable();
+                    }
+                });
+            }
+
+            loadExpertise();
+
+
+            // ... 
+            // SORTABLE
+            // ... 
+            $(document).on('sortupdate', '#item-list', function(event, ui) {
+                var sortItems = [];
+
+                $.each($(this).find('li.media'), function(i, v) {
+                    var item = {
+                        'uuid': $(v).attr('data-uuid'),
+                        'sort_order': i + 1
+                    }
+
+                    sortItems.push(item);
+                });
+
+                doSorting(sortItems);
+            });
+
+            var doSorting = function(param) {
+                $.ajax({
+                    method: 'PUT',
+                    url: API_ENDPOINT + 'resume/expertises/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(param),
+                    cache: false,
+                    success: function(response) {
+                        // pass
+                    }
+                });
+            }
+
+            // ...
+            // CREATE TOPIC
+            // ...
+            var createTopic = function(label, param, isCreated = false, uuid = '') {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'master/topics/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify({'label': label}),
+                    cache: false,
+                    success: function(response) {
+                        param['topic'] = response.uuid;
+
+                        if (isCreated) {
+                            doSave(param);
+                        } else {
+                            doUpdate(param, uuid);
+                        }
+                    }
+                });
+            }
+
+            // ...
+            // SUBMIT FORM
+            // ...
+            $(document).on('submit', '#resume-expertise-form', function(e) {
+                e.preventDefault();
+
+                // clear all alert
+                $(this).find('.uk-alert').remove();
+
+                var values = $(this).serializeArray(),
+                    uuid = $(this).find('button[type="submit"]').attr('data-uuid');
+                    param = {},
+                    hasExpiration = false,
+                    hasStatus = false,
+                    hasTopic = false,
+                    topicLabel = '';
+                
+                $.each(values, function(i, v) {
+                    param[v.name] = v.value;
+
+                    if (v.name === 'topic' && v.value) hasTopic = true;
+                    if (v.name === 'topic_label') topicLabel = v.value;
+                });
+
+                if (uuid) {
+                    if (!hasTopic && topicLabel) {
+                        createTopic(topicLabel, param, true, uuid);
+                    } else {
+                        doUpdate(param, uuid);
+                    }
+
+                } else {
+                    if (!hasTopic && topicLabel) {
+                        createTopic(topicLabel, param, true);
+                    } else {
+                        doSave(param);
+                    }
+                }
+            });
+
+            // ...
+            // SAVE FORM
+            // ...
+            var doSave = function(param) {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'resume/expertises/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(param),
+                    cache: false,
+                    success: function(response) {
+                        var item = objItem(response);
+
+                        $('#item-list').append(item);
+                        $('#resume-expertise-form')[0].reset();
+                        $('#modal-form').modal('hide');
+                    },
+                    error: function(error) {
+                        var errorJSON = error?.responseJSON;
+
+                        if (error && errorJSON) {
+                            $.each(errorJSON, function(k, v) {
+                                var message = '';
+
+                                if(Array.isArray(v)) {
+                                    message = v.join(' ');
+                                } else {
+                                    message = v;
+                                }
+                                
+                                var el = $('#' + k);
+                                if (k === 'detail') el = $('#topic');
+                                el.closest('.form-group').after('<p class="small">' + message + '</p>');
+                            });
+                        }
+                    }
+                });
+            }
+
+            // ...
+            // UPDATE FORM
+            // ...
+            var doUpdate = function(param, uuid) {
+                $.ajax({
+                    method: 'PATCH',
+                    url: API_ENDPOINT + 'resume/expertises/' + uuid + '/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(param),
+                    cache: false,
+                    success: function(response) {
+                        var item = objItem(response);
+
+                        $('#expertise-' + response.id).replaceWith(item);
+                        $('#resume-expertise-form')[0].reset();
+                        $('#modal-form').modal('hide');
+                    },
+                    error: function(error) {
+                        var errorJSON = error?.responseJSON;
+
+                        if (error && errorJSON) {
+                            $.each(errorJSON, function(k, v) {
+                                var message = '';
+
+                                if(Array.isArray(v)) {
+                                    message = v.join(' ');
+                                } else {
+                                    message = v;
+                                }
+                                
+                                var el = $('#' + k);
+                                el.closest('.form-group').after('<p class="small">' + message + '</p>');
+                            });
+                        }
+                    }
+                });
+            }
+
+            // ... 
+            // DELETE
+            // ...
+            $(document).on('click', '#delete', function(e) {
+                e.preventDefault();
+
+                var uuid = $(this).attr('data-uuid');
+
+                Swal.fire({
+                    title: 'Apakah Yakin?',
+                    text: "Tindakan ini menghapus data selamanya.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Ya, Hapus'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        doDelete(uuid, $(this));
+                    }
+                });
+            });
+
+            var doDelete = function(uuid, $this) {
+                $.ajax({
+                    method: 'DELETE',
+                    url: API_ENDPOINT + 'resume/expertises/' + uuid + '/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    cache: false,
+                    success: function(response) {
+                        Swal.fire(
+                            'Informasi',
+                            'Data telah dihapus permanen.',
+                            'success'
+                        )
+
+                        $this.closest('li.media').remove();
+                    }
+                });
+            }
+
+            // ...
+            // EDIT
+            // ...
+            $(document).on('click', '#edit', function(e) {
+                e.preventDefault();
+                
+                var data = $(this).closest('li.media').attr('data-json'),
+                    json = (data ? JSON.parse(data) : {});
+
+                $($modalEl).appendTo('body');
+            
+                $('#modal-form').modal('show');
+                $('#modal-form').on('shown.bs.modal', function() {
+                    var $thisModal = $(this);
+
+                    $.each(json, function(n, v) {
+                        $thisModal.find('form #' + n).val(v);
+                    });
+                });
+
+                $('#modal-form button[type="submit"]').attr('data-uuid', json.uuid);
+            });
+
+            $(document).on('hidden.bs.modal', '#modal-form', function() {
+                $(this).modal('dispose');
+                $(this).remove();
+            });
+        });
+    </script>
+{% endblock %}

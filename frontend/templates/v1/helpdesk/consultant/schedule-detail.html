@@ -1,0 +1,1409 @@
+{% extends 'v1/base/base-user.html' %}
+{% load i18n static %}
+
+{% block head_title %}{% trans 'Detail Jadwal' noop %}{% endblock %}
+
+{% block main %}
+    <h6 class="text-uppercase">
+        <strong>{% trans 'Detail Jadwal' noop %}</strong>
+    </h6>
+
+    <ul class="nav nav-tabs small">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link active" href="{% url 'helpdesk_view:consultant:schedule_detail' uuid %}">{% trans "Ringkasan" noop %}</a>
+        </li>
+
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" href="{% url 'helpdesk_view:consultant:schedule_calendar' uuid %}">{% trans "Kalender" noop %}</a>
+        </li>
+    </ul>
+    
+    <div id="schedule-form" class="mt-4">
+        <!-- SCHEDULE FORM -->
+    </div>
+{% endblock %}
+
+{% block style %}
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.1.2/css/tempusdominus-bootstrap-4.min.css" integrity="sha512-PMjWzHVtwxdq7m7GIxBot5vdxUY+5aKP9wpKtvnNBZrVv1srI8tU6xvFMzG8crLNcMj/8Xl/WWmo/oAP/40p1g==" crossorigin="anonymous" />
+{% endblock %}
+
+{% block js %}
+    <script src="{% static 'js/moment-with-locales.min.js' %}" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.1.2/js/tempusdominus-bootstrap-4.min.js" integrity="sha512-2JBCbWoMJPH+Uj7Wq5OLub8E5edWHlTM4ar/YJkZh3plwB2INhhOC3eDoqHm1Za/ZOSksrLlURLoyXVdfQXqwg==" crossorigin="anonymous" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.2/dist/jquery.validate.min.js" defer></script>
+
+    <script type="text/javascript">
+        window.addEventListener('DOMContentLoaded', function() {
+            moment.locale('id');
+
+            var scheduleURL = "{% url 'helpdesk_view:consultant:schedule_detail' uuid %}";
+            var wkstChoices = JSON.parse('{{ wkst_choices | safe }}');
+            var priorityChoices = JSON.parse('{{ priority_choices | safe }}');
+            var segmentModal = `<div class="modal fade" id="segment-modal" data-backdrop="static" data-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="staticBackdropLabel">{% trans 'Tambah Segmen' noop %}</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+
+                        <div class="modal-body">
+                            <form id="helpdesk-segment-form" method="POST" action="${scheduleURL}">
+                                {% csrf_token %}
+                                
+                                <div class="form-group">
+                                    <div class="form-radio">
+                                        <input class="form-radio-input" type="radio" name="canal" value="text" id="text" required>
+                                        <label class="form-radio-label" for="text">
+                                            {% trans 'Teks' noop %}
+                                        </label>
+                                    </div>
+
+                                    <p class="mb-0 text-muted small">
+                                        {% trans 'Diskusi seperti chat' noop %}
+                                    </p>
+                                </div>
+
+                                <div class="form-group">  
+                                    <div class="form-radio">
+                                        <input class="form-radio-input" type="radio" name="canal" value="voice" id="voice" required>
+                                        <label class="form-radio-label" for="voice">
+                                            {% trans 'Voice' noop %}
+                                        </label>
+                                    </div>
+
+                                    <p class="mb-0 text-muted small">
+                                        {% trans 'Panggilan suara' noop %}
+                                    </p>
+                                </div>
+
+                                <div class="form-group">  
+                                    <div class="form-radio">
+                                        <input class="form-radio-input" type="radio" name="canal" value="video" id="video" required>
+                                        <label class="form-radio-label" for="video">
+                                            {% trans 'Video' noop %}
+                                        </label>
+                                    </div>
+
+                                    <p class="mb-0 text-muted small">
+                                        {% trans 'Tatap muka seperti Zoom' noop %}
+                                    </p>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div class="form-group">
+                                            <label for="open_hour">{% trans 'Jam buka' noop %} *</label>
+                                            <input type="text" class="form-control datetimepicker-input" id="open_hour" data-toggle="datetimepicker" data-target="#open_hour" name="open_hour" autocomplete="off" required>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-6">
+                                        <div class="form-group">
+                                            <label for="close_hour">{% trans 'Jam tutup' noop %} *</label>
+                                            <input type="text" class="form-control datetimepicker-input" id="close_hour" data-toggle="datetimepicker" data-target="#close_hour" name="close_hour" autocomplete="off" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="quota">{% trans 'Klien maksimal' noop %} *</label>
+                                    <input class="form-control" type="number" id="quota" name="quota" required>
+                                    <p class="form-text text-muted small">{% trans "Banyaknya klien yang Anda layani per-sesi. Ini penting, pastikan sesuai dengan waktu Anda" noop %}</p>
+                                </div>
+
+                                <div class="text-right">
+                                    <button type="submit" class="btn btn-info pl-3 pr-3">{% trans "Simpan" noop %}</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- /.modal segment -->`;
+
+            $(document).on('shown.bs.modal', '#segment-modal', function() {
+                $('#open_hour').datetimepicker({
+                    format: 'HH:mm'
+                });
+
+                $('#close_hour').datetimepicker({
+                    format: 'HH:mm'
+                });
+            });
+
+            var slaForm = function(segmentUUID = '') {
+                var elem = `<div class="modal fade" id="sla-modal" data-backdrop="static" data-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="staticBackdropLabel">{% trans 'Tambah SLA' noop %}</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+
+                            <div class="modal-body">
+                                <form id="helpdesk-sla-form" method="POST" action="${scheduleURL}">
+                                    <div class="form-group">
+                                        <label for="label">{% trans "Biaya" noop %} *</label>
+                                        <input type="number" class="form-control" id="cost" name="cost" placeholder="{% trans 'Contoh: 20000' noop %}" required>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="grace_periode">{% trans "Jaminan ditanggapi dalam x jam" noop %} *</label>
+                                        <input type="number" class="form-control" id="grace_periode" name="grace_periode" placeholder="{% trans 'Contoh: 1' noop %}" required>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="allocation">{% trans "Alokasi" noop %} *</label>
+                                        <input type="number" class="form-control" id="allocation" name="allocation" placeholder="{% trans 'Contoh: 10' noop %}" required>
+                                        <p class="form-text text-muted small">{% trans 'Jika kanal Text satuan adalah Jumlah Tanggapan. Jika kanal Voice dan Video maka satuan adalah Menit' noop %}</p>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="promise">{% trans "Tawaran" noop %} *</label>
+                                        <textarea class="form-control" id="promise" name="promise" placeholder="{% trans 'Apa yang klien dapatkan?' noop %}" required></textarea>
+                                    </div>
+
+                                    <p>{% trans "Prioritas (biaya tambahan) *" noop %}</p>`;
+
+                                    $.each(priorityChoices, function(k, v) {
+                                        var shortLabel = 'H';
+                                        var labelClass = 'btn-danger';
+
+                                        if (k === 'medium') {
+                                            shortLabel = 'M';
+                                            labelClass = 'btn-warning';
+                                        }
+
+                                        if (k === 'low') {
+                                            shortLabel = 'L';
+                                            labelClass = 'btn-success';
+                                        }
+
+                                        elem += `<div class="form-group">
+                                            <div class="d-flex w-100">
+                                                <div><button type="button" class="btn ${labelClass} d-block" style="width: 44px;">${shortLabel}</button></div>
+                                                <div class="pl-2"><input type="text" class="form-control" name="priority_label_${k}" placeholder="{% trans 'Label' noop %}" value="${v}" required></div>
+                                                <div class="pl-2">
+                                                    <div class="input-group">
+                                                        <div class="input-group-prepend">
+                                                            <span class="input-group-text">Rp</span>
+                                                        </div>
+
+                                                        <input type="number" class="form-control" name="priority_cost_${k}" placeholder="{% trans 'Harga' noop %}" required>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>`
+                                    });
+
+                                elem += `<input type="hidden" id="segment" name="segment" value="${segmentUUID}">
+                                    <div class="text-right">
+                                        <button type="submit" class="btn btn-info pl-4 pr-4">{% trans "Simpan" noop %}</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+
+                return elem;
+            }
+
+    
+            // ...
+            // LOAD EXPERTISES
+            // ...
+            var loadExpertise = function(currentExpertises=[]) {
+                $.ajax({
+                    method: 'GET',
+                    url: API_ENDPOINT + 'resume/expertises/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    cache: false,
+                    success: function(response) {
+                        var items = '';
+
+                        $.each(response, function(k, v) {
+                            var index = currentExpertises.findIndex(d => d.expertise == v.uuid);
+                            var checked = index != '-1' ? 'checked' : '';
+                            var obj = currentExpertises[index];
+                            var currentUuid = obj ? `data-uuid="${obj?.uuid}"` : '';
+
+                            items += `<div class="col-6 col-sm-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="checkbox-${v.uuid}" name="expertise" value="${v.uuid}" ${checked} ${currentUuid}>
+                                    <label class="form-check-label" for="checkbox-${v.uuid}">
+                                        ${v.topic_label}
+                                    </label>
+                                </div>
+                            </div>`;
+                        });
+
+                        $('#expertise-choices').html(items);
+                    }
+                });
+            }
+
+            // ...
+            //  SLA ITEM
+            // ...
+            var SLAItem = function(s) {
+                var priority = s.priority;                                                            
+                var item = `<li id="sla-${s.uuid}">
+                    <div class="d-flex w-100">
+                        <span class="font-weight-bold">${s.grace_periode} jam</span>
+                        <span class="ml-auto">
+                            <a href="#" data-uuid="${s.uuid}" class="badge badge-secondary btn-delete-sla">{% trans 'Hapus' noop %}</a>
+                            <a href="#" data-toggle="modal" data-uuid="${s.uuid}" data-segment-uuid="${s.segment}" class="badge badge-primary btn-add-sla">{% trans 'Edit' noop %}</a>
+                            Rp ${s.cost.toLocaleString()}
+                        </span>
+                    </div>`;
+
+                    if (priority) {
+                        item += `<ul id="sla-${s.uuid}-priority" class="list-unstyled text-muted">`;
+                            $.each(priority, function(i, p) {
+                                var badgeClass = `badge-warning`;
+                
+                                if (p.identifier == 'high') badgeClass = `badge-danger`;
+                                if (p.identifier == 'low') badgeClass = `badge-success`;
+
+                                item += `<li>
+                                    <div class="d-flex w-100">
+                                        <span>
+                                            ${p.label}
+                                            
+                                            <span class="badge ${badgeClass}">
+                                                ${p.identifier_display}
+                                            </span>
+                                        </span>
+
+                                        <span class="ml-auto"> + ${p.cost.toLocaleString()}</span>
+                                    </div>
+                                </li>`;
+                            });
+                        item += `</ul>`;
+                    }
+                item += `</li>`;
+                return item;
+            }
+
+
+            // ...
+            // SEGMENT ITEM
+            // ...
+            var segmentItem = function(v) {
+                var sla = v.sla;            
+                var item = `<div class="col-12 col-sm-12 col-md-12 col-lg-6 mb-4">
+                    <div id="segment-${v.uuid}" class="card bg-light h-100">
+                        <div class="card-body p-2 d-flex flex-column">
+                            <div class="d-flex w-100">
+                                <strong id="sla-label-${v.uuid}">${v.canal_label}</strong>
+
+                                <div class="ml-auto">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-light btn-sm dropdown-toggle small" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                            <small>Opsi</small>
+                                        </button>
+
+                                        <div class="dropdown-menu dropdown-menu-right">
+                                            <button class="dropdown-item btn-edit-segment" type="button" data-uuid="${v.uuid}">Edit</button>
+                                            <button class="dropdown-item btn-delete-segment" type="button" data-uuid="${v.uuid}" data-uuid="${v.uuid}">Hapus</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <ul class="list-unstyled small">
+                                <li>Jam <strong id="sla-open-hour-${v.uuid}">${v.open_hour_formated}</strong> sampai <strong id="sla-close-hour-${v.uuid}">${v.close_hour_formated}</strong></li>
+                                <li>Maksimal <strong id="sla-quota-${v.uuid}">${v.quota}</strong> klien</li>`;
+
+                                item += `<li id="segment-sla-${v.uuid}">
+                                    <p class="mb-0 font-weight-bold mt-3 d-flex w-100 align-items-center">
+                                        <span>SLA</span>
+                                        <button data-segment-uuid="${v.uuid}" type="button" class="btn btn-xs btn-outline-secondary pl-2 pr-2 btn-add-sla ml-auto">
+                                            {% trans "Tambah SLA" noop %}
+                                        </button>
+                                    </p>`;
+
+                                    if (sla.length > 0) {
+                                        item += `<ul id="sla-list-${v.uuid}" class="sla-list-wrap list-unstyled list-margin border-top pt-1 mt-1">`;
+                                            $.each(sla, function(i, s) {
+                                                item += SLAItem(s);
+                                            });
+                                        item += `</ul>`;
+                                    }
+                                item += `</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>`;
+                return item;
+            }
+    
+            // ...
+            // LOAD SCHEDULE
+            // ... 
+            var loadSchedule = function() {
+                $.ajax({
+                    method: 'GET',
+                    url: API_ENDPOINT + 'helpdesk/consultant/schedules/{{ uuid }}/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    cache: false,
+                    success: function(response) {
+                        if (response) {
+                            var byweekday = '';
+                            var expertises = '';
+                            var currentExpertises = [];
+                            var schedule_term = response?.schedule_term;
+                            var cur_dtstart = schedule_term?.dtstart ? schedule_term?.dtstart : Date.now();
+                            var dtstart = new Date(cur_dtstart).toISOString().split('T')[0];
+                            var dtstartDefault = moment(dtstart, 'YYYY-DD-MM').format('DD-MM-YYYY');
+                            var dtstart_open_hour = new Date(cur_dtstart).toISOString().split('T')[1],
+                                dtstart_open_hour = dtstart_open_hour.split('.')[0];
+
+                            var byweekday_values = [];
+                            var rule = schedule_term?.rule;
+
+                            if (rule) {
+                                byweekday = rule.find(x => x.identifier === 'byweekday');
+                                byweekday_values = byweekday?.rule_value;
+                            }
+
+                            var segment = response?.segment;
+                            var isActive = response?.is_active ? 'checked' : '';
+                            var description = response?.description ? response?.description : '';
+
+                            var form = `<form id="helpdesk-schedule-form" method="POST" action="${scheduleURL}">
+                                {% csrf_token %}
+
+                                <div class="form-group">
+                                    <label for="label">{% trans 'Label jadwal' noop %} *</label>
+                                    <input class="form-control" type="text" id="label" name="label" placeholder="Ex: Konsultasi Memasak" autocomplete="off" value="${response.label}" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="description">{% trans "Deskripsi" noop %}</label>
+                                    <textarea class="form-control" id="description" name="description" placeholder="{% trans 'Penjelasan singkat (jika ada)' noop %}">${description}</textarea>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="expertise">{% trans 'Keahlian jadwal ini' noop %} *</label>
+                                    <div id="expertise-choices" class="row">
+                                        <!-- CHOICES HERE -->
+                                    </div>
+                                </div>
+
+                                <section id="schedule_term">
+                                    <div class="form-group position-relative">
+                                        <label for="dtstart">{% trans 'Tanggal buka' noop %} *</label>
+                                        <input type="text" id="dtstart" class="form-control datetimepicker-input" data-toggle="datetimepicker" data-target="#dtstart" name="dtstart" autocomplete="off" required>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="label">{% trans 'Setiap hari' noop %} *</label>
+                                        <div class="row">`;
+                                            $.each(wkstChoices, function(k, v) {
+                                                if (k != 'FD') {
+                                                    var checked = '',
+                                                        uuid = '';
+                    
+                                                    if (byweekday_values) {
+                                                        var value = byweekday_values.find(x => x.value_varchar === k);
+                                                        checked = value ? 'checked' : '';
+                                                        uuid = value?.uuid ? `data-uuid="${value?.uuid}"` : '';
+                                                    }
+
+                                                    form += `<div class="col-6 col-sm-4">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="checkbox-${k}" name="byweekday" value="${k}" ${uuid} ${checked}>
+                                                            <label class="form-check-label" for="checkbox-${k}">${v}</label>
+                                                        </div>
+                                                    </div>`;
+                                                }
+                                            });
+                                        form += `</div>
+                                    </div> <!-- /.byweekday -->
+                                    
+                                    <p class="mb-1">{% trans "Jenis jadwal" noop %}</p>
+
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <div class="form-group">
+                                                <div class="form-radio">
+                                                    <input class="form-radio-input" type="radio" name="direction" value="recur" id="direction_recur" ${schedule_term.direction === 'recur' ? 'checked' : ''} required>
+                                                    <label class="form-radio-label" for="direction_recur">
+                                                        {% trans 'Berulang' noop %}
+                                                    </label>
+                                                </div>
+
+                                                <p class="mb-0 text-muted small">
+                                                    {% trans 'Jadwal rutin mingguan' noop %}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-6">
+                                            <div class="form-group">  
+                                                <div class="form-radio">
+                                                    <input class="form-radio-input" type="radio" name="direction" value="once" id="direction_once" ${schedule_term.direction === 'once' ? 'checked' : ''} required>
+                                                    <label class="form-radio-label" for="direction_once">
+                                                        {% trans 'Sekali saja' noop %}
+                                                    </label>
+                                                </div>
+
+                                                <p class="mb-0 text-muted small">
+                                                    {% trans 'Lakukan ini sekali saja' noop %}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="is_active">{% trans "Status" noop %}</label>
+
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" ${isActive}>
+                                            <label class="form-check-label" for="is_active">
+                                                {% trans 'Aktif' noop %}
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group text-right">
+                                        <button type="submit" class="btn btn-sm btn-info pl-3 pr-3" data-uuid="${response.uuid}">
+                                            {% trans 'Simpan' noop %}
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <hr />
+
+                                <div class="form-group">
+                                    <label for="label">{% trans 'Segmen' noop %} *</label>
+                                    <ul class="list-unstyled list-margin">
+                                        <li class="media">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm pl-3 pr-3 btn-add-segment">
+                                                {% trans 'Tambah' noop %}
+                                            </button>
+                                        </li>`;
+                                        
+                                        if (segment) {
+                                            form += `<li>
+                                                <div id="segment-list" class="row">`;
+                                                    $.each(segment, function(i, v) {
+                                                        form += segmentItem(v);
+                                                    });
+                                                form += `</div>
+                                            </li>`;
+                                        }
+                                    form += `</ul>
+                                </div> <!-- /.segment -->
+                            </section>
+
+                            <hr />
+
+                            <button type="button" id="delete" class="btn btn-sm btn-outline-danger pl-3 pr-3">
+                                {% trans 'Hapus jadwal' noop %}
+                            </button>`;
+
+                            $('#schedule-form').html(form);
+                            
+                            $.each(response.schedule_expertise, function(k, v) {
+                                currentExpertises.push(v);
+                            });
+
+                            loadExpertise(currentExpertises);
+
+                            // set global
+                            window.scheduleTermUuid = response?.schedule_term.uuid;
+                            window.scheduleUuid = response?.uuid;
+                            window.byweekdayUuid = byweekday?.uuid;
+                            
+                            $('#dtstart').datetimepicker({
+                                date: moment(dtstart, 'YYYY-DD-MM'),
+                                format: 'DD-MM-YYYY',
+                            });
+                        }
+                    }
+                });
+            }
+
+            loadSchedule();
+
+            // ...
+            // SUBMIT
+            // ...
+            $(document).on('submit', '#helpdesk-schedule-form', function(e) {
+                e.preventDefault();
+
+                // clear all alert
+                $(this).find('.uk-alert').remove();
+
+                var values = $(this).serializeArray(),
+                    scheduleUuid = $(this).find('button[type="submit"]').attr('data-uuid'),
+                    param = {};
+                    
+                // collect all weeekdays
+                var byweekdaysInput = $('input[name=byweekday]');
+                var byweekdaysCreate = [];
+                var byweekdaysDelete = [];
+
+                $.each(byweekdaysInput, function(i, v) {
+                    var uuid = $(v).attr('data-uuid');
+                    var value = $(v).val();
+                    var checked = $(v).is(':checked' );
+                    
+                    if (checked) {
+                        var obj = {'value_varchar': value};
+                        if (uuid) obj['uuid'] = uuid;
+
+                        byweekdaysCreate.push(obj);
+                    } else {
+                        if (uuid) byweekdaysDelete.push({'uuid': uuid});
+                    }
+                });
+
+                // filtering value
+                $.each(values, function(i, v) {
+                    if (v.name !== 'expertise') param[v.name] = v.value;
+                    if (v.name !== 'is_active') param['is_active'] = false;
+                });
+
+                // collect expertises
+                var expertiseInput = $('input[name=expertise]');
+                var expertiseCreate = [];
+                var expertiseDelete = [];
+
+                $.each(expertiseInput, function(i, v) {
+                    var uuid = $(v).attr('data-uuid');
+                    var value = $(v).val();
+                    var checked = $(v).is(':checked' );
+                    
+                    if (checked) {
+                        var obj = {
+                            'user': '{{ user.uuid }}',
+                            'expertise': value, 
+                            'schedule': scheduleUuid
+                        };
+
+                        if (uuid) obj['uuid'] = uuid;
+
+                        expertiseCreate.push(obj);
+                    } else {
+                        if (uuid) expertiseDelete.push({'uuid': uuid});
+                    }
+                });
+
+                // schedule
+                doUpdateSchedule(param, scheduleUuid);
+
+                // set schedule expertise
+                if (expertiseCreate.length > 0) doSetScheduleExpertise(expertiseCreate);
+
+                // delete schedule expertise
+                if (expertiseDelete.length > 0) doDeleteScheduleExpertise(expertiseDelete);
+
+                var byweekdayData = {
+                    "type": "varchar", 
+                    "identifier": "byweekday",
+                    "rule_value": byweekdaysCreate,
+                    "schedule_term": window.scheduleTermUuid,
+                }
+
+                // create schedule_term rule
+                if (window.byweekdayUuid) {
+                    updateRule(byweekdayData, window.byweekdayUuid);
+                } else {
+                    if (byweekdaysCreate.length > 0) createRule(byweekdayData);
+                }
+
+                // update schedule_term rule
+                if (byweekdaysDelete.length > 0) doDeleteRuleValue(byweekdaysDelete);
+
+                // collect schedule term
+                var dtstart = $('#dtstart').val();
+                var dtstartFmt = moment(dtstart, 'DD-MM-YYYY').toISOString();
+
+                if (dtstart) {
+                    var scheduleTerm = {
+                        'dtstart': dtstartFmt,
+                        'direction': $('input[name=direction]:checked').val(),
+                    }
+
+                    updateScheduleTerm(scheduleTerm, window.scheduleTermUuid);
+                }
+            });
+    
+
+            // ...
+            // UPDATE
+            // ...
+            var doUpdateSchedule = function(param, uuid) {
+                $.ajax({
+                    method: 'PATCH',
+                    url: API_ENDPOINT + 'helpdesk/consultant/schedules/' + uuid + '/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(param),
+                    cache: false,
+                    success: function(response) {
+                        Swal.fire(
+                            'Informasi',
+                            'Pembaruan sukses',
+                            'success'
+                        );
+                    },
+                    error: function(error) {
+                        var errorJSON = error?.responseJSON;
+
+                        if (error && errorJSON) {
+                            $.each(errorJSON, function(k, v) {
+                                var message = '';
+
+                                if(Array.isArray(v)) {
+                                    message = v.join(' ');
+                                } else {
+                                    message = v;
+                                }
+                                
+                                var el = $('#' + k);
+                                el.closest('.form-group').after('<p class="small">' + message + '</p>');
+                            });
+                        }
+                    }
+                });
+            }
+
+            var createRule = function(data) {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'helpdesk/consultant/rules/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    cache: false,
+                    success: function(response) {
+                        // set rule uuid to value
+                        var ruleValue = [];
+                        
+                        $.each(data?.rule_value, function(i, v) {
+                            v['rule'] = response.uuid;
+                            ruleValue.push(v);
+                        });
+
+                        if (ruleValue.length > 0) createRuleValue(ruleValue);
+                    }
+                });
+            }
+
+            var updateRule = function(data, uuid) {
+                $.ajax({
+                    method: 'PATCH',
+                    url: API_ENDPOINT + 'helpdesk/consultant/rules/' + uuid + '/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    cache: false,
+                    success: function(response) {
+                        // set rule uuid to value
+                        var ruleValue = [];
+                        
+                        $.each(data?.rule_value, function(i, v) {
+                            v['rule'] = response.uuid;
+                            ruleValue.push(v);
+                        });
+
+                        if (ruleValue.length > 0) createRuleValue(ruleValue);
+                    }
+                });
+            }
+
+            var createRuleValue = function(data) {
+                $.ajax({
+                    method: 'PUT',
+                    url: API_ENDPOINT + 'helpdesk/consultant/rulesvalue/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    cache: false,
+                    success: function(response) {
+                        $.each(response, function(i, v) {
+                            $('input[value=' + v.value_varchar + ']').attr('data-uuid', v.uuid);
+                        });
+                    }
+                });
+            }
+
+            var deleteRule = function(data) {
+                $.ajax({
+                    method: 'DELETE',
+                    url: API_ENDPOINT + 'helpdesk/consultant/rules/' + window.byweekdayUuid + '/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    cache: false,
+                    success: function(response) {
+                        var rule_value = data?.rule_value;
+
+                        $.each(rule_value, function(i, v) {
+                            $('input[data-uuid=' + v.uuid + ']').removeAttr('data-uuid');
+                        });
+                    }
+                });
+            }
+
+
+            // ...
+            // DELETE RULE VALUES
+            // ...
+            var doDeleteRuleValue = function(data) {
+                $.ajax({
+                    method: 'DELETE',
+                    url: API_ENDPOINT + 'helpdesk/consultant/rulesvalue/delete/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    cache: false,
+                    success: function(response) {
+                        $.each(data, function(i, v) {
+                            $('input[data-uuid=' + v.uuid + ']').removeAttr('data-uuid');
+                        });
+                    }
+                });
+            }
+
+
+            // ... 
+            // DELETE SUBMIT
+            // ...
+            $(document).on('click', '#delete', function(e) {
+                e.preventDefault();
+
+                var uuid = $(this).attr('data-uuid');
+
+                Swal.fire({
+                    title: 'Apakah Yakin?',
+                    text: "Tindakan ini menghapus data selamanya.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Ya, Hapus'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        doDelete(uuid, $(this));
+                    }
+                });
+            });
+
+            var doDelete = function(uuid, $this) {
+                $.ajax({
+                    method: 'DELETE',
+                    url: API_ENDPOINT + 'helpdesk/consultant/schedules/' + window.scheduleUuid + '/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    cache: false,
+                    success: function(response) {
+                        window.location.href = "{% url 'helpdesk_view:consultant:schedule' %}";
+                    }
+                });
+            }
+
+
+            // ...
+            // SET SCHEDULE EXPERTISE
+            // ...
+            var doSetScheduleExpertise = function(data) {
+                $.ajax({
+                    method: 'PUT',
+                    url: API_ENDPOINT + 'helpdesk/consultant/expertises/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    cache: false,
+                    success: function(response) {
+                        // pass
+                    }
+                });
+            }
+
+
+            // ...
+            // DELETE SCHEDULE EXPERTISE
+            // ...
+            var doDeleteScheduleExpertise = function(data) {
+                $.ajax({
+                    method: 'DELETE',
+                    url: API_ENDPOINT + 'helpdesk/consultant/expertises/delete/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    cache: false,
+                    success: function(response) {
+                        // pass
+                    }
+                });
+            }
+
+
+            // ...
+            // SCHEDULE TERM
+            // ...
+            var updateScheduleTerm = function(data, uuid) {
+                $.ajax({
+                    method: 'PATCH',
+                    url: API_ENDPOINT + 'helpdesk/consultant/schedulesterm/' + uuid + '/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    cache: false,
+                    success: function(response) {
+                        // pass
+                    }
+                });
+            }
+
+
+            // ...
+            // ADD SEGMENT
+            // ...
+            $(document).on('click', '.btn-add-segment', function(e) {
+                e.preventDefault();
+
+                $(segmentModal).appendTo('body');
+                $('#segment-modal').modal('show');
+            });
+
+
+            // ...
+            // SUBMIT SEGMENT
+            // ...
+            $(document).on('submit', '#helpdesk-segment-form', function(e) {
+                e.preventDefault();
+
+                var uuid = $(this).attr('data-uuid');
+                var values = $(this).serializeArray();
+                var data = {'schedule': "{{ uuid }}"}; // uuid is schedule uuid from views.py
+
+                // filtering value
+                $.each(values, function(i, v) {
+                    data[v.name] = v.value;
+                });
+
+                if (uuid) {
+                    doUpdateSegment(data, uuid);
+                } else {
+                    doSaveSegment(data);
+                }
+            });
+
+
+            // ...
+            // SAVE SEGMENT
+            // ...
+            var doSaveSegment = function(data) {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'helpdesk/consultant/segments/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    cache: false,
+                    success: function(response) {
+                        $('#segment-modal').modal('hide');
+                        
+                        var item = segmentItem(response);
+                        $('#segment-list').prepend(item);
+                    }
+                });
+            }
+
+
+            // ...
+            // UPDATE SEGMENT
+            // ...
+            var doUpdateSegment = function(data, uuid) {
+                $.ajax({
+                    method: 'PATCH',
+                    url: API_ENDPOINT + 'helpdesk/consultant/segments/' + uuid + '/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    cache: false,
+                    success: function(response) {
+                        $('#sla-open-hour-' + response.uuid).html(response.open_hour_formated);
+                        $('#sla-close-hour-' + response.uuid).html(response.close_hour_formated);
+                        $('#sla-quota-' + response.uuid).html(response.quota);
+                        $('#sla-label-' + response.uuid).html(response.canal_label);
+                        $('#segment-modal').modal('hide');
+                    }
+                });
+            }
+
+
+            // ...
+            // DELETE SEGMENT
+            // ...
+            var doDeleteSegment = function(uuid) {
+                $.ajax({
+                    method: 'DELETE',
+                    url: API_ENDPOINT + 'helpdesk/consultant/segments/' + uuid + '/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    cache: false,
+                    success: function(response) {
+                        $('#segment-' + uuid).parent().remove();
+                    }
+                });
+            }
+    
+
+            // ...
+            // GET SINGLE SEGMENT
+            // ...
+            var getSegment = function(uuid) {
+                $.ajax({
+                    method: 'GET',
+                    url: API_ENDPOINT + 'helpdesk/consultant/segments/' + uuid + '/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    cache: false,
+                    success: function(response) {
+                        $(segmentModal).appendTo('body');
+                        $('#segment-modal').modal('show');
+                        $('#segment-modal').on('shown.bs.modal', function() {
+                            var $thisModal = $(this);
+
+                            $.each(response, function(n, v) {
+                                if (n === 'canal') {
+                                    $thisModal.find('form #' + v).prop('checked', true);
+
+                                } else if (n === 'open_hour') {
+                                    $('#open_hour').datetimepicker({date: moment(v, 'HH:mm:ss'), format: 'HH:mm'});
+
+                                } else if (n === 'close_hour') {
+                                    $('#close_hour').datetimepicker({date: moment(v, 'HH:mm:ss'), format: 'HH:mm'});
+
+                                } else {
+                                    $thisModal.find('form #' + n).val(v);
+                                }
+                            });
+
+                            if (uuid) $thisModal.find('#helpdesk-segment-form').attr('data-uuid', uuid);
+                        });
+                    }
+                });
+            }
+
+
+            // ...
+            // EDIT SEGMENT
+            // ...
+            $(document).on('click', '.btn-edit-segment', function(e) {
+                e.preventDefault();
+                
+                var uuid = $(this).attr('data-uuid');
+                if (uuid) getSegment(uuid);
+            });
+
+            // ...
+            // DELETE SEGMENT
+            // ...
+            $(document).on('click', '.btn-delete-segment', function(e) {
+                e.preventDefault();
+
+                var uuid = $(this).attr('data-uuid');
+
+                Swal.fire({
+                    title: 'Apakah Yakin?',
+                    text: "Tindakan ini menghapus data selamanya.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Ya, Hapus'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        doDeleteSegment(uuid);
+                    }
+                });
+            });
+
+
+            $(document).on('hidden.bs.modal', '#segment-modal', function() {
+                $('#helpdesk-segment-form').removeAttr('data-uuid');
+                $(this).modal('dispose');
+                $(this).remove();
+            });
+
+
+            // ... 
+            // ADD SLA
+            // ...
+            $(document).on('click', '.btn-add-sla', function(e) {
+                e.preventDefault();
+
+                var uuid = $(this).attr('data-uuid');
+                var segmentUUID = $(this).attr('data-segment-uuid');
+
+                if (uuid) {
+                    getSLA(uuid);
+                } else {
+                    $(slaForm(segmentUUID)).appendTo('body');
+                    $('#sla-modal').modal('show');
+                }
+            });
+
+
+            // ...
+            // GET SINGLE SLA
+            // ...
+            var getSLA = function(uuid) {
+                $.ajax({
+                    method: 'GET',
+                    url: API_ENDPOINT + 'helpdesk/consultant/slas/' + uuid + '/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    cache: false,
+                    success: function(response) {
+                        $(slaForm(response.segment)).appendTo('body');
+                        $('#sla-modal').modal('show');
+                        $('#sla-modal').on('shown.bs.modal', function() {
+                            var $thisModal = $(this);
+
+                            $.each(response, function(n, v) {
+                                if (n === 'priority') {
+                                    $.each(v, function(pn, pv) {
+                                        $('input[name="priority_cost_' + pv.identifier +'"]').attr('data-uuid', pv.uuid);
+                                        $('input[name="priority_cost_' + pv.identifier +'"]').val(pv.cost);
+                                        $('input[name="priority_label_' + pv.identifier +'"]').val(pv.label);
+                                    });
+                                } else {
+                                    $thisModal.find('form #' + n).val(v);
+                                }
+                            });
+
+                            $thisModal.find('#helpdesk-sla-form').attr('data-uuid', uuid);
+                        });
+                    }
+                });
+            }
+
+
+            // ...
+            // SUBMIT SLA
+            // ...
+            $(document).on('submit', '#helpdesk-sla-form', function(e) {
+                e.preventDefault();
+
+                var slaUuid = $(this).attr('data-uuid');
+                var values = $(this).serializeArray();
+                var param = {};
+                var priorityList = [];
+                var priorityIdentifiers = [];
+                var priorityCosts = [];
+                var priority_labels = [];
+                var priorityUuids = [];
+
+                $.each(values, function(n, v) {
+                    var name = v.name;
+                    var value = v.value;
+
+                    // only for update action
+                    var priorityUuid = $('input[name="' + name + '"]').attr('data-uuid');
+                    if (priorityUuid) priorityUuids.push(priorityUuid);
+
+                    param[name] = value;
+
+                    // priority cost
+                    if (name === 'priority_cost_high') {
+                        priorityCosts.push(value);
+                        priorityIdentifiers.push('high');
+                    }
+
+                    if (name === 'priority_cost_medium') {
+                        priorityCosts.push(value);
+                        priorityIdentifiers.push('medium');
+                    }
+
+                    if (name === 'priority_cost_low') {
+                        priorityCosts.push(value);
+                        priorityIdentifiers.push('low');
+                    }
+
+                    // priority label
+                    if (name === 'priority_label_high') priority_labels.push(value);
+                    if (name === 'priority_label_medium') priority_labels.push(value);
+                    if (name === 'priority_label_low') priority_labels.push(value);
+                });
+
+                // build priority object
+                $.each(priorityCosts, function(i, v) {
+                    var label = priority_labels[i];
+                    var identifier = priorityIdentifiers[i];
+                    var priorityUuid = priorityUuids[i];
+        
+                    var o = {
+                        'user': '{{ user.uuid }}',
+                        'cost': +v,
+                        'label': label,
+                        'identifier': identifier,
+                    }
+
+                    // only for update action
+                    if (priorityUuid) o['uuid'] = priorityUuid;
+
+                    priorityList.push(o);
+                });
+
+                param['priority'] = priorityList;
+                
+                if (slaUuid) {
+                    updateSLA(param, slaUuid);
+                } else {
+                    saveSLA(param);
+                }
+            });
+
+
+            // ...
+            // SAVE SLA
+            // ...
+            var saveSLA = function(data) {
+                $.ajax({
+                    method: 'POST',
+                    url: API_ENDPOINT + 'helpdesk/consultant/slas/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    cache: false,
+                    success: function(response) {
+                        var item = SLAItem(response);
+
+                        if ($('#sla-list-' + response.segment).length > 0) {
+                            $('#sla-list-' + response.segment).prepend(item);
+                        } else {
+                            $('#segment-sla-' + data['segment']).append(`<ul id="sla-list-${response.segment}" class="sla-list-wrap list-unstyled list-margin border-top pt-1 mt-1">${item}</ul>`);
+                        }
+
+                        $('#sla-modal').modal('hide');
+
+                        // create Priority
+                        var priorityList = [];
+                        $.each(data.priority, function(i, v) {
+                            v['sla'] = response.uuid;
+                            priorityList.push(v);
+                        });
+
+                        if (priorityList.length > 0) createPriority(priorityList);
+                    },
+                    error: function(error) {
+                        var errorJSON = error?.responseJSON;
+
+                        if (error && errorJSON) {
+                            $.each(errorJSON, function(k, v) {
+                                var message = '';
+
+                                if(Array.isArray(v)) {
+                                    message = v.join(' ');
+                                } else {
+                                    message = v;
+                                }
+                                
+                                var el = $('#' + k);
+                                el.closest('.form-group').after('<p class="small">' + message + '</p>');
+                            });
+                        }
+                    }
+                });
+            }
+
+
+            // ...
+            // UPDATE SLA
+            // ...
+            var updateSLA = function(data, uuid) {
+                $.ajax({
+                    method: 'PATCH',
+                    url: API_ENDPOINT + 'helpdesk/consultant/slas/' + uuid + '/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    cache: false,
+                    success: function(response) {
+                        var item = SLAItem(response);
+
+                        $('li#sla-' + response.uuid).replaceWith(item);
+                        $('#sla-modal').modal('hide');
+
+                        // update Priority
+                        var priorityList = [];
+                        $.each(data.priority, function(i, v) {
+                            v['sla'] = response.uuid;
+                            priorityList.push(v);
+                        });
+
+                        if (priorityList.length > 0) createPriority(priorityList);
+                    },
+                    error: function(error) {
+                        var errorJSON = error?.responseJSON;
+
+                        if (error && errorJSON) {
+                            $.each(errorJSON, function(k, v) {
+                                var message = '';
+
+                                if(Array.isArray(v)) {
+                                    message = v.join(' ');
+                                } else {
+                                    message = v;
+                                }
+                                
+                                var el = $('#' + k);
+                                el.closest('.form-group').after('<p class="small">' + message + '</p>');
+                            });
+                        }
+                    }
+                });
+            }
+
+
+            // ...
+            // DELETE SLA
+            // ...
+            $(document).on('click', '.btn-delete-sla', function(e) {
+                e.preventDefault();
+
+                var uuid = $(this).attr('data-uuid');
+                
+                Swal.fire({
+                    title: 'Apakah Yakin?',
+                    text: "Tindakan ini menghapus data selamanya.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Ya, Hapus'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        deleteSLA(uuid);
+                    }
+                });
+            });
+
+            var deleteSLA = function(uuid) {
+                $.ajax({
+                    method: 'DELETE',
+                    url: API_ENDPOINT + 'helpdesk/consultant/slas/' + uuid + '/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    cache: false,
+                    success: function(response) {
+                        Swal.fire(
+                            'Informasi',
+                            'Data telah dihapus permanen.',
+                            'success'
+                        );
+
+                        var $slaWrap = $('#sla-' + uuid).closest('.sla-list-wrap'); 
+
+                        $('#sla-' + uuid).remove();
+
+                        if ($slaWrap.find('ul > li').length == 0) $slaWrap.remove();
+                    }
+                });
+            }
+
+
+            // ...
+            // CREATE PRIORITY
+            // ...
+            var createPriority = function(data) {
+                $.ajax({
+                    method: 'PUT',
+                    url: API_ENDPOINT + 'helpdesk/consultant/priorities/',
+                    headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                    xhrFields: {withCredentials: true},
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    cache: false,
+                    success: function(response) {
+                        var item = '';
+                        var slaUuid = [];
+
+                        $.each(response, function(i, p) {
+                            slaUuid.push(p.sla);
+
+                            var badgeClass = `badge-warning`;
+                    
+                            if (p.identifier == 'high') badgeClass = `badge-danger`;
+                            if (p.identifier == 'low') badgeClass = `badge-success`;
+
+                            item += `<li>
+                                <div class="d-flex w-100">
+                                    <span>
+                                        ${p.label}
+                                        
+                                        <span class="badge ${badgeClass}">
+                                            ${p.identifier_display}
+                                        </span>
+                                    </span>
+
+                                    <span class="ml-auto"> + ${p.cost.toLocaleString()}</span>
+                                </div>
+                            </li>`;
+                        });
+                        
+                        var slaUuid = slaUuid[0];
+
+                        if ($('#sla-' + slaUuid + '-priority').length > 0 ) {
+                            $('#sla-' + slaUuid + '-priority').html(item);
+                        } else {
+                            $('#segment-sla-' + slaUuid).append(`<ul id="sla-${slaUuid}-priority">${item}</ul>`);
+                        }
+                    }
+                });
+            }
+
+            $(document).on('hidden.bs.modal', '#sla-modal', function(e) {
+                $(this).modal('dispose');
+                $(this).remove();
+            });
+        });
+    </script>
+{% endblock %}

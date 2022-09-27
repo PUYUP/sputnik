@@ -1,0 +1,61 @@
+{% load i18n %}
+
+<form id="person-login-form" action="{{ submit_url }}" method="POST">
+    {% csrf_token %}
+
+    <div class="form-group">
+        <input class="form-control" type="text" id="account" name="account" placeholder="{{ placeholder }}" autocomplete="off">
+    </div>
+    
+    <div class="w-100 text-right">
+        <button type="submit" class="btn btn-info pl-3 pr-3">Berikutnya</button>
+    </div>
+</form>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js" defer></script>
+<script type="text/javascript">
+    window.addEventListener('DOMContentLoaded', function() {
+        var account = Cookies.get('person_login');
+        if (account) $('input#account').val(account);
+
+        // SUBMIT FORM
+        $(document).on('submit', 'form#person-login-form', function(event) {
+            event.preventDefault();
+
+            var account = $(this).find('input#account').val();
+            if (account) doLogin(account);
+        });
+
+        // SEND FORM DATA
+        var doLogin = function(account) {
+            $.ajax({
+                method: 'POST',
+                url: API_ENDPOINT + 'person/users/check-account/',
+                headers: {'X-CSRFToken': Cookies.get('csrftoken')},
+                xhrFields: {
+                    withCredentials: true
+                },
+                data: {account: account},
+                cache: false,
+                success: function(response) {
+                    Cookies.set(
+                        '{{ cookie_key }}', 
+                        account, 
+                        {expires: COOKIE_AGE, path: '/', secure: {% if request.is_secure %}true{% else %}false{% endif %}}
+                    );
+                    
+                    window.location.href = '{{ redirect_url }}';
+                },
+                error: function(error) {
+                    if (error && error?.responseJSON) {
+                        Swal.fire(
+                            'Kesalahan',
+                            error?.responseJSON?.detail,
+                            'warning'
+                        );
+                    }
+                }
+            });
+        }
+    });
+</script>

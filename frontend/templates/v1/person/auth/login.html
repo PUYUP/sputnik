@@ -1,0 +1,27 @@
+{% extends 'v1/base/base-clean.html' %}
+
+{% load i18n %}
+
+{% block head_title %}{% trans "Masuk ke Akun" noop %}{% endblock %}
+
+{% block main %}
+    <section class="container h-100 align-items-center">
+        <div class="row justify-content-center h-100 align-items-center">
+            <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5">
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h3 class="card-title font-weight-bold">
+                            <a href="{% url 'home' %}" class="text-dark">{{ app_name }}</a>
+                        </h3>
+                        <p class="mb-1">{% trans "Masuk ke akun" noop %}</p>
+                        
+                        {% url 'person_view:login' as submit_url %}
+                        {% url 'person_view:login_password' as redirect_url %}
+
+                        {% include 'v1/person/auth/login-form.html' with placeholder="Nama pengguna atau email" submit_url=submit_url redirect_url=redirect_url cookie_key="person_login_login" action="login" input_icon="lock" %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}

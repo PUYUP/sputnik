@@ -1,0 +1,181 @@
+Menggunakan Supervisor untuk manager proses. Instalasi Supervisor bisa Googling.
+
+1. Buat file berikut dalam folder proyek, misal /root/home/openpeo/
+
+# GUNICORN BASH
+# nama file: gunicorn_start.bash
+# !/bin/bash
+
+NAME="OpenPeo"
+DJANGODIR=/root/openpeo
+DJANGOENVDIR=/root/openpeo/openv3.7
+SOCKFILE=/root/openpeo/gunicorn.sock
+USER=root
+GROUP=www-data
+NUM_WORKERS=1
+DJANGO_SETTINGS_MODULE=openpeo.settings.production
+DJANGO_WSGI_MODULE=openpeo.wsgi
+
+echo "Starting $NAME as `whoami`"
+
+# Activate the virtual environment
+cd $DJANGODIR
+source /root/openpeo/openv3.7/bin/activate
+export DJANGO_SETTINGS_MODULE=$DJANGO_SETTINGS_MODULE
+export PYTHONPATH=$DJANGODIR:$PYTHONPATH
+
+# Create the run directory if it doesn't exist
+RUNDIR=$(dirname $SOCKFILE)
+test -d $RUNDIR || mkdir -p $RUNDIR
+
+# Start your Django Unicorn
+# Programs meant to be run under supervisor should not daemonize themselves (do$
+exec ${DJANGOENVDIR}/bin/gunicorn ${DJANGO_WSGI_MODULE}:application \
+  --name $NAME \
+  --workers $NUM_WORKERS \
+  --user=$USER --group=$GROUP \
+  --bind=unix:$SOCKFILE \
+  --log-level=debug \
+  --log-file=-
+
+
+# DAPHNE BASH
+# nama file: daphne_start.bash
+# !/bin/bash
+
+NAME="OpenPeo Daphne"
+DJANGODIR=/root/openpeo
+DJANGOENVDIR=/root/openpeo/openv3.7
+SOCKFILE=/root/openpeo/daphne.sock
+USER=root
+GROUP=www-data
+NUM_WORKERS=1
+DJANGO_SETTINGS_MODULE=openpeo.settings.production
+DJANGO_ASGI_MODULE=openpeo.asgi
+
+echo "Starting $NAME as `whoami`"
+
+# Activate the virtual environment
+cd $DJANGODIR
+source /root/openpeo/openv3.7/bin/activate
+export DJANGO_SETTINGS_MODULE=$DJANGO_SETTINGS_MODULE
+export PYTHONPATH=$DJANGODIR:$PYTHONPATH
+
+# Start your Django Unicorn
+# Programs meant to be run under supervisor should not daemonize themselves (do$
+exec ${DJANGOENVDIR}/bin/daphne -u ${SOCKFILE} -p 9002 ${DJANGO_ASGI_MODULE}:ap$
+
+
+
+2. Buat file berikut dalam /etc/supervisor/conf.d/
+tutorial menjalakan supervisor Googling
+
+# GUNICORN
+untuk menjalakan Django WSGI server
+------------------------------------------------------------------------------------
+; ================================
+;  gunicorn supervisor
+; ================================
+
+[program:openpeo_gunicorn]
+command = /root/openpeo/gunicorn_start.bash
+user = root
+stdout_logfile = /root/openpeo/logs/gunicorn/access.log
+stderr_logfile = /root/openpeo/logs/gunicorn/error.log
+stdout_logfile_maxbytes=50
+stderr_logfile_maxbytes=50
+stdout_logfile_backups=10
+stderr_logfile_backups=10
+environment=LANG=en_US.UTF-8,LC_ALL=en_US.UTF-8
+
+# DAPHNE
+untuk menjalakan Django ASGI server
+------------------------------------------------------------------------------------
+; ================================
+;  daphne supervisor
+; ================================
+
+[program:openpeo_daphne]
+command = /root/openpeo/daphne_start.bash
+user = root
+stdout_logfile = /root/openpeo/logs/daphne/access.log
+stderr_logfile = /root/openpeo/logs/daphne/error.log
+stdout_logfile_maxbytes=50
+stderr_logfile_maxbytes=50
+stdout_logfile_backups=10
+stderr_logfile_backups=10
+environment=LANG=en_US.UTF-8,LC_ALL=en_US.UTF-8
+
+
+3. Setup Nginx
+dalam /etc/nginx/sites-available/ buat file openpeo.com (nama situs, atau apa saja) isi dengan ini;
+tutorial Nginx + letsencrypt SSL Googling;
+
+server {
+        listen 443 ssl;
+        listen [::]:443 ssl;
+        server_name api.openpeo.com;
+
+        ssl_certificate /etc/letsencrypt/live/api.openpeo.com/fullchain.pem; # $
+        ssl_certificate_key /etc/letsencrypt/live/api.openpeo.com/privkey.pem; $
+
+        location = /favicon.ico { 
+            access_log off; 
+            log_not_found off; 
+        }
+
+        location /static/ {
+            root /root/openpeo;
+        }
+
+        location /media/ {
+            root /root/openpeo;
+        }
+
+        location /ws/ {
+            proxy_pass http://unix:/root/openpeo/daphne.sock;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+
+            proxy_redirect off;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $server_name;
+        }
+
+        location / {
+            include proxy_params;
+            proxy_pass http://unix:/root/openpeo/gunicorn.sock;
+            proxy_ssl_name api.openpeo.com;
+            proxy_ssl_server_name on;
+            proxy_read_timeout 300;
+            proxy_connect_timeout 300;
+            proxy_ssl_session_reuse off;
+            client_max_body_size 10M;
+        }
+}
+
+server {
+        if ($host = api.openpeo.com) {
+              return 301 https://$host$request_uri;
+        } # managed by Certbot
+}
+
+
+
+
+
+
+
+
+
+
+Mysql;
+1.  sudo mysql
+2.  CREATE USER 'tanyapakar_db_user'@'localhost' IDENTIFIED BY 'K65&&hyrt#@!hgrtr';
+3.  GRANT ALL PRIVILEGES ON * . * TO 'tanyapakar_db_user'@'localhost';
+    GRANT ALL PRIVILEGES ON tanyapakar_db.* TO 'tanyapakar_db_user'@'localhost';
+4.  FLUSH PRIVILEGES;
+5.  CREATE DATABASE tanyapakar_db CHARACTER SET utf8;
